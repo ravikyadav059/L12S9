@@ -1,0 +1,143 @@
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@source "../views";
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-dmsans: 'DM Sans', sans-serif;
+
+    /* Theme Brand Colors */
+    --color-brand: #198BEA;
+    --color-brand-600: #1476c9;
+    --color-brand-dark: #0a5f9e;
+    --color-brand-50: #eaf5ff;
+    --color-brand-050: #eaf5ff;
+    
+    /* Theme Neutrals & Accents */
+    --color-dark-navy: #172A39;
+    --color-text-main: #111827;
+    --color-text-secondary: #64748b;
+    --color-muted: #6b7280;
+    --color-border-theme: #e5e7eb;
+    --color-bg-theme: #f9fafb;
+    --color-sm-highlight: #f5b944;
+
+    /* Semantic Status & Accents */
+    --color-success: #10b981;
+    --color-success-light: #ecfdf5;
+    --color-accent-emerald: #059669;
+    --color-accent-emerald-light: #ecfdf5;
+    --color-accent-purple: #7c3aed;
+    --color-accent-purple-light: #f5f3ff;
+    --color-accent-amber: #d97706;
+    --color-accent-amber-light: #fffbeb;
+    --color-accent-dark: #0f172a;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-danger-light: #fef2f2;
+    --color-blue-100: #e0f2fe;
+    --color-blue-400: #60a5fa;
+
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    --color-accent: var(--color-neutral-800);
+    --color-accent-content: var(--color-neutral-800);
+    --color-accent-foreground: var(--color-white);
+}
+
+:root {
+    --brand: #198BEA;
+    --brand-600: #1476c9;
+    --brand-dark: #0a5f9e;
+    --brand-050: #eaf5ff;
+    --brand-rgb: 25, 139, 234;
+    --dark-navy: #172A39;
+    --text: #111827;
+    --text-secondary: #64748b;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --bg: #f9fafb;
+    --white: #ffffff;
+    --color-black: #000000;
+    --success: #10b981;
+    --success-light: #ecfdf5;
+    --accent-emerald-light: #ecfdf5;
+    --accent-purple: #7c3aed;
+    --accent-purple-light: #f5f3ff;
+    --accent-emerald: #059669;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --accent-amber: #d97706;
+    --accent-amber-light: #fffbeb;
+    --sm-highlight: #f5b944;
+    --accent-dark: #0f172a;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --shadow: 0 10px 30px -10px rgba(25, 139, 234, 0.3);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-modal: all 0.3s cubic-bezier(0, 0, 0.2, 1);
+    --blue-100: #e0f2fe;
+    --blue-400: #60a5fa;
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-family-DMSans: 'DM Sans', sans-serif;
+}
+
+@layer theme {
+    .dark {
+        --color-accent: var(--color-white);
+        --color-accent-content: var(--color-white);
+        --color-accent-foreground: var(--color-neutral-800);
+    }
+}
+
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+
+    body {
+        font-family: var(--font-family);
+        color: var(--text);
+    }
+}
+
+[data-flux-field] {
+    @apply grid gap-2;
+}
+
+[data-flux-label] {
+    @apply  !mb-0 !leading-tight;
+}
+
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+/* \[:where(&)\]:size-4 {
+    @apply size-4;
+} */

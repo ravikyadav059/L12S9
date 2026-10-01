@@ -1,0 +1,1912 @@
+<style>
+    /* Header Styles */
+
+    a {
+        text-decoration: none;
+    }
+
+    .headermainBox {
+        position: fixed;
+        width: 100%;
+        /* z-index: 133; */
+        z-index: 99999;
+        top: 0;
+        background: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .main-headerNew {
+        background: var(--white);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 99999;
+        box-shadow: var(--shadow-sm);
+        padding: 10px 0;
+        /* padding: 16px 0; */
+    }
+
+    .header-container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+        max-width: 111em;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex: 1;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        gap: 4px;
+        text-decoration: none;
+        cursor: pointer;
+        width: fit-content;
+    }
+
+    .logo-image {
+        height: 35px;
+        width: auto;
+        display: block;
+    }
+
+    .logo-tagline {
+        font-size: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--brand);
+        text-align: center;
+        white-space: nowrap;
+        line-height: 1;
+    }
+
+    .search-bar.header-search-container {
+        position: relative;
+        max-width: 400px;
+        flex: 1;
+        /* display: none; */
+    }
+
+    .search-bar.header-search-container i {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    .search-bar.header-search-container input {
+        width: 100%;
+        padding: 10px 16px 10px 44px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        background: var(--bg);
+        transition: var(--transition);
+    }
+    .search-bar.header-search-container input::placeholder{
+        font-size: 14px;
+    }
+
+    .search-bar.header-search-container input:focus {
+        outline: none;
+        border-color: var(--brand);
+        background: var(--white);
+        box-shadow: 0 0 0 3px var(--brand-050);
+    }
+
+    .header-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 16px;
+        padding: 8px 10px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 500;
+        border-radius: var(--radius-md);
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .nav-item i {
+        font-size: 20px;
+    }
+
+    .nav-item:hover {
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    .nav-item.active {
+        color: var(--brand);
+    }
+
+    .nav-item .badge {
+        position: absolute;
+        top: 4px;
+        right: 8px;
+        background: #ef4444;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    /* User Profile Dropdown Styles */
+    .nav-item-dropdown {
+        flex-direction: column;
+        cursor: pointer;
+        gap: 4px;
+        position: relative;
+        align-items: center;
+    }
+
+    .nav-item-dropdown>i.fa-user-circle {
+        position: relative;
+    }
+
+    .user-avatar-header {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid transparent;
+        transition: var(--transition);
+    }
+
+    .user-name-header {
+        font-size: 12px;
+        font-weight: 500;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dropdown-arrow {
+        position: absolute;
+        top: 2px;
+        right: -8px;
+        font-size: 10px transition: transform 0.3s ease;
+    }
+
+    .nav-item-dropdown:hover .dropdown-arrow {
+        transform: rotate(180deg);
+    }
+
+    .user-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 0px);
+        right: 0;
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        width: 260px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1001;
+    }
+
+    .nav-item-dropdown:hover .user-dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .dropdown-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+    }
+
+    .dropdown-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--brand);
+    }
+
+    .dropdown-user-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .dropdown-user-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dropdown-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 4px 0;
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        color: var(--text);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+
+    .dropdown-item i {
+        width: 20px;
+        font-size: 16px;
+        color: var(--muted);
+        transition: var(--transition);
+    }
+
+    .dropdown-item:hover {
+        background: var(--bg);
+        color: var(--brand);
+    }
+
+    .dropdown-item:hover i {
+        color: var(--brand);
+    }
+
+    .dropdown-item-logout {
+        color: #ef4444;
+    }
+
+    .dropdown-item-logout i {
+        color: #ef4444;
+    }
+
+    .dropdown-item-logout:hover {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .dropdown-item-logout:hover i {
+        color: #dc2626;
+    }
+
+    /* Mail Badge Animation */
+    .mail-badge {
+        height: 9px;
+        width: 9px;
+    }
+
+    .mail-badge {
+        position: absolute;
+        /* top: 4px;
+        right: 8px; */
+        background: #006EC9;
+        color: white;
+        font-size: 10px;
+        /* padding: 2px 6px; */
+        border-radius: 10px;
+        /* font-weight: 600;
+        min-width: 18px;
+        text-align: center; */
+    }
+
+    .animated-badge {
+        animation: scholarmailHeaderpulse 1.5s infinite;
+        box-shadow: 0 0 0 rgba(0, 110, 201, 0.7);
+    }
+
+    @keyframes scholarmailHeaderpulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(0, 110, 201, 0.7);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(0, 110, 201, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(0, 110, 201, 0);
+        }
+    }
+
+    /* Mail Notification Modal Position Override */
+    #MailnotificationModal {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: auto;
+        margin-top: 8px;
+    }
+
+    /* Mail Notification Modal Styles - Modern Design */
+    /* .divMailNotificationModel {
+        background: linear-gradient(to bottom, #ffffff, #fafbfc);
+        border: 1px solid #e1e4e8;
+        max-width: 420px;
+        min-width: 420px;
+        width: 100%;
+        height: auto;
+        max-height: 550px;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+    }
+
+    .divMailNotificationModel .MailMsgHeadingForModel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #198BEA 0%, #1a7bc9 100%);
+        padding: 16px 20px;
+        border-bottom: none;
+    }
+
+    .divMailNotificationModel .MailMsgHeadingForModel h3 {
+        font-family: Inter, sans-serif;
+        font-weight: 700;
+        font-size: 18px;
+        line-height: 1.2;
+        color: #ffffff;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .divMailNotificationModel .MailMsgHeadingForModel h3::before {
+        content: '✉️';
+        font-size: 20px;
+    }
+
+    .divMailNotificationModel .MailMsgHeadingForModel h4 {
+        font-family: Inter, sans-serif;
+        font-weight: 600;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.9);
+        margin: 0;
+        cursor: pointer;
+        padding: 6px 12px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.15);
+        transition: all 0.2s ease;
+    }
+
+    .divMailNotificationModel .MailMsgHeadingForModel h4:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    .divMailNotificationModel .MainConatinerRight {
+        overflow-y: auto;
+        max-height: 380px;
+        padding: 8px;
+    }
+
+    .divMailNotificationModel .MainConatinerRight::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .divMailNotificationModel .MainConatinerRight::-webkit-scrollbar-thumb {
+        background: #198BEA;
+        border-radius: 10px;
+    }
+
+    .divMailNotificationModel .MainConatinerRight::-webkit-scrollbar-track {
+        background: #f0f2f5;
+    }
+
+    .divMailNotificationModel .EmptyImgMsg {
+        display: flex;
+        justify-content: center;
+        padding: 48px 24px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .divMailNotificationModel .EmptyImgMsg p {
+        font-family: Inter, sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        color: #65676b;
+        margin: 12px 0 0 0;
+    }
+
+    .divMailNotificationModel .EmptyImgMsg img {
+        width: 64px;
+        opacity: 0.7;
+    }
+
+    .divMailNotificationModel .ScholarMsgUserLeft {
+        text-align: left;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .divMailNotificationModel .ScholarMsgUserLeft .userName {
+        font-family: Inter, sans-serif;
+        font-weight: 600;
+        font-size: 15px;
+        line-height: 1.4;
+        color: #1a1a1a;
+        margin-bottom: 4px;
+    }
+
+    .divMailNotificationModel .ScholarMsgUserLeft .userReminderSubject {
+        font-family: Inter, sans-serif;
+        font-weight: 400;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #65676b;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        display: -webkit-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .divMailNotificationModel .MailMsgViewAllForModel {
+        background: #f8f9fa;
+        border-top: 1px solid #e1e4e8;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 4px;
+    }
+
+    .divMailNotificationModel .MailMsgViewAllForModel a {
+        width: 100%;
+        text-align: center;
+    }
+
+    .divMailNotificationModel .MailMsgViewAllForModel a h4 {
+        font-family: Inter, sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        color: #198BEA;
+        margin: 12px 0;
+        transition: all 0.2s ease;
+    } */
+
+    .divMailNotificationModel .MailMsgViewAllForModel a:hover h4 {
+        color: #1a7bc9;
+        transform: translateY(-1px);
+    }
+
+    .main-inner-change-container {
+        background: white;
+        border: 1px solid #e1e4e8;
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        margin: 6px 0;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .main-inner-change-container::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: #198BEA;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .main-inner-change-container:hover {
+        background: #f8f9ff;
+        border-color: #198BEA;
+        transform: translateX(2px);
+        box-shadow: 0 2px 8px rgba(25, 139, 234, 0.1);
+    }
+
+    .main-inner-change-container:hover::before {
+        opacity: 1;
+    }
+
+    .main-inner-change-container.unread {
+        background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+        border: 2px solid #198BEA;
+        border-left: 4px solid #198BEA;
+    }
+
+    .main-inner-change-container.unread::before {
+        opacity: 1;
+        width: 4px;
+    }
+
+    .main-inner-change-container.unread .userName {
+        color: #198BEA;
+        font-weight: 700;
+    }
+
+    .forUserImageScholarMsg {
+        height: 48px;
+        width: 48px;
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .forUserImageScholarMsg img {
+        border-radius: 50%;
+        height: 100%;
+        width: 100%;
+        border: 2px solid #e1e4e8;
+        object-fit: cover;
+        transition: all 0.2s ease;
+    }
+
+    .main-inner-change-container:hover .forUserImageScholarMsg img {
+        border-color: #198BEA;
+        box-shadow: 0 0 0 3px rgba(25, 139, 234, 0.1);
+    }
+
+    .main-inner-change-container.unread .forUserImageScholarMsg img {
+        border-color: #198BEA;
+    }
+
+    .forUserDeatilsScholarMsg {
+        display: flex;
+        /* flex-direction: column; */
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+
+
+    /* Publications Dropdown Styles */
+    .publications-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 0px);
+        /* right: 0; */
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        width: 200px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1001;
+    }
+
+    .publications-dropdown:hover .publications-dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    /* Mentorship Dropdown Styles */
+    .mentorship-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 0px);
+        /* right: 0; */
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        width: 200px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1001;
+    }
+
+    .mentorship-dropdown:hover .mentorship-dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    /* Responsive Styles */
+
+
+
+
+
+
+    /* Hamburger Button & Mobile Controls */
+    .mobile-search-btn,
+    .hamburger-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: none;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        color: var(--text);
+        font-size: 20px;
+        border-radius: var(--radius-md);
+        transition: var(--transition);
+    }
+
+    .mobile-search-btn:hover,
+    .hamburger-btn:hover {
+        background: var(--bg);
+    }
+
+    .hamburger-btn {
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+    }
+
+    .hamburger-btn span {
+        display: block;
+        width: 24px;
+        height: 2px;
+        background: var(--text);
+        border-radius: 2px;
+        transition: var(--transition);
+    }
+
+    /* Mobile Search Overlay */
+    .mobile-search-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        display: none;
+        /* align-items: flex-start; */
+        justify-content: center;
+        padding-top: 60px;
+    }
+
+    .mobile-search-overlay.active {
+        display: flex;
+    }
+
+    .mobile-search-container {
+        background: var(--white);
+        width: 90%;
+        max-width: 500px;
+        padding: 16px;
+        border-radius: var(--radius-lg);
+        display: flex;
+        gap: 12px;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .mobile-search-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+    }
+
+    .mobile-search-input:focus {
+        outline: none;
+        border-color: var(--brand);
+    }
+
+    .mobile-search-close {
+        width: 44px;
+        height: 44px;
+        background: var(--bg);
+        border: none;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        color: var(--text);
+        font-size: 18px;
+    }
+
+    /* Mobile Menu Overlay */
+    .mobile-menu-overlay {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 85%;
+        max-width: 320px;
+        height: 100vh;
+        background: var(--white);
+        z-index: 2000;
+        transition: right 0.3s ease;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+    }
+
+    .mobile-menu-overlay.active {
+        right: 0;
+    }
+
+    .mobile-menu-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .mobile-menu-logo {
+        height: 32px;
+    }
+
+    .mobile-menu-close {
+        width: 36px;
+        height: 36px;
+        background: var(--bg);
+        border: none;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        color: var(--text);
+        font-size: 18px;
+    }
+
+    .mobile-menu-nav {
+        padding: 8px 0;
+    }
+
+    .mobile-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        color: var(--text);
+        text-decoration: none;
+        font-size: 15px;
+        font-weight: 500;
+        transition: var(--transition);
+        cursor: pointer;
+        position: relative;
+    }
+
+    .mobile-menu-item i {
+        width: 24px;
+        font-size: 18px;
+        color: var(--muted);
+    }
+
+    .mobile-menu-item:hover {
+        background: var(--bg);
+        color: var(--brand);
+    }
+
+    .mobile-menu-item:hover i {
+        color: var(--brand);
+    }
+
+    .mobile-menu-item.has-submenu {
+        justify-content: space-between;
+    }
+
+    .mobile-menu-item-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .submenu-arrow {
+        font-size: 12px;
+        transition: transform 0.3s ease;
+        width: auto;
+    }
+
+    .mobile-menu-item.has-submenu.active .submenu-arrow {
+        transform: rotate(180deg);
+    }
+
+    .mobile-submenu {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background: var(--bg);
+    }
+
+    .mobile-submenu.active {
+        max-height: 200px;
+    }
+
+    .mobile-submenu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px 12px 56px;
+        color: var(--text);
+        text-decoration: none;
+        font-size: 14px;
+        transition: var(--transition);
+    }
+
+    .mobile-submenu-item i {
+        width: 20px;
+        font-size: 14px;
+        color: var(--muted);
+    }
+
+    .mobile-submenu-item:hover {
+        background: var(--white);
+        color: var(--brand);
+    }
+
+    .mobile-submenu-item:hover i {
+        color: var(--brand);
+    }
+
+    .mobile-badge {
+        margin-left: auto;
+        background: #006EC9;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 600;
+        min-width: 18px;
+        text-align: center;
+    }
+
+
+    .dropdown-item.active {
+        background: var(--brand-050);
+        color: var(--brand);
+    }
+
+    .dropdown-item.active i {
+        color: var(--brand);
+    }
+
+    /* Header Right Section */
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Mobile Me Dropdown - hidden on desktop, shown on mobile */
+    .mobile-me-dropdown {
+        display: none;
+    }
+
+    /* Sign Up Button for Guest Users */
+    .sign_up {
+        list-style: none;
+    }
+
+    .header-container .sign-up-button {
+        padding: 0.806em 3.157em 0.806em 1.4em;
+        position: relative;
+        padding-left: 30px;
+        padding-right: 52px;
+        text-decoration: none;
+        line-height: 22px;
+        letter-spacing: 0;
+        display: inline-block;
+        background: linear-gradient(135deg, #198BEA 0%, #1565c0 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.4s ease;
+        box-shadow: 0 4px 15px rgba(25, 139, 234, 0.3);
+    }
+
+    .header-container .sign-up-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(25, 139, 234, 0.5);
+    }
+
+    .for_mobile{
+        display: none;
+    }
+
+    .text-label-of-LoginSign{
+        display: block;
+        }
+
+
+    /* Tablet and below (768px) */
+    @media (max-width: 1180px) {
+        .header-container {
+            padding: 0 16px;
+            height: 56px;
+        }
+
+        .search-bar.header-search-container {
+            max-width: 250px;
+        }
+
+        .search-bar.header-search-container input {
+            font-size: 13px;
+            padding: 8px 12px 8px 36px;
+        }
+
+        .nav-item {
+            padding: 6px 12px;
+            padding: 6px;
+            font-size: 11px;
+        }
+
+        .nav-item i {
+            font-size: 18px;
+        }
+
+        .nav-item span {
+            /* display: none; */
+        }
+
+        .user-avatar-header {
+            width: 38px;
+            height: 38px;
+        }
+
+
+        /* Hide desktop navigation */
+        .header-nav {
+            display: none
+        }
+
+        /* Show hamburger and search on tablet */
+        .hamburger-btn {
+            display: flex
+        }
+
+        .sign-up-button {
+            padding: 6px 16px;
+            font-size: 13px;
+        }
+
+        .mobile-me-dropdown {
+            display: flex
+        }
+    }
+
+    /* Mobile (576px and below) */
+    @media (max-width: 576px) {
+        .header-container {
+            padding: 0 12px;
+            height: 50px;
+            gap: 8px;
+        }
+
+        .header-left {
+            gap: 8px;
+            min-width: 0;
+        }
+
+
+
+        .search-bar {
+            display: none;
+        }
+
+        .header-nav {
+            gap: 4px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .header-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-item {
+            padding: 4px 8px;
+            min-width: 40px;
+        }
+
+        .nav-item i {
+            font-size: 16px;
+        }
+
+        /* .user-avatar-header {
+            width: 24px;
+            height: 24px;
+        } */
+
+        .user-dropdown-menu,
+        .publications-dropdown-menu,
+        .mentorship-dropdown-menu {
+            width: 180px;
+            font-size: 13px;
+        }
+
+        .user-dropdown-menu {
+            width: 214px;
+        }
+
+        .dropdown-item {
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+
+        /* Hide desktop nav on mobile */
+        .header-nav {
+            display: none;
+        }
+
+        .mobile-search-btn {
+            display: block;
+        }
+
+        /* Show mobile controls */
+        .hamburger-btn {
+            display: flex;
+        }
+
+        .header-container .sign-up-button{
+            padding-right: 20px;
+            padding-left: 20px;
+        }
+
+        .for_mobile{
+            display: inline-block;
+            margin: 0 5px;
+        }
+
+        .text-label-of-LoginSign{
+            display: none;
+        }
+
+         a.sign-up-button:after{
+            display: none;
+         }
+
+        .sign-up-button {
+            padding: 6px 14px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 420px) {
+            .header-container .sign-up-button {
+                padding-right: 10px;
+                padding-left: 10px;
+            }
+        }
+    }
+</style><style>
+/* ========== CUSTOM MODAL (Verification) ========== */
+.apply-for-verify-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.apply-for-verify-modal-overlay.active {
+    display: flex;
+    animation: overlayFadeIn 0.25s ease forwards;
+}
+@keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.apply-for-verify-modal {
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+    animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    overflow: hidden;
+}
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+.apply-for-verify-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 24px 0;
+}
+.apply-for-verify-modal-title-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.apply-for-verify-modal-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(var(--brand-rgb), 0.3);
+}
+.apply-for-verify-modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 2px;
+    line-height: 1.2;
+}
+.apply-for-verify-modal-subtitle {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 0;
+    font-weight: 400;
+}
+.apply-for-verify-modal-close {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 15px;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+.apply-for-verify-modal-close:hover {
+    background: var(--danger-light);
+    border-color: #fca5a5;
+    color: var(--danger);
+}
+.apply-for-verify-modal-body {
+    padding: 20px 24px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.apply-for-verify-modal-footer {
+    padding: 16px 24px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+.apply-for-verify-modal-btn-cancel {
+    height: 42px;
+    padding: 0 20px;
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
+}
+.apply-for-verify-modal-btn-cancel:hover {
+    background: var(--danger-light);
+    border-color: #fca5a5;
+    color: var(--danger);
+}
+.apply-for-verify-modal-btn-confirm {
+    height: 42px;
+    padding: 0 24px;
+    border-radius: var(--radius-md);
+    background: var(--brand);
+    border: none;
+    color: var(--white);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 16px rgba(var(--brand-rgb), 0.35);
+    transition: var(--transition);
+}
+.apply-for-verify-modal-btn-confirm:hover {
+    background: var(--brand-dark);
+    box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.45);
+    transform: translateY(-1px);
+}
+@media (max-width: 500px) {
+    .apply-for-verify-modal { border-radius: 14px; }
+    .apply-for-verify-modal-header,
+    .apply-for-verify-modal-body,
+    .apply-for-verify-modal-footer { padding-left: 16px; padding-right: 16px; }
+}
+</style>
+
+<!-- Header Navigation -->
+<div class="headermainBox">
+    <header class="main-headerNew">
+        <div class="header-container">
+            <div class="header-left">
+                <a href="{{ url('/') }}" class="logo">
+                    <img src="{{ asset('assets/images/logo.webp') }}" alt="Scholar9 logo"
+                        class="logo-image logo-desktop">
+                    <span class="logo-tagline">True scholar network</span>
+                </a>
+                <div class="search-bar header-search-container header-search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="desktop-search-input" placeholder="Search for researchers, publications, questions..." autocomplete="off">
+                    <div id="desktop-search-results" class="search-results-dropdown"></div>
+                </div>
+            </div>
+
+            <!-- Header Right - Mobile Controls -->
+            <div class="header-right">
+                <!-- Mobile Search Icon -->
+                <button class="mobile-search-btn" onclick="toggleMobileSearch()">
+                    <i class="fas fa-search"></i>
+                </button>
+
+                <!-- Mobile Me Dropdown (Tablet/Mobile only) -->
+                @auth
+                            <div class="nav-item nav-item-dropdown mobile-me-dropdown">
+                                <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->first_name ?? 'User' }}" class="user-avatar-header">
+
+                                <!-- Dropdown Menu -->
+                                <div class="user-dropdown-menu">
+                                    <div class="dropdown-header">
+                                        <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->first_name ?? 'User' }}" class="dropdown-avatar">
+                                        <div class="dropdown-user-info">
+                                            <div class="dropdown-user-name">
+                                                {{ auth()->check() ? auth()->user()->first_name . ' ' . auth()->user()->last_name : 'User' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="dropdown-divider"></div>
+                                    <a href="{{ $urlProfile }}" class="dropdown-item">
+                                        <i class="fas fa-user"></i>
+                                        <span>My Profile</span>
+                                    </a>
+                                    @if ($user && $user->status === 'Active')
+                                        <a href="{{ route('publisher') }}" class="dropdown-item">
+                                            <i class="fas fa-building"></i>
+                                            <span>Publisher Profile</span>
+                                        </a>
+                                    @endif
+                                    <div class="dropdown-divider"></div>
+                                    <a href="{{ route('logout') }}" class="dropdown-item dropdown-item-logout"
+                                        onclick="event.preventDefault(); document.getElementById('logout-form-mobile').submit();">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                    <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="d-none">
+                                        @csrf
+                                    </form>
+                                </div>
+                            </div>
+                @endauth
+
+                @guest
+                    <!-- Login/Sign Up Button for Guests (Mobile/Tablet) -->
+                    <div class="mobile-me-dropdown">
+                        <li class="sign_up"><a href="{{ route('signup') }}" class="sign-up-button"><i class="fa-solid fa-arrow-right-to-bracket for_mobile"></i> <span class="text-label-of-LoginSign">Login / Sign Up</span><i class="fas fa-user-plus for_mobile"></i></a></li>
+                    </div>
+                @endguest
+
+                <!-- Hamburger Menu Button -->
+                <button class="hamburger-btn" onclick="toggleMobileMenu()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+
+            <!-- Mobile Search Overlay -->
+            <div class="mobile-search-overlay" id="mobileSearchOverlay">
+                <div class="mobile-search-container">
+                    <input type="text" 
+                           id="mobile-search-input"
+                           placeholder="Search for researchers, publications, questions..."
+                           class="mobile-search-input"
+                           autocomplete="off">
+                    <button class="mobile-search-close" onclick="toggleMobileSearch()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <!-- Mobile Search Results Dropdown -->
+                <div id="mobile-search-results" class="search-results-dropdown"></div>
+            </div>
+
+            <!-- Mobile Menu Overlay -->
+            <div class="mobile-menu-overlay" id="mobileMenuOverlay">
+                <div class="mobile-menu-header">
+                    <img src="{{ asset('assets/images/logo.webp') }}" alt="Scholar9" class="mobile-menu-logo">
+                    <button class="mobile-menu-close" onclick="toggleMobileMenu()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <nav class="mobile-menu-nav">
+                    <!-- <a href="{{ route('feed') }}" class="mobile-menu-item">
+                        <i class="fas fa-home"></i>
+                        <span>Feed</span>
+                    </a>
+                    <a href="#" class="mobile-menu-item">
+                        <i class="fas fa-users"></i>
+                        <span>Network</span>
+                    </a> -->
+
+                    <!-- Publications Submenu -->
+                    <div class="mobile-menu-item has-submenu" onclick="toggleSubmenu(this)">
+                        <div class="mobile-menu-item-content">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Publications ▼</span>
+                        </div>
+                        <i class="fas fa-chevron-down submenu-arrow"></i>
+                    </div>
+                    <div class="mobile-submenu">
+                        <a href="{{ url('articles') }}" class="mobile-submenu-item">
+                            <i class="fas fa-list"></i>
+                            <span>Article List</span>
+                        </a>
+                        <a href="{{ url('deposit-article') }}" class="mobile-submenu-item">
+                            <i class="fas fa-upload"></i>
+                            <span>Deposit Article</span>
+                        </a>
+                    </div>
+
+                    <!-- Mentorship Submenu -->
+                    <div class="mobile-menu-item has-submenu" onclick="toggleSubmenu(this)">
+                        <div class="mobile-menu-item-content">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Mentorship ▼</span>
+                        </div>
+                        <i class="fas fa-chevron-down submenu-arrow"></i>
+                    </div>
+                    <div class="mobile-submenu">
+                        <a href="{{ route('mentorshipindexHomePage') }}" class="mobile-submenu-item">
+                            <i class="fas fa-eye"></i>
+                            <span>Overview</span>
+                        </a>
+                        <a href="{{ route('UserMentorSessions') }}" class="mobile-submenu-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Sessions</span>
+                        </a>
+                    </div>
+
+                    <a href="{{ url('questions') }}" class="mobile-menu-item">
+                        <i class="fas fa-question-circle"></i>
+                        <span>Q&A</span>
+                    </a>
+
+                    <a href="{{ url('institutions') }}" class="mobile-menu-item">
+                        <i class="fas fa-university"></i>
+                        <span>Institutions</span>
+                    </a>
+                    <!-- <a href="{{ url('scholars') }}" class="mobile-menu-item">
+                        <i class="fas fa-user-graduate"></i>
+                        <span>Scholars</span>
+                    </a> -->
+                    
+                    <a href="{{ url('network') }}" class="mobile-menu-item">
+                        <i class="fas fa-users"></i>
+                        <span>Network</span>
+                    </a> 
+
+                    <a href="{{ route('allJournals') }}" class="mobile-menu-item">
+                        <i class="fas fa-book"></i>
+                        <span>Journals</span>
+                    </a>
+
+                    @guest
+                        {{-- <a href="{{ route('solution') }}" class="mobile-menu-item {{ request()->is('solution') ? 'active' : '' }}">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Solution</span>
+                        </a> --}}
+                    @endguest
+                    @if ($user && $user["verified"] == "Active" && isset($user['email_verified_at']))
+                        @if ($user && $user['reviewer_status'] == null)
+                            <a href="{{ url('reviewer') }}" class="mobile-menu-item" style="background: #F3C500;">
+                                <i class="fas fa-user-check"></i>
+                                <span>Enroll as Reviewer</span>
+                            </a>
+                        @elseif ($user && $user['reviewer_status'] == '0')
+                            <a href="{{ url('/reviewer/profile') }}" class="mobile-menu-item">
+                                <i class="fas fa-clipboard-check"></i>
+                                <span>Reviewer Panel</span>
+                            </a>
+                        @elseif ($user && $user['reviewer_status'] == '1')
+                            <a href="{{ url('reviewer/profile') }}" class="mobile-menu-item">
+                                <i class="fas fa-clipboard-check"></i>
+                                <span>Reviewer Panel</span>
+                                @if ($pendingReviewsCount > 0)
+                                    <span class="mobile-badge">{{ $pendingReviewsCount }}</span>
+                                @endif
+                            </a>
+                        @endif
+                    @endif
+
+                    @if ($user)
+                        @livewire('scholar-messages.scholar-message-notifcaition', ['displayMode' => 'mobile', 'shouldPoll' => false])
+
+                        <!-- <a href="#" class="mobile-menu-item" id="MailnotificationToggleMobile" style="display: none;">
+                            <i class="fas fa-envelope"></i>
+                            <span>Messages</span>
+                            @if($UnreadInboxCount > 0)
+                                <span class="mobile-badge animated-badge"></span>
+                            @endif
+                        </a> -->
+
+                        <a href="{{ route('notifications.page') }}" class="mobile-menu-item">
+                            <i class="fas fa-bell"></i>
+                            <span>Notifications</span>
+                            <span class="mobile-badge">0</span>
+                        </a>
+                    @endif
+                </nav>
+            </div>
+            <nav class="header-nav">
+                <!-- <a href="{{ route('feed') }}" class="nav-item {{ request()->routeIs('feed') ? 'active' : '' }}">
+                    <i class="fas fa-home"></i>
+                    <span>Feed</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Network</span>
+                </a> -->
+                @php
+                    $isPublicationsActive = request()->is('articles') || request()->routeIs('deposite-artical');
+                @endphp
+                <div
+                    class="nav-item nav-item-dropdown publications-dropdown {{ $isPublicationsActive ? 'active' : '' }}"
+                    onclick="if (!event.target.closest('.publications-dropdown-menu')) window.location.href = '{{ url('articles') }}';">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Publications ▼</span>
+
+                    <!-- Publications Dropdown Menu -->
+                    <div class="publications-dropdown-menu">
+                        <a href="{{ url('articles') }}"
+                            class="dropdown-item {{ request()->is('articles') ? 'active' : '' }}">
+                            <i class="fas fa-list"></i>
+                            <span>Article List</span>
+                        </a>
+                        <a href="{{ url('deposit-article') }}"
+                            class="dropdown-item {{ request()->is('deposit-article') ? 'active' : '' }}">
+                            <i class="fas fa-upload"></i>
+                            <span>Deposit Article</span>
+                        </a>
+                    </div>
+                </div>
+
+                @php
+                    $isMentorshipActive = request()->is('mentorship') || request()->is('mentorship/*') || request()->routeIs('mentorshipindexHomePage') || request()->routeIs('UserMentorSessions') || request()->is('user/mentor-sessions') || request()->is('user/mentor-sessions/*');
+                @endphp
+                <div class="nav-item nav-item-dropdown mentorship-dropdown {{ $isMentorshipActive ? 'active' : '' }}"
+                onclick="if (!event.target.closest('.mentorship-dropdown-menu')) window.location.href = '{{ route('mentorshipindexHomePage') }}';">
+                    <i class="fas fa-user-tie"></i>
+                    <span>Mentorship ▼</span>
+
+                    <!-- Mentorship Dropdown Menu -->
+                    <div class="mentorship-dropdown-menu">
+                        <a href="{{ route('mentorshipindexHomePage') }}"
+                            class="dropdown-item {{ request()->routeIs('mentorshipindexHomePage') ? 'active' : '' }}">
+                            <i class="fas fa-eye"></i>
+                            <span>Overview</span>
+                        </a>
+                        <a href="{{ route('UserMentorSessions') }}"
+                            class="dropdown-item {{ request()->routeIs('UserMentorSessions') ? 'active' : '' }}">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Sessions</span>
+                        </a>
+                    </div>
+                </div>
+                @php
+                    $isQuestionsActive = request()->routeIs('questions') || request()->is('questions/*') || request()->is('questions');
+                @endphp
+                <a href="{{ url('questions') }}" class="nav-item {{ $isQuestionsActive ? 'active' : '' }}">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Q&A</span>
+                </a>
+                @php
+                    $isInstitutionsActive = request()->is('institutions') || request()->is('institutions/*');
+                @endphp
+                <a href="{{ url('institutions') }}" class="nav-item {{ $isInstitutionsActive ? 'active' : '' }}">
+                    <i class="fas fa-university"></i>
+                    <span>Institutions</span>
+                </a>
+                <!-- @php
+                    $isScholarsActive = request()->is('scholars') || request()->is('scholars/*');
+                @endphp
+                <a href="{{ url('scholars') }}" class="nav-item {{ $isScholarsActive ? 'active' : '' }}">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>Scholars</span>
+                </a> -->
+                @auth
+                  @php
+                    $isNetworkActive = request()->is('network') || request()->is('network/*');
+                @endphp
+                <a href="{{ url('network') }}" class="nav-item {{ $isNetworkActive ? 'active' : '' }}">
+                    <i class="fas fa-users"></i>
+                    <span>Network</span>
+                </a>
+                @endauth
+                @guest
+                   @php
+                    $isNetworkActive = request()->is('network') || request()->is('network/*');
+                @endphp
+                <a href="{{ url('network') }}" class="nav-item {{ $isNetworkActive ? 'active' : '' }}">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>Scholars</span>
+                </a>
+                @endguest
+
+                @php
+                    $isJournalsActive = request()->routeIs('allJournals') || request()->is('journals') || request()->is('journals/*');
+                @endphp
+                <a href="{{ route('allJournals') }}" class="nav-item {{ $isJournalsActive ? 'active' : '' }}">
+                    <i class="fas fa-book"></i>
+                    <span>Journals</span>
+                </a>
+
+                @guest
+                    {{-- <a href="{{ route('solution') }}" class="nav-item {{ request()->is('solution') ? 'active' : '' }}">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Solution</span>
+                    </a> --}}
+                @endguest
+
+                @if ($user && $user["verified"] == "Active" && isset($user['email_verified_at']))
+                            @if ($user && $user['reviewer_status'] == null)
+                                <a href="{{ url('reviewer') }}" class="nav-item"
+                                    style="background: #F3C500; color: black; border-radius: var(--radius-md);">
+                                    <i class="fas fa-user-check"></i>
+                                    <span>Enroll as Reviewer</span>
+                                </a>
+                            @elseif ($user && $user['reviewer_status'] == '0')
+                                        @php
+                                            $isReviewerActive = request()->is('reviewer') || request()->is('reviewer/*');
+                                        @endphp
+                                        <a href="{{ url('/reviewer/profile') }}" class="nav-item {{ $isReviewerActive ? 'active' : '' }}">
+                                            <i class="fas fa-clipboard-check"></i>
+                                            <span>Reviewer Panel</span>
+                                        </a>
+                            @elseif ($user && $user['reviewer_status'] == '1')
+                                        @php
+                                            $isReviewerActive = request()->is('reviewer') || request()->is('reviewer/*');
+                                        @endphp
+                                        <a href="{{ url('reviewer/profile') }}" class="nav-item {{ $isReviewerActive ? 'active' : '' }}"
+                                            style="position: relative;">
+                                            <i class="fas fa-clipboard-check"></i>
+                                            <span>Reviewer Panel</span>
+                                            @if ($pendingReviewsCount > 0)
+                                                <span class="badge"
+                                                    style="position: absolute; top: 4px; right: 22px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600;">{{ $pendingReviewsCount }}</span>
+                                            @endif
+                                        </a>
+                            @endif
+                @endif
+
+                @if ($user)
+                                @livewire('scholar-messages.scholar-message-notifcaition', ['displayMode' => 'desktop', 'shouldPoll' => true])
+
+                                <!-- <div style="position: relative;" style="display: none;">
+                                    <a href="#" class="nav-item" id="MailnotificationToggle" style="display: none;">
+                                        <span style="position: relative;">
+                                            <i class="fas fa-envelope"></i>
+                                            @if($UnreadInboxCount > 0)
+                                                <span class="mail-badge animated-badge"></span>
+                                            @endif
+                                        </span>
+                                        <span>Messages</span>
+                                    </a> -->
+                                   {{-- @include('scholar-messages.section.layouts.NotificationModel') --}}
+                                <!-- </div> -->
+
+
+                                @php
+                                    $isNotificationsActive = request()->routeIs('notifications.page') || request()->is('notifications') || request()->is('notifications/*');
+                                @endphp
+                                <a href="{{ route('notifications.page') }}"
+                                    class="nav-item {{ $isNotificationsActive ? 'active' : '' }}" style="position: relative;">
+                                    <i class="fas fa-bell"></i>
+                                    <span>Notifications</span>
+                                    <span class="notification-badge-header"
+                                        style="display: none; position: absolute; top: 4px; right: 22px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600; min-width: 18px; text-align: center;">0</span>
+                                </a>
+                @endif
+                @auth
+                            <div class="nav-item nav-item-dropdown">
+                                <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->first_name ?? 'User' }}" class="user-avatar-header">
+                                <span>Me ▼</span>
+
+                                <!-- Dropdown Menu -->
+                                <div class="user-dropdown-menu">
+                                    <div class="dropdown-header">
+                                        <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->first_name ?? 'User' }}" class="dropdown-avatar">
+                                        <div class="dropdown-user-info">
+                                            <div class="dropdown-user-name">
+                                                {{ auth()->check() ? auth()->user()->first_name . ' ' . auth()->user()->last_name : 'User' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="dropdown-divider"></div>
+                                    <a href="{{ $urlProfile }}" class="dropdown-item">
+                                        <i class="fas fa-user"></i>
+                                        <span>My Profile</span>
+                                    </a>
+                                    @if ($user && $user->status === 'Active')
+                                        <a href="{{ route('publisher') }}" class="dropdown-item">
+                                            <i class="fas fa-building"></i>
+                                            <span>Publisher Profile</span>
+                                        </a>
+                                    @endif
+                                    <div class="dropdown-divider"></div>
+                                    <a href="{{ route('logout') }}" class="dropdown-item dropdown-item-logout logout-button"
+                                        onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                                        @csrf
+                                    </form>
+                                </div>
+                            </div>
+                @endauth
+
+                @guest
+                    <li class="sign_up"><a href="{{ route('signup') }}" class="sign-up-button">Login/Sign up</a></li>
+                @endguest
+            </nav>
+        </div>
+    </header>
+
+    {{-- Mobile Search Overlay --}}
+    <div class="mobile-search-overlay header-search-wrapper" id="mobileSearchOverlay">
+        <div class="mobile-search-container">
+            <input type="text" id="mobile-search-input" class="mobile-search-input" placeholder="Search for researchers, publications, questions..." autocomplete="off">
+            <button class="mobile-search-close" onclick="toggleMobileSearch()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="mobile-search-results" class="search-results-dropdown" style="margin: 0 5%; max-width: 90%; background: white;"></div>
+    </div>
+
+    <div class="AdminSessionCodeDivMain">
+        @include('layouts.partials.AdminSessionCheck')
+    </div>
+    @if(auth()->check() && (strtolower(auth()->user()->status ?? '') == 'pending' || strtolower(auth()->user()->getRawOriginal('status') ?? '') == 'pending'))
+        <div style="background-color: #fff3cd; color: #856404; padding: 12px 20px; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 14px; font-weight: 500;">
+            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+            Your account is not Active yet. Review the verification <a href="/docs#scholar-profile" style="color: #533f03; font-weight: bold; text-decoration: underline;">docs</a> to see what's required, then <a href="javascript:void(0)" onclick="handleApplyVerification('{{ auth()->user()->email_verified_at ?? '' }}')" style="color: #533f03; font-weight: bold; text-decoration: underline;">Apply for Active</a>.
+        </div>
+    @endif
+</div>
+
+{{-- Verification Modals --}}
+<div class="apply-for-verify-modal-overlay" id="emailVerificationModal">
+    <div class="apply-for-verify-modal">
+        <div class="apply-for-verify-modal-header">
+            <div class="apply-for-verify-modal-title-group">
+                <div class="apply-for-verify-modal-icon"><i class="fa-solid fa-envelope-circle-check"></i></div>
+                <div>
+                    <h3 class="apply-for-verify-modal-title">Email Not Verified</h3>
+                    <p class="apply-for-verify-modal-subtitle">Action Required</p>
+                </div>
+            </div>
+            <button class="apply-for-verify-modal-close" onclick="closeVerificationModals()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="apply-for-verify-modal-body">
+            <p style="font-size: 14px; color: #4b5563; margin-bottom: 10px;">Please go to your profile settings and make sure your email is verified before applying for account verification.</p>
+            <a href="/docs#scholar-profile" target="_blank" style="color: #198bea; text-decoration: underline; font-weight: 500; font-size: 13.5px;">Please refer to the documentation here.</a>
+        </div>
+        <div class="apply-for-verify-modal-footer">
+            <button class="apply-for-verify-modal-btn-confirm" onclick="window.location.href='{{ $urlProfile ?? '/profile' }}'">Go to Profile</button>
+            <button class="apply-for-verify-modal-btn-cancel" onclick="closeVerificationModals()">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="apply-for-verify-modal-overlay" id="accountVerificationConfirmModal">
+    <div class="apply-for-verify-modal">
+        <div class="apply-for-verify-modal-header">
+            <div class="apply-for-verify-modal-title-group">
+                <div class="apply-for-verify-modal-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+                <div>
+                    <h3 class="apply-for-verify-modal-title">Confirm Account Verification</h3>
+                    <p class="apply-for-verify-modal-subtitle">Final Step</p>
+                </div>
+            </div>
+            <button class="apply-for-verify-modal-close" onclick="closeVerificationModals()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="apply-for-verify-modal-body">
+            <p style="font-size: 14.5px; color: #4b5563; margin-bottom: 5px;">Please make sure you have filled in all the required details.</p>
+            <p style="font-size: 13px; color: #6b7280; margin-bottom: 15px;">We need these details to verify your account. Once you click Yes, we will send an account activation request to our team.</p>
+            <a href="/docs#scholar-profile" target="_blank" style="color: var(--brand); text-decoration: underline; font-weight: 500; font-size: 13.5px;">Please refer to the documentation here.</a>
+        </div>
+        <div class="apply-for-verify-modal-footer">
+            <button class="apply-for-verify-modal-btn-confirm" id="btnSubmitVerification" onclick="submitAccountVerification()">Yes, Send Request</button>
+            <button class="apply-for-verify-modal-btn-cancel" onclick="closeVerificationModals()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="apply-for-verify-modal-overlay" id="incompleteProfileModal">
+    <div class="apply-for-verify-modal">
+        <div class="apply-for-verify-modal-header">
+            <div class="apply-for-verify-modal-title-group">
+                <div class="apply-for-verify-modal-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div>
+                    <h3 class="apply-for-verify-modal-title">Incomplete Profile</h3>
+                    <p class="apply-for-verify-modal-subtitle">Missing Information Required</p>
+                </div>
+            </div>
+            <button class="apply-for-verify-modal-close" onclick="closeVerificationModals()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="apply-for-verify-modal-body">
+            <p style="font-size: 14.5px; color: #4b5563; margin-bottom: 5px;">Here are all required fields. Complete the remaining ones before applying:</p>
+            <ul id="incompleteProfileList" style="font-size: 13.5px; margin: 10px 0 10px 0; list-style: none; padding: 0; display: flex; flex-direction: column; gap: 2px;">
+                <!-- Checklist injected here -->
+            </ul>
+        </div>
+        <div class="apply-for-verify-modal-footer">
+            <button class="apply-for-verify-modal-btn-confirm" onclick="window.location.href='{{ $urlProfile ?? '/profile' }}'">Go to Profile</button>
+            <button class="apply-for-verify-modal-btn-cancel" onclick="closeVerificationModals()">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="back-to-top">Back to Top</div>
+<script>
+    function toggleMobileMenu() {
+        const overlay = document.getElementById('mobileMenuOverlay');
+        overlay.classList.toggle('active');
+        document.body.style.overflow = overlay.classList.contains('active') ? 'hidden' : '';
+    }
+
+    function toggleMobileSearch() {
+        const overlay = document.getElementById('mobileSearchOverlay');
+        overlay.classList.toggle('active');
+        document.body.style.overflow = overlay.classList.contains('active') ? 'hidden' : '';
+        
+        if (overlay.classList.contains('active')) {
+            // Opening - focus on input
+            setTimeout(() => overlay.querySelector('.mobile-search-input').focus(), 100);
+        } else {
+            // Closing - clear input and results
+            const input = overlay.querySelector('.mobile-search-input');
+            const results = document.getElementById('mobile-search-results');
+            if (input) input.value = '';
+            if (results) {
+                results.innerHTML = '';
+                results.style.display = 'none';
+            }
+        }
+    }
+
+    function toggleSubmenu(element) {
+        element.classList.toggle('active');
+        const submenu = element.nextElementSibling;
+        submenu.classList.toggle('active');
+    }
+
+    document.addEventListener('click', function (e) {
+        const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+        const hamburgerBtn = document.querySelector('.hamburger-btn');
+        if (mobileMenuOverlay?.classList.contains('active') && !mobileMenuOverlay.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+            toggleMobileMenu();
+        }
+    });
+
+    document.getElementById('mobileSearchOverlay')?.addEventListener('click', function (e) {
+        if (e.target === this) toggleMobileSearch();
+    });
+
+    function handleApplyVerification(emailVerifiedAt) {
+        if (!emailVerifiedAt || emailVerifiedAt === '') {
+            document.getElementById('emailVerificationModal').classList.add('active');
+        } else {
+            document.getElementById('accountVerificationConfirmModal').classList.add('active');
+        }
+    }
+
+    function closeVerificationModals() {
+        document.getElementById('emailVerificationModal').classList.remove('active');
+        document.getElementById('accountVerificationConfirmModal').classList.remove('active');
+        document.getElementById('incompleteProfileModal').classList.remove('active');
+    }
+
+    function submitAccountVerification() {
+        const btn = document.getElementById('btnSubmitVerification');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+        btn.disabled = true;
+
+        fetch('{{ route('apply.verification.request') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            closeVerificationModals();
+            if(data.success) {
+                alert('Verification request sent successfully!');
+            } else {
+                if (data.missing_fields && data.missing_fields.length > 0) {
+                    // Use full checklist if available, otherwise fall back to missing-only
+                    const fields = data.all_fields || data.missing_fields.map(f => ({ label: f, done: false, optional: false }));
+                    const listHtml = fields.map(f => {
+                        if (f.done) {
+                            // Completed — green strikethrough
+                            return `<li style="display:flex;align-items:center;gap:8px;padding:5px 0;color:#16a34a;text-decoration:line-through;opacity:0.7;">
+                                        <span style="flex-shrink:0;width:18px;height:18px;border-radius:50%;background:#dcfce7;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#16a34a;">✓</span>
+                                        ${f.label}
+                                    </li>`;
+                        } else if (f.optional) {
+                            // Optional & unfilled — amber badge, italic, not blocking
+                            return `<li style="display:flex;align-items:center;gap:8px;padding:5px 0;color:#92400e;font-style:italic;">
+                                        <span style="flex-shrink:0;width:18px;height:18px;border-radius:50%;background:#fef3c7;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#d97706;">○</span>
+                                        ${f.label}
+                                    </li>`;
+                        } else {
+                            // Required & missing — red bold
+                            return `<li style="display:flex;align-items:center;gap:8px;padding:5px 0;color:#dc2626;font-weight:600;">
+                                        <span style="flex-shrink:0;width:18px;height:18px;border-radius:50%;background:#fee2e2;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#dc2626;">✕</span>
+                                        ${f.label}
+                                    </li>`;
+                        }
+                    }).join('');
+                    document.getElementById('incompleteProfileList').innerHTML = listHtml;
+                    document.getElementById('incompleteProfileModal').classList.add('active');
+                } else {
+                    alert('Failed to send request: ' + (data.message || 'Unknown error'));
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            closeVerificationModals();
+            alert('An error occurred while sending the request.');
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+
+</script>

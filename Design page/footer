@@ -1,0 +1,300 @@
+
+<footer class="proto-footer-wrap">
+    <div class="newsletter-section proto-newsletter">
+        <div class="container">
+            <div class="head-main-div">
+                <div class="newsletter-section-inner">
+                    <div class="newsletter-section-title">
+                        <h2>Subscribe us to get updated</h2>
+                    </div>
+                    <div class="newsletter-form proto-footer-newsletter-form">
+                        <input type="text" name="email" value="" placeholder="Enter Your Email Address">
+                        <input type="submit" name="" value="submit">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="head-main-div">
+            <div class="footer-inner-section">
+                <div class="footer-inner">
+                    <div class="footer-inner-sub">
+                        <div class="footer-s9-logo" style="display: flex;justify-content: space-between;">
+                            <a href="#" title="logo"><img src="{{asset('assets/images/footer-logo.webp')}}" alt="logo" title="Logo"></a>
+                            <a href="{{ route('pdf.viewer') }}" target="_blank">
+                                <img src="{{ asset('assets/images/Startup India Logo.webp') }}" alt="logo" title="Logo" width="150px">
+                            </a>
+                            <!-- <span class="tagline_footer">True scholar network</span> -->
+                        </div>
+                        <div>
+                            @if (!empty($footersetting))
+                                <p>{{$footersetting['footer_text']}}</p>
+                            @else
+                                <p>Scholar9 is aiming to empower the research community around the world with the help of technology & innovation. Scholar9 provides the required platform to Scholar for visibility & credibility.</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-inner">
+                    <div class="footer-inner-sub">
+                        <div class="footer-inner-title">
+                            <h2>QUICKLINKS</h2>
+                        </div>
+                        <div class="footer-inner-content">
+                            <ul class="quicklinks-left">
+                                <li><a href="{{ route('whatisScholar9')}}">What is Scholar9?</a></li>
+                                <li><a href="{{ route('aboutus') }}">About Us</a></li>
+                                <li><a href="{{ route('missionVision') }}">Mission Vision</a></li>
+                                <li><a href="{{ route('contactus') }}">Contact Us</a></li>
+                                <li><a href="{{ route('docs') }}">Documentation</a></li>
+                            </ul>
+                            <ul class="quicklinks-right">
+                                <li><a href="{{ route('privacy')}}">Privacy Policy</a></li>
+                                <li><a href="{{ route('terms')}}">Terms of Use</a></li>
+                                <li><a href="{{ route('blogs') }}">Blogs</a></li>
+                                <li><a href="{{ route('faq') }}">FAQ</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-inner">
+                    <div class="footer-inner-sub">
+                        <div class="footer-inner-title">
+                            <h2>CONTACT US</h2>
+                        </div>
+                        <div class="footer-inner-content quicklinks-contact proto-contact-list">
+                            <ul>
+                                <li>
+                                    @if (!empty($footersetting))
+                                    <a href="tel:{{$footersetting['phone_number']}}">
+                                        <span class="proto-contact-icon-circle">
+                                            <i class="fas fa-phone"></i>
+                                        </span>
+                                        <span class="proto-contact-text">{{$footersetting['phone_number']}}</span>
+                                    </a>
+                                    @else
+                                    <a href="tel:+91 82003 85143">
+                                        <span class="proto-contact-icon-circle">
+                                            <i class="fas fa-phone"></i>
+                                        </span>
+                                        <span class="proto-contact-text">+91 82003 85143</span>
+                                    </a>
+                                    @endif
+                                </li>
+                                <li>
+                                    @if (!empty($footersetting))
+                                    <a href="mailto:{{$footersetting['email']}}">
+                                        <span class="proto-contact-icon-circle">
+                                            <i class="fas fa-envelope"></i>
+                                        </span>
+                                        <span class="proto-contact-text">{{$footersetting['email']}}</span>
+                                    </a>
+                                    @else
+                                    <a href="mailto:hello@scholar9.com">
+                                        <span class="proto-contact-icon-circle">
+                                            <i class="fas fa-envelope"></i>
+                                        </span>
+                                        <span class="proto-contact-text">hello@scholar9.com</span>
+                                    </a>
+                                    @endif
+                                </li>
+                                <li>
+                                    @if (!empty($footersetting))
+                                    <a href="mailto:{{$footersetting['website']}}">
+                                        <span class="proto-contact-icon-circle">
+                                            <i class="fas fa-globe"></i>
+                                        </span>
+                                        <span class="proto-contact-text">{{$footersetting['website']}}</span>
+                                    </a>
+                                    @else
+                                    <a href="/">
+                                        <span class="proto-contact-icon-circle">
+                                            <i class="fas fa-globe"></i>
+                                        </span>
+                                        <span class="proto-contact-text">www.scholar9.com</span>
+                                    </a>
+                                    @endif
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="copyright-text proto-copyright">
+            <p>&copy; {{ date('Y') }} 
+                @if (!empty($footersetting))
+                {{$footersetting['copyright']}}
+                @else
+                Sequence Research & Development Pvt Ltd. All Rights Reserved.
+                @endif
+            </p>
+        </div>
+        <div class="whatsapp_fixed">
+            @if (!empty($footersetting))
+            @php
+                $phonenumber = str_replace(['+','-'],'',$footersetting['phone_number']);   
+            @endphp
+            <a href="https://wa.me/{{$phonenumber}}" target="_blank">
+                <img src="{{asset('assets/images/whatsapp.webp')}}" alt="whatsapp">
+              </a>
+            @else
+            <!-- <a href="https://wa.me/918200385143" target="_blank"> -->
+            <a href="https://wa.link/dz9m0p" target="_blank">
+                <img src="{{asset('assets/images/whatsapp.webp')}}" alt="whatsapp">
+            </a>
+            @endif
+        </div>
+    </div>
+</footer>
+
+<style>
+/* Prototype Footer - Only Font Family and Colors Changed from Original */
+
+/* Apply Inter font family to entire footer */
+.proto-footer-wrap{
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.proto-footer-newsletter-form input[type=text]{
+    font-size: 14px;    
+    height: 50px;
+    height: 45px;
+}
+.proto-footer-newsletter-form input[type=text]::placeholder{
+     font-size: 14px;  
+}
+
+.proto-footer-newsletter-form::before{
+        top: 17px;  
+        top: 12px;  
+}
+
+
+
+/* Newsletter Section - Feed Colors */
+.proto-footer-wrap .proto-newsletter {
+    background: #eaf5ff; /* Feed brand-050 color instead of #F3FAFF */
+    margin: 0 0 32px 0;
+    padding: 25px 0;
+    padding: 10px 0;
+}
+
+.proto-footer-wrap .newsletter-section-title h2 {
+    color: #111827; /* Feed text color instead of #172A39 */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 30px;
+    line-height: 35px;
+    font-size: 25px;
+    line-height: 28px;
+}
+
+.proto-footer-wrap .newsletter-form input[type="text"]::placeholder {
+    color: #6b7280; /* Feed muted color instead of #616161 */
+}
+
+.proto-footer-wrap .newsletter-form input[type="submit"] {
+    /* background: #198BEA; Feed brand color instead of #092A45 */
+    background: #092A45; /* Feed brand color instead of #092A45 */
+    width: 40px;
+    height: 39px;
+    color: transparent;
+    top: 3px;
+    background-image: url(/assets/images/right-arrow.png);
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Footer Text Colors - Feed Color System */
+.proto-footer-wrap .footer-inner p,
+.proto-footer-wrap .footer-inner ul li a {
+    color: #6b7280; /* Feed muted color instead of #616161 */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.proto-footer-wrap .footer-inner-title h2 {
+    color: #111827; /* Feed text color instead of #2A2A2A */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 16px;
+    font-weight: 600;
+}  
+
+.proto-footer-wrap .footer-inner-content ul li a {
+    color: #6b7280; /* Feed muted color instead of #616161 */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 14px;
+    line-height: 26px;
+}
+
+.proto-footer-wrap .footer-inner-content ul li a:hover {
+    color: #198BEA; /* Feed brand color on hover */
+}
+
+/* Contact Section - Circular Icon Style as per image 2 */
+.proto-footer-wrap .proto-contact-list ul li a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.proto-footer-wrap .proto-contact-icon-circle {
+    width: 30px;
+    height: 30px;
+    background: #eaf5ff; /* Feed brand-050 */
+    color: #198BEA; /* Feed brand color */
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin: 0;
+}
+
+.proto-footer-wrap .proto-contact-list ul li a:hover .proto-contact-icon-circle {
+    background: #198BEA;
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+.proto-footer-wrap .proto-contact-icon-circle i {
+    font-size: 14px;
+}
+
+.proto-footer-wrap .proto-contact-text {
+    font-size: 14px;
+   color: #6b7280;/* Feed brand color for contact text */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-weight: 500;
+}
+
+.proto-footer-wrap .proto-contact-list ul li a:hover .proto-contact-text {
+    color: #1476c9; /* Slightly darker on hover */
+}
+
+/* Hide the old images in contact section */
+.proto-footer-wrap .proto-contact-list ul li a img {
+    display: none;
+}
+
+/* Copyright */
+.proto-footer-wrap .proto-copyright p {
+    color: #111827; /* Feed text color instead of #001425 */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 14px;
+    line-height: 17px;
+}
+
+.proto-footer-wrap .proto-copyright {
+    border-top: 2px solid #e5e7eb; /* Feed border color instead of #DFDFDF */
+    padding: 12px 0px;
+    margin-top: 28px;
+}
+
+/* Footer Title Underline */
+.proto-footer-wrap .footer-inner-title h2:after {
+    background: #e5e7eb; /* Feed border color instead of #DFDFDF */
+}
+</style>

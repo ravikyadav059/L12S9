@@ -1,0 +1,1955 @@
+@extends('NewReviewer.master')
+@section('title', $journal['journal_title'] . ' | Scholar9')
+@section('content')
+
+
+    <style>
+        /* style.css */
+        :root {
+            /* --brand: #198BEA;
+            --brand-600: #1476c9;
+            --brand-050: #eaf5ff;
+            --text: #111827;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --bg: #f9fafb;
+            --white: #ffffff;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        /* Background Pattern */
+        .nj-body-bg {
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(25, 139, 234, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(25, 139, 234, 0.05) 0%, transparent 50%);
+            min-height: 100vh;
+        }
+
+        /* Container */
+        .nj-container {
+            max-width: 1220px;
+            margin: 90px auto 0;
+            padding: 0 1rem;
+        }
+
+        /* Header */
+        .nj-header {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 40;
+        }
+
+        .nj-header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+        }
+
+        .nj-logo-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nj-logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nj-logo-icon svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .nj-logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .nj-logo-text p {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .nj-nav {
+            display: none;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        /* Add to style.css */
+
+        /* Publisher Section */
+        .nj-detail-pub {
+            margin-bottom: 0.75rem;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+        }
+
+        .nj-pub-label {
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .nj-pub-name {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+
+        @media (min-width: 768px) {
+            .nj-nav {
+                display: flex;
+            }
+        }
+
+        .nj-nav-link {
+            font-weight: 500;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .nj-nav-link:hover {
+            color: var(--brand);
+        }
+
+        .nj-nav-link.active {
+            color: var(--brand);
+        }
+
+        /* Buttons */
+        .nj-btn-primary {
+            background: var(--brand);
+            color: var(--white);
+            padding: 10px 20px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            line-height: unset;
+            font-size: 13px;
+        }
+
+        .nj-btn-primary:hover {
+            background: var(--brand-600);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .nj-btn-outline {
+            background: transparent;
+            color: var(--brand);
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            transition: var(--transition);
+            border: 1px solid var(--brand);
+            cursor: pointer;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        .nj-btn-outline:hover {
+            background: var(--brand);
+            color: var(--white);
+        }
+
+        /* Filter Section */
+        .nj-mobile-toggle {
+            display: flex;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .nj-mobile-toggle {
+                display: none;
+            }
+        }
+
+        .nj-filter-section {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 50;
+            display: none;
+            /* Hidden on mobile by default unless open */
+        }
+
+        .nj-filter-section.open {
+            display: block;
+        }
+
+        @media (min-width: 768px) {
+            .nj-filter-section {
+                display: block;
+            }
+        }
+
+        .nj-filter-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .nj-filter-group {
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .nj-filter-group {
+                width: auto;
+                flex: 1;
+                min-width: 240px;
+            }
+
+            .nj-filter-group.nj-filter-dropdown {
+                flex: 0 0 256px;
+                min-width: 200px;
+            }
+
+            .nj-filter-group.nj-filter-disciplines {
+                flex: 0 0 224px;
+            }
+
+            .nj-filter-group.nj-filter-toggles {
+                width: auto;
+                flex: 0 0 auto;
+            }
+        }
+
+        .nj-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .nj-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .nj-input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1.25rem;
+            height: 1.25rem;
+            color: var(--muted);
+        }
+
+        .nj-input {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px 16px 12px 44px;
+            width: 100%;
+            transition: var(--transition);
+            outline: none;
+            font-size: 0.875rem;
+        }
+
+        .nj-input:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(25, 139, 234, 0.1);
+        }
+
+        /* Toggle Switch */
+        .nj-toggle-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .nj-toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .nj-toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .nj-toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: var(--white);
+            border-radius: 50%;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nj-toggle-switch.active {
+            background: var(--brand);
+        }
+
+        .nj-toggle-switch.active::after {
+            left: 22px;
+        }
+
+        .nj-toggle-label {
+            font-size: 0.875rem;
+            color: var(--text);
+        }
+
+        .nj-toggle-item:hover .nj-toggle-label {
+            color: var(--brand);
+        }
+
+        /* Dropdown */
+        .nj-dropdown {
+            position: relative;
+            z-index: 100;
+        }
+
+        .nj-dropdown-btn {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.875rem;
+        }
+
+        .nj-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px) scale(0.98);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .nj-dropdown.open .nj-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .nj-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            border-radius: var(--radius-md);
+        }
+
+        .nj-dropdown-item:hover {
+            background: var(--brand-050);
+        }
+
+        /* Custom Checkbox */
+        .nj-checkbox {
+            position: relative;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .nj-checkbox input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .nj-checkbox-box {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            background: var(--white);
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nj-checkbox input:checked+.nj-checkbox-box {
+            background: var(--brand);
+            border-color: var(--brand);
+        }
+
+        .nj-checkbox-box svg {
+            opacity: 0;
+            color: white;
+            width: 12px;
+            height: 12px;
+        }
+
+        .nj-checkbox input:checked+.nj-checkbox-box svg {
+            opacity: 1;
+        }
+
+        .nj-indexer-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .nj-badge {
+            background: var(--brand);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        /* Main Layout */
+        .nj-main-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            .nj-main-layout {
+                flex-direction: row;
+            }
+        }
+
+        .nj-content-area {
+            width: 100%;
+        }
+
+        @media (min-width: 1024px) {
+            .nj-content-area {
+                width: 70%;
+            }
+        }
+
+        .nj-sidebar {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 1024px) {
+            .nj-sidebar {
+                width: 30%;
+            }
+        }
+
+        /* Results Header */
+        .nj-results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .nj-results-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .nj-results-title span {
+            color: var(--brand);
+        }
+
+        .nj-results-subtitle {
+            font-size: 0.875rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
+        }
+
+        .nj-sort-group {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .nj-sort-group {
+                display: flex;
+            }
+        }
+
+        .nj-select {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            outline: none;
+        }
+
+        /* Journal Card */
+        .nj-card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .nj-journal-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            transition: var(--transition);
+        }
+
+        .nj-journal-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--brand);
+            transform: translateY(-2px);
+        }
+
+        .nj-card-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            .nj-card-inner {
+                flex-direction: row;
+            }
+        }
+
+        .nj-card-image {
+            flex-shrink: 0;
+        }
+
+        .nj-card-image img {
+            width: 80px;
+            height: 96px;
+            border-radius: var(--radius-md);
+            object-fit: cover;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nj-card-content {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .nj-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .nj-card-title span {
+            color: var(--brand);
+        }
+
+        .nj-card-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        @media (min-width: 768px) {
+            .nj-card-meta {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .nj-meta-item span {
+            display: block;
+        }
+
+        .nj-meta-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .nj-meta-value {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .nj-card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .nj-tag {
+            display: inline-block;
+            padding: 6px 12px;
+            background: var(--brand-050);
+            color: var(--brand);
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .nj-tag.green {
+            background: rgba(209, 250, 229, 1);
+            color: rgb(22, 101, 52);
+        }
+
+        .nj-tag.amber {
+            background: rgba(254, 243, 199, 1);
+            color: rgb(180, 83, 9);
+        }
+
+        .nj-tag:hover {
+            background: var(--brand);
+            color: white;
+        }
+
+        .nj-card-actions {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            align-self: flex-start;
+        }
+
+        @media (min-width: 640px) {
+            .nj-card-actions {
+                flex-direction: column;
+            }
+        }
+
+        /* Sidebar Ads */
+        .nj-sidebar-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .nj-ad-card {
+            background: linear-gradient(135deg, var(--white) 0%, var(--brand-050) 100%);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .nj-ad-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .nj-ad-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .nj-ad-content {
+            aspect-ratio: 4 / 3;
+            background: linear-gradient(to bottom right, var(--brand-050), white);
+            border-radius: var(--radius-md);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nj-ad-body {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .nj-ad-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 0.5rem auto;
+            border-radius: 50%;
+            background: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .nj-ad-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .nj-ad-subtitle {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
+        }
+
+        .nj-ad-link {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--brand);
+            text-decoration: none;
+        }
+
+        .nj-ad-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        .nj-footer {
+            background: var(--white);
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+            padding: 2rem 0;
+        }
+
+        .nj-footer-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .nj-footer-inner {
+                flex-direction: row;
+            }
+        }
+
+        .nj-footer-text {
+            font-size: 0.875rem;
+            color: var(--muted);
+        }
+
+        .nj-footer-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nj-footer-link {
+            font-size: 0.875rem;
+            color: var(--muted);
+            text-decoration: none;
+        }
+
+        .nj-footer-link:hover {
+            color: var(--brand);
+        }
+
+
+        /* ========================================= */
+        /* DETAIL PAGE STYLES                        */
+        /* ========================================= */
+
+        /* Detail Header */
+        .nj-detail-header {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .nj-detail-top {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .nj-detail-top {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+        }
+
+        .nj-detail-img {
+            width: 100%;
+            max-width: 120px;
+            height: auto;
+            aspect-ratio: 3/4;
+            /* object-fit: cover; */
+            object-fit: contain;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+        }
+
+        .nj-detail-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            /* Stack on mobile */
+            gap: 1.5rem;
+        }
+
+        .nj-detail-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .nj-badge-large {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .nj-badge-green {
+            background: rgba(209, 250, 229, 1);
+            color: rgb(22, 101, 52);
+        }
+
+        .nj-badge-blue {
+            background: var(--brand-050);
+            color: var(--brand);
+        }
+
+        .nj-detail-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Meta Grid */
+        .nj-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .nj-meta-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .nj-detail-info {
+                flex-direction: row;
+                /* Image left, text right */
+                align-items: flex-start;
+                /* Align content to the top */
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .nj-meta-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .nj-meta-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nj-meta-key {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .nj-meta-val {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* Generic Section */
+        .nj-section {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            /* margin-bottom: 1.5rem; */
+        }
+
+        .nj-section-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Team Members */
+        .nj-team-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .nj-team-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .nj-team-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .nj-team-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .nj-team-card:hover {
+            border-color: var(--brand);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nj-team-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            object-fit: cover;
+            /* margin-bottom: 0.75rem; */
+            border: 2px solid var(--brand-050);
+        }
+
+        .nj-team-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--brand);
+            margin-bottom: 0.25rem;
+        }
+
+        .nj-team-role {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        /* Description List */
+        .nj-desc-content {
+            line-height: 1.7;
+            color: var(--text);
+        }
+
+        .nj-desc-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 1rem;
+        }
+
+        .nj-desc-list li {
+            position: relative;
+            padding-left: 1.25rem;
+            /* margin-bottom: 0.5rem; */
+        }
+
+        .nj-desc-list li::before {
+            content: "•";
+            color: var(--brand);
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        /* Indexing Grid */
+        .nj-indexing-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .nj-index-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--bg);
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+
+        .nj-index-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nj-index-item.hidden {
+            display: none;
+        }
+
+        .nj-index-name {
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .nj-indexing-grid .more-button {
+            display: flex;
+            width: unset;
+            padding: 0;
+            margin: 0;
+            text-align: unset;
+        }
+
+        /* Publication Items */
+        .nj-pub-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .nj-pub-item {
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            transition: var(--transition);
+        }
+
+        .nj-pub-item:hover {
+            border-color: var(--brand);
+        }
+
+        .nj-pub-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 15px;
+            color: var(--muted);
+            margin: 5px 0;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+
+        .nj-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--brand);
+        }
+
+        .nj-pub-title {
+            font-size: 15px;
+            color: var(--text);
+            line-height: 1.6;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
+            font-weight: 600;
+        }
+
+        .nj-pub-desc {
+            font-size: 15px;
+            color: var(--text);
+            line-height: 1.6;
+            margin-bottom: 12px;
+            word-break: break-word;
+        }
+
+        /* Disclaimer Button */
+        .nj-disclaimer-btn {
+            width: 100%;
+            border: 1px solid var(--border);
+            color: var(--white);
+            padding: 12px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            margin-bottom: 1.5rem;
+        }
+
+        .nj-disclaimer-btn:hover {
+            border-color: var(--brand);
+            background: var(--brand);
+            color: var(--white)
+        }
+
+        /* Hidden utility */
+        .hidden {
+            display: none;
+        }
+    </style>
+
+    <script type="application/ld+json">
+            [
+              {
+                "@context": "https://schema.org",
+                "@type": "Periodical",
+                "name": "{{ $journal['journal_title'] }}",
+                "alternateName": "{{ $journal['journal_short_name'] ?? '' }}",
+                "issn": [
+                  @if(!empty($journal['e_issn'])) "{{ $journal['e_issn'] }}" @endif
+
+                  @if(!empty($journal['e_issn']) && !empty($journal['p_issn'])) , @endif
+
+                  @if(!empty($journal['p_issn'])) "{{ $journal['p_issn'] }}" @endif
+
+                ],
+                @if(!empty($journal['organization_name']))
+                    "publisher": {
+                      "@type": "Organization",
+                      "name": "{{ $journal['organization_name'] }}"
+                    },
+                @endif
+
+
+                "url": "{{ url()->current() }}",
+                "description": "{{ Str::limit(strip_tags($journal['journal_description'] ?? ''), 250) }}"
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                  {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Home",
+                    "item": "{{ url('/') }}"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Journals",
+                    "item": "{{ url('/journals') }}"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": "{{ $journal['journal_title'] }}",
+                    "item": "{{ url()->current() }}"
+                  }
+                ]
+              }
+            ]
+            </script>
+
+    @php use Illuminate\Support\Str; @endphp
+
+
+    <main class="nj-container"  style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <!-- <section class="journal-banner  "> -->
+
+          <a href="{{ url()->previous() }}" style="margin:0 0 15px 0" >
+    <span class="v3-badge v3-badge-outline" style="border: 2px solid var(--border);color: var(--muted);background: white;padding: 6px 14px;border-radius: 8px;font-size: 13px;font-weight: 600;text-transform: uppercase;letter-spacing: 0.5px;">
+        <i class="fa-solid fa-arrow-left"></i> Go Back
+    </span>
+</a>
+
+        <!-- Detail Header -->
+        <section class="nj-detail-header">
+            <div class="nj-detail-info">
+
+
+                <div>
+                    <!-- Image Section (Updated with your logic) -->
+                    @if (!empty($journal['journal_photo']))
+                        <img src="{{ asset($journal['journal_photo']) }}" alt="Journal Photo for {{$journal['journal_title']}}"
+                            class="nj-detail-img" loading="lazy">
+                    @else
+
+
+                        <!-- Placeholder with initials -->
+                        <div class="nj-detail-img"
+                            style="background: #006EC9; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.25rem; width: 90px;">
+                            {{ substr(strtoupper(implode('', array_map(fn($word) => $word[0], array_filter(explode(' ', $journal['journal_title'] ?? ''))))), 0, 5) }}
+                        </div>
+                    @endif
+
+
+                </div>
+
+                <div>
+                    <!-- Badges -->
+                    @if (!empty($journal['followpeer']) && $journal['followpeer'] == '1' || !empty($journal['JournalOpenAccess']) && $journal['JournalOpenAccess'] == '1')
+
+                        <div class="nj-detail-badges">
+                            @if (!empty($journal['followpeer']) && $journal['followpeer'] == '1')
+                                <span class="nj-badge-large nj-badge-green">
+                                    <svg style="width:16px; height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Peer reviewed only
+                                </span>
+                            @endif
+
+
+                            @if (!empty($journal['JournalOpenAccess']) && $journal['JournalOpenAccess'] == '1')
+                                <span class="nj-badge-large nj-badge-blue">
+                                    <svg style="width:16px; height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                    </svg>
+                                    Open Access
+                                </span>
+                            @endif
+
+
+                        </div>
+                    @endif
+
+
+
+
+                    <!-- Title -->
+                    <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.75rem; line-height: 1.3;">
+                        {{$journal['journal_title']}}
+                        ({{!empty($journal['journal_short_name']) ? $journal['journal_short_name'] : ''}})
+                    </h1>
+
+                    <!-- Publisher Section (NEW) -->
+                    @if (!empty($journal['organization_name']))
+                        <div class="nj-detail-pub">
+                            <span class="nj-pub-label">Publisher : </span>
+                            <span
+                                class="nj-pub-name">{{ !empty($journal['organization_name']) ? $journal['organization_name'] : 'N/A'  }}</span>
+                        </div>
+                    @endif
+
+
+                    @if (!empty($journal['journal_subjects']))
+                        <div class="nj-detail-tags">
+                            @foreach ($journal['journal_subjects'] as $index => $journal_subject)
+                                <span class="nj-tag {{ $index >= 3 ? 'hidden' : '' }}">
+                                    {{ $journal_subject }}
+                                </span>
+                            @endforeach
+                            @if (count($journal['journal_subjects']) > 3)
+                                <button class="nj-tag-more" id="moreBtn">
+                                    +{{ count($journal['journal_subjects']) - 3 }}
+                                </button>
+                            @endif
+
+
+                        </div>
+                    @endif
+
+
+
+                    <!-- Buttons -->
+                    <!-- Submit Paper &  Claim Your Journal -->
+                    <div class="nj-detail-actions">
+                        @if (!empty($journal['user_id']))
+                            <a href="{{ route('journals_submit_paper', ['slug' => $journal['slug']]) }}" class="nj-btn-primary">
+                                Submit Paper
+                            </a>
+                        @else
+
+
+                            <a href="javascript:void(0)" class="nj-btn-primary claimJournalBtn"
+                                data-journal-id="{{ $journal->_id }}">
+                                Claim Your Journal
+                            </a>
+                        @endif
+
+
+                        <!--  View PRC &  Get PRC -->
+                        @if (!empty($journal['user_id']))
+                            <a href="{{ route('journal_certificate', ['slug' => $journal['slug']]) }}" class="nj-btn-outline"
+                                title="View Peer Review Certificate">
+                                View PRC
+                            </a>
+                        @else
+
+                            <a href="{{ route('publisher_register') }}" class="nj-btn-outline"
+                                title="Get Peer Review Certificate">
+                                Get PRC
+                            </a>
+                        @endif
+
+
+                        @if (!empty($journal['journal_webiste_url']))
+                            <a href="{{ $journal['journal_webiste_url'] }}" class="nj-btn-outline" target="_blank">
+                                Visit Website <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        @endif
+
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Main Layout -->
+        <div class="nj-main-layout">
+
+            <!-- Content Area -->
+            <div class="nj-content-area">
+                <!-- Metadata Grid -->
+                <div class="nj-meta-grid">
+                    @if (!empty($journal['e_issn']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">e-ISSN</span>
+                            <span class="nj-meta-val">{{!empty($journal['e_issn']) ? $journal['e_issn'] : 'N/A'}}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['p_issn']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">p-ISSN</span>
+                            <span class="nj-meta-val">{{!empty($journal['p_issn']) ? $journal['p_issn'] : 'N/A'}}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['issue_frequency']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">Issue Frequency</span>
+                            <span
+                                class="nj-meta-val">{{!empty($journal['issue_frequency']) ? $journal['issue_frequency'] : 'N/A' }}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['journal_impact_factor']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">Impact Factor</span>
+                            <span
+                                class="nj-meta-val">{{!empty($journal['journal_impact_factor']) ? $journal['journal_impact_factor'] : 'N/A' }}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['first_publication_year']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">Est. Year</span>
+                            <span
+                                class="nj-meta-val">{{!empty($journal['first_publication_year']) ? $journal['first_publication_year'] : 'N/A' }}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['mobile']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">Mobile</span>
+                            <span class="nj-meta-val">{{!empty($journal['country_code']) ? $journal['country_code'] : '' }} {{!empty($journal['mobile']) ? $journal['mobile'] : 'N/A' }}</span>
+                    </div>@endif
+
+                    @if (!empty($journal['DOI']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">DOI</span>
+                            <span
+                                class="nj-meta-val">{{!empty($journal['DOI']) && $journal['DOI'] == '1' ? 'YES' : 'NO' }}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($country['name']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">Country</span>
+                            <span class="nj-meta-val">{{!empty($country['name']) ? $country['name'] : 'N/A' }}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['languages']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">Language</span>
+                            <span
+                                class="nj-meta-val">{{ !empty($journal['languages']) ? implode(', ', $journal['languages']) : 'N/A' }}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['feesAssociatedWithPublishing']))
+
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">APC</span>
+                            <span
+                                class="nj-meta-val">{{!empty($journal['feesAssociatedWithPublishing']) && $journal['feesAssociatedWithPublishing'] == '1' ? 'YES' : 'NO' }}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['impact_factor_assignee_agency']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">Impact Factor Assignee</span>
+                            <span
+                                class="nj-meta-val">{{!empty($journal['impact_factor_assignee_agency']) ? $journal['impact_factor_assignee_agency'] : 'NO' }}</span>
+                        </div>
+                    @endif
+
+                    @if (!empty($journal['contact_email']))
+                        <div class="nj-meta-box">
+                            <span class="nj-meta-key">Email</span>
+                            <span class="nj-meta-val"
+                                style="font-size: 0.8rem;">{{!empty($journal['contact_email']) ? $journal['contact_email'] : 'N/A' }}</span>
+                        </div>
+                    @endif
+
+                    <!-- Disclaimer Button -->
+                    <button class="nj-disclaimer-btn  disclaimer-popup">Disclaimer</button>
+
+                </div>
+
+                <!-- Journal Descriptions -->
+                <section class="nj-section">
+                    <h3 class="nj-section-title">Journal Descriptions</h3>
+
+                    <div class="nj-desc-content">
+
+                        {{-- Journal Description --}}
+                        <p style="margin-bottom: 1rem;">
+                            {{ $journal['journal_description'] ?? '' }}
+                        </p>
+
+                        {{-- Journal Title --}}
+                        <h4
+                            style="font-weight:600;margin-bottom:0.5rem;line-height: 1.7;color: var(--text);font-size: unset;">
+                            {{ $journal['journal_title'] }}
+                            ({{ $journal['journal_short_name'] ?? '' }}) is :-
+                        </h4>
+
+                        {{-- Journal Details --}}
+                        <ul class="nj-desc-list">
+
+                            <li>
+                                {{-- Journal Summary Line --}}
+                                <p>
+                                    International, Peer-Reviewed, Open Access, Refereed,
+
+                                    @if(is_array($journal['journal_subjects'] ?? null))
+                                        {{ implode(', ', $journal['journal_subjects']) }}
+                                    @else
+                                        {{ $journal['journal_subjects'] ?? '' }}
+                                    @endif
+                                    ,
+
+                                    @if(!empty($journal['e_issn']))
+                                        Online
+                                    @endif
+
+                                    @if(!empty($journal['e_issn']) && !empty($journal['p_issn']))
+                                        or
+                                    @endif
+
+                                    @if(!empty($journal['p_issn']))
+                                        Print
+                                    @endif
+
+                                    @if(!empty($journal['issue_frequency']))
+                                        , {{ $journal['issue_frequency'] }}
+                                    @endif
+                                    Journal
+                                </p>
+
+                            </li>
+
+                            <li>
+                                UGC Approved, ISSN Approved: P-ISSN
+                                @if(!empty($journal['p_issn']))
+                                    P-ISSN: {{ $journal['p_issn'] }},
+                                @endif
+
+                                @if(!empty($journal['e_issn']))
+                                    E-ISSN: {{ $journal['e_issn'] }},
+                                @endif
+
+                                @if(!empty($journal['first_publication_year']))
+                                    Established: {{ $journal['first_publication_year'] }},
+                                @endif
+
+                                @if(!empty($journal['journal_impact_factor']))
+                                    Impact Factor: {{ $journal['journal_impact_factor'] }}
+                                @endif
+
+                            </li>
+
+                            <li>
+                                {{ !empty($journal['DOI']) && $journal['DOI'] == '1'
+        ? 'Provides Crossref DOI'
+        : 'Does Not Provide Crossref DOI' }}
+                            </li>
+
+                            <li>
+                                @php
+                                    $allIndexingAgency = '';
+                                    $allNotIndexingAgency = '';
+                                    $allowedAgencies = ['Scopus', 'WoS', 'UGC CARE', 'PubMed', 'DOAJ'];
+
+                                    foreach ($indixing_agency as $agency) {
+                                        $fieldName = str_replace(' ', '_', $agency->agency_name);
+                                        $checkboxName = $fieldName . '_checkbox';
+
+                                        $isChecked = isset($journal[$checkboxName]) && $journal[$checkboxName];
+                                        $hasValue = !empty($journal[$fieldName]);
+
+                                        if (in_array($agency->agency_name, $allowedAgencies) && ($hasValue || $isChecked)) {
+                                            $allIndexingAgency .= $agency->agency_name . ', ';
+                                        } elseif (in_array($agency->agency_name, $allowedAgencies)) {
+                                            $allNotIndexingAgency .= $agency->agency_name . ', ';
+                                        }
+                                    }
+
+                                    $allIndexingAgency = rtrim($allIndexingAgency, ', ');
+                                    $allNotIndexingAgency = rtrim($allNotIndexingAgency, ', ');
+                                @endphp
+
+
+                                @if ($allIndexingAgency != '')
+                                    <p><strong>Indexed in:</strong> {{ $allIndexingAgency }}</p>
+                                @endif
+
+                            </li>
+
+                            <li>
+                                @if ($allNotIndexingAgency != '')
+                                    <p>Not indexed in {{$allNotIndexingAgency}}</p>
+                                @endif
+
+                            </li>
+                        </ul>
+
+                    </div>
+                </section>
+
+                <!-- Indexing -->
+                @php
+                    $hasAnyIndexing = false;
+                    if (!empty($indixing_agency)) {
+                        foreach ($indixing_agency as $agency) {
+                            $fieldName = str_replace(' ', '_', $agency->agency_name);
+                            $checkboxName = $fieldName . '_checkbox';
+                            if ((isset($journal[$checkboxName]) && $journal[$checkboxName]) || !empty($journal[$fieldName])) {
+                                $hasAnyIndexing = true;
+                                break;
+                            }
+                        }
+                    }
+                @endphp
+
+                @if($hasAnyIndexing)
+                <section class="nj-section">
+                    <h3 class="nj-section-title">Indexing</h3>
+
+                    <div class="nj-indexing-grid" id="njIndexingGrid">
+                        @php $displayed = 0; @endphp
+
+                        @foreach ($indixing_agency as $agency)
+                                            @php
+                                                $fieldName = str_replace(' ', '_', $agency->agency_name);
+                                                $checkboxName = $fieldName . '_checkbox';
+                                                $isChecked = isset($journal[$checkboxName]) && $journal[$checkboxName];
+                                                $hasValue = !empty($journal[$fieldName]);
+                                                $imageUrl = asset($agency->image);
+                                            @endphp
+
+                                            @if ($hasValue || $isChecked)
+                                                @php $displayed++; @endphp
+
+                                                <div class="nj-index-item {{ $displayed > 3 ? 'hidden' : '' }}">
+                                                    <a href="{{ Str::startsWith($journal[$fieldName], ['http://', 'https://']) ? $journal[$fieldName] : 'https://' . $journal[$fieldName] }}"
+                                                        target="_blank" style="display:flex; align-items:center;">
+                                                        <div class="nj-index-icon">
+                                                            <img src="{{ $imageUrl }}" alt="{{ $agency->agency_name }} Logo" width="24" height="24"
+                                                                loading="lazy">
+                                                        </div>
+                                                        <span class="nj-index-name">{{ $agency->agency_name }}</span>
+                                                    </a>
+                                                </div>
+                                            @endif
+                        @endforeach
+                        @if ($displayed > 3)
+                            <div class="more-button">
+                                <button id="showMoreBtn"
+                                    style="background:none;border:none;color:#1695ff;cursor:pointer;font-weight:600;">
+                                    +{{ $displayed - 3 }} More
+                                </button>
+                            </div>
+                        @endif
+                    </div>
+
+
+                </section>
+                @endif
+
+
+                <!-- Role In Research Journal -->
+                @if (count($roleusers) > 0)
+                        <section class="nj-section">
+                            <h3 class="nj-section-title">Role In Research Journal</h3>
+                            <div class="nj-team-grid">
+                                <!-- User 1 -->
+                                @foreach ($roleusers as $roleuser)
+                                                @php
+                                                    $role = $roleuser['journal_role'];
+                                                    $user = $roleuser['user'];
+                                                    $authLink = !empty($user->slug) ?  route('ownprofile', ['slug' => $user->slug]) : '#';
+                                                @endphp
+
+                                                @if(!empty($user) && !empty($user->slug))
+                                                    <a href="{{ $authLink }}" class="nj-team-card">
+                                                        <div>
+                                                            <img src="{{ !empty($user->photo) ? asset($user->photo) : asset('assets/images/def.jpeg') }}"
+                                                                class="nj-team-avatar"
+                                                                alt="{{ $user->first_name }} {{ $user->last_name }} Profile Photo"
+                                                                title="{{ $user->first_name }} {{ $user->last_name }}" loading="lazy">
+                                                        </div>
+                                                        <div>
+                                                            <div class="nj-team-name">{{ $user->first_name }}
+                                                                {{ $user->last_name }}
+                                                            </div>
+                                                            <div class="nj-team-role">{{ !empty($role->name) ? $role->name : $roleuser['role'] }}
+                                                            </div>
+                                                        </div>
+                                                </a> @endif
+
+                                @endforeach
+
+                            </div>
+                        </section>
+
+                @endif
+
+                <!-- Publications -->
+                @if ($publications->count() != 0)
+                    <section class="nj-section">
+                        {{-- Section Title --}}
+                        <h3 class="nj-section-title">
+                            Publications of {{ $journal['journal_short_name'] ?? '' }}
+                        </h3>
+
+                        {{-- Publications List --}}
+                        @include('journalpublicationlist')
+
+                        {{-- Load More Button --}}
+                        @if ($total_publication > 10)
+                            <div style="margin-top: 1.5rem; text-align: center;">
+                                <button class="nj-btn-outline load-more-publications" id="load-journal-publications-more"
+                                    data-offset="10" data-journal-id="{{ $journal['_id'] }}">
+                                    Load More
+                                </button>
+                            </div>
+                        @endif
+                    </section>
+                @endif
+
+                <!-- Peer Reviews -->
+                @if ($reviewPapers->count() != 0)
+                    <section class="nj-section">
+                        {{-- Section Title --}}
+                        <h3 class="nj-section-title">Explore Transparent Peer Reviews of
+                            {{!empty($journal['journal_short_name']) ? $journal['journal_short_name'] : ''}}
+                        </h3>
+                        @include('journalreviewpaperlist')
+                        @if ($total_reviewPaper > 10)
+                            <div style="margin-top: 1.5rem; text-align: center;">
+                                <button class="nj-btn-outline" style="padding: 8px 24px;" id="load-journal-reviewpaper-more"
+                                    data-offset="10" data-journal-id="{{ $journal['_id'] }}">View More</button>
+                            </div>
+                        @endif              
+                    </section>
+                @endif
+
+            </div>
+
+
+
+            <!-- Sidebar Ads -->
+            <aside class="nj-sidebar">
+                @include('Article.section.skill')
+            </aside>
+        </div>
+
+        <!-- </section> -->
+
+        <div class="modal fade" id="disclaimer-popup" style="display: none; z-index:1111;">
+            <div class="modal-dialog modal-dialog-centered model-sectionn" role="document">
+                <div class="modal-content">
+                    <div class="disclaimer-modal-header">
+                        <h3 class="modal-title" id="exampleModalLongTitle">Disclaimer for Journal Page</h3>
+
+                    </div>
+                    <div class="disclaimer-modal-body">
+                        <ul>
+                            <li>
+                                Platform Role and Journal Ownership:
+                                <p>Scholar9.com is a peer-review platform that hosts journals from across the globe. Please
+                                    note that we do not own any of the journals hosted on the platform.</p>
+                            </li>
+                            <li>
+                                Services for Journal Owners:
+                                <p>Our platform enables journal owners to send articles for peer review to users who have
+                                    registered via https://scholar9.com/register and have consented to serve as reviewers
+                                    for multiple journals. Additionally, we offer an indirect manuscript submission system
+                                    for journals that are claimed and actively managed by their respective owners on
+                                    Scholar9.com.</p>
+                            </li>
+                            <li>
+                                Indexing and Contact Detail:
+                                <p>For accurate information about the indexing status of journals (in databases such as UGC
+                                    CARE, Scopus, or Web of Science) and contact details, users must refer to the respective
+                                    official websites.</p>
+                            </li>
+                            <li>
+                                Limitations of Responsibility:
+                                <p>Scholar9 is not responsible for indexing claims, manuscript acceptance/rejection, refunds
+                                    of article processing charges, or any stage of the final publication process. Users are
+                                    strongly advised to verify all information provided on the platform independently.</p>
+                            </li>
+                            <li>
+                                Resolution of Disputes:
+                                <p>Scholar9.com disclaims liability for disputes related to indexing claims, publication
+                                    decisions, or other journal-specific matters. Users are encouraged to contact the
+                                    respective journal owners directly for detailed information and clarifications.</p>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="disclaimer-close-modal">
+                        <button type="button" class="disclaimer-close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">Close</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        $('.claimJournalBtn').on('click', function () {
+
+            let journalId = $(this).data('journal-id');
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to submit a claim for this journal?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Claim It',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33'
+            }).then((result) => {
+
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ route('claim.journal', ':id') }}".replace(':id', journalId),
+
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        beforeSend: function () {
+                            Swal.fire({
+                                title: 'Submitting...',
+                                text: 'Please wait',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                        },
+                        success: function (res) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: res.message
+                            }).then(() => {
+                                location.reload(); // optional
+                            });
+                        },
+                        error: function (xhr) {
+                            let msg = 'Something went wrong';
+
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                msg = xhr.responseJSON.message;
+                            }
+
+                            // User not logged in
+                            if (xhr.status === 401) {
+
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Login Required',
+                                    text: msg,
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Login',
+                                    cancelButtonText: 'OK',
+                                }).then((result) => {
+
+                                    if (result.isConfirmed) {
+                                        window.location.href = "{{ route('publisher_login') }}";
+                                    }
+
+                                });
+
+                            }
+
+                            // Publisher profile not created
+                            else if (xhr.status === 403) {
+
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Publisher Registration Required',
+                                    text: msg,
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Register',
+                                    cancelButtonText: 'OK',
+                                }).then((result) => {
+
+                                    if (result.isConfirmed) {
+                                        window.location.href = "{{ route('publisher_register') }}";
+                                    }
+
+                                });
+
+                            }
+
+                            // All other errors
+                            else {
+
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: msg
+                                });
+
+                            }
+                        }
+                    });
+
+                }
+
+            });
+
+        });
+
+        // For View More Tags 
+        document.addEventListener('DOMContentLoaded', function () {
+            var moreBtn = document.getElementById('moreBtn');
+
+            if (moreBtn) {
+                moreBtn.addEventListener('click', function () {
+
+                    var hiddenItems = document.querySelectorAll('.nj-tag.hidden');
+
+                    hiddenItems.forEach(function (item) {
+                        item.classList.remove('hidden');
+                    });
+
+                    this.style.display = 'none';
+                });
+            }
+        });
+
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const btn = document.getElementById('showMoreBtn');
+            const grid = document.getElementById('njIndexingGrid');
+
+            if (!btn || !grid) return;
+
+            btn.addEventListener('click', function () {
+                const hiddenItems = grid.querySelectorAll('.nj-index-item.hidden');
+                if (hiddenItems.length > 0) {
+                    // Show the next hidden item
+                    hiddenItems[0].classList.remove('hidden');
+
+                    // Update button text
+                    const remaining = hiddenItems.length - 1;
+                    if (remaining > 0) {
+                        btn.textContent = `+${remaining} More`;
+                    } else {
+                        btn.style.display = 'none';
+                    }
+                }
+            });
+        });
+    </script>
+
+@endsection

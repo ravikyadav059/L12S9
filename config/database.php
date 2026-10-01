@@ -31,6 +31,12 @@ return [
 
     'connections' => [
 
+        'mongodb' => [
+            'driver' => 'mongodb',
+            'dsn' => env('MONGODB_URI', 'mongodb://'.env('DB_HOST', '127.0.0.1').':'.env('DB_PORT', '27017')),
+            'database' => env('MONGODB_DATABASE', env('DB_DATABASE', 'clonedata')),
+        ],
+
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),

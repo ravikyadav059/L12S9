@@ -1,0 +1,1803 @@
+<!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> -->
+
+<script src="https://www.google.com/recaptcha/api.js"></script>
+<!-- <div class="small-loader"><img src="{{ asset('assets/images/loader.gif') }}" alt=""></div> -->
+{!! RecaptchaV3::initJs() !!}
+<div class="row qna-container new article-container">
+
+    <div class="que-boxes" style=" background: unset; ">
+        <div class="left-first-boxes-main" id="">
+            <section class="form-section article-form-section">
+                <div class="form-section-in box-design-csss refresh-form-div">
+                    <form action="javascript:;" method="post" class="form" id="form_deposit">
+                        @csrf
+                        <input type="hidden" name="user_id" id="user_id" value="{{$authUser->_id ?? '' }}">
+                        <div class="step1" id="step1">
+                            <div class="question-left-wrapper-block">
+                                <div
+                                    class="question-title-model-header new-question-title-model-header new-article-title-model-header">
+                                    Step 1: Paper Information
+                                </div>
+                                <!-- <div class="required-star-title">
+                                    All the * field are requireds.
+                                </div> -->
+                                <div class="article-dep-form-group">
+                                    <div class="label-of-article-wrapper">
+                                        <label class="label-of-article" for="article">Paper
+                                            title <span class="required-star">*</span>
+                                            <p class="question-error" id="article-errors-paper-title"></p>
+                                        </label>
+                                    </div>
+                                    <input class="article-input-css" id="paper_title" type="text" value=""
+                                        name="paper_title" placeholder="Enter paper title" required="true">
+                                </div>
+
+                                <div class=" article-dep-form-group">
+                                    <div class="label-of-article-wrapper">
+                                        <label class="label-of-article" for="article">Abstract <span
+                                                class="required-star">*</span>
+                                            <p class="question-error" id="article-errors-abstract"></p>
+                                        </label>
+                                    </div>
+                                    <textarea class="article-textarea" name="abstract" id="abstract"
+                                        placeholder="Enter abstract" required></textarea>
+                                </div>
+
+                                <!-- <div class="article-dep-form-group">
+                                    <div class="label-of-article-wrapper">
+                                        <label class="label-of-article" for="article">
+                                            Keywords <span class="required-star">*</span>
+                                            <p class="question-error" id="keyword-error"></p>
+                                        </label>
+                                    </div>
+                                    <div class="tags-input-container">
+                                        <input class="article-input-css" type="text" id="keyword-input"
+                                            placeholder="Enter keywords and then press enter">
+                                    </div>
+                                    <input type="hidden" name="keywords" id="keywords-hidden" required>
+                                </div> -->
+
+
+                                <div class="article-dep-form-group">
+                                    <div class="label-of-article-wrapper">
+                                        <label class="label-of-article" for="article">
+                                            Keywords <span class="required-star">*</span>
+                                            <p class="question-error" id="keyword-error"></p>
+                                        </label>
+                                    </div>
+                                    <!-- Container holds both non-editable tags and a dedicated editable area -->
+                                    <div id="keyword-input" class="tags-input-container article-textarea"
+                                        style="overflow-y: auto; max-height: 100px;">
+                                        <span id="editable-area" class="editable-area" contenteditable="true"
+                                            style="outline:none;">&nbsp;</span>
+                                    </div>
+                                    <input type="hidden" name="keywords" id="keywords-hidden" required>
+                                </div>
+
+
+
+                                <div class=" article-dep-form-group">
+                                    <div class="label-of-article-wrapper">
+                                        <label class="label-of-article" for="article">Option <span
+                                                class="required-star">*</span></label>
+                                    </div>
+                                    <div style=" display: flex; gap: 8px; align-items: center;">
+                                        <input class="article-radio" id="pre-print-check" type="radio" value="pre-print"
+                                            name="article_status" checked>
+                                        <span class="radio-span">Pre-Print</span>
+
+                                        <input class="article-radio" type="radio" id="published-check" value="published"
+                                            name="article_status">
+                                        <span class="radio-span">Published</span>
+                                    </div>
+                                </div>
+
+
+                                <div id="journalDetails">
+
+                                    <!-- <div class=" article-dep-form-group-sub article-dep-form-doi">
+                                        <div class="label-of-article-wrapper">
+                                            <label class="label-of-sub-article" for="article">DOI</label>
+                                        </div>
+                                        <div style="position: relative; width: 100%;">
+                                            <input class="article-input-css" type="text" value="" name="doi" id="doi"
+                                                placeholder="Enter doi, e.g. 10.5120/ijca2016909228">
+                                            <button type="button" id="retrieve_publication"
+                                                style="position: absolute;right: 0;top: 0;height: 100%;border: none;background: #13C20f;color: white;padding: 5px 15px;cursor: pointer;font-weight: 600;font-size: 14px;border-radius: 0 8px 8px 0;">Retive</button>
+                                        </div>
+                                    </div> -->
+
+                                    <div class="article-sub-div">
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Article Type</label>
+                                            </div>
+                                            <!-- <input class="article-input-css" type="" value="" id="" name=""
+                                                placeholder=""> -->
+                                            <select class="article-input-css" id="article_type"
+                                                name="article_type_dropdown">
+                                                <option value="">-- Select Article Type --</option>
+                                                @foreach($articleTypes as $articleType)
+                                                    <option value="{{ $articleType->_id }}">
+                                                        {{ $articleType->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">DOI</label>
+                                            </div>
+                                            <div style="position: relative; width: 100%;">
+                                                <input class="article-input-css" type="text" value="" name="doi"
+                                                    id="doi" placeholder="Enter doi, e.g. 10.5120/ijca2016909228">
+                                                <button type="button" id="retrieve_publication"
+                                                    style="position: absolute;right: 0;top: 0;height: 100%;border: none;background: #13C20f;color: white;padding: 5px 15px;cursor: pointer;font-weight: 600;font-size: 14px;border-radius: 0 8px 8px 0;">Retive</button>
+                                            </div>
+                                        </div>
+
+
+                                    </div>
+                                    <div class="article-sub-div">
+                                        <div class=" article-dep-form-group-sub article-journal-search">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Journal name <span
+                                                        class="required-star">*</span> <img class="journal-check-icon"
+                                                        id="journal-check-icon"
+                                                        src="{{ asset('assets/images/check-circle.png') }}" alt=""
+                                                        style="display: none;width: 15px;height: 15px;">
+                                                    <p class="question-error" id="article-errors-journal"></p>
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css" type="text" value=""
+                                                id="article_search_journal" name="journal_name"
+                                                placeholder="Search journal name Or Add" required>
+                                            <!-- Autocomplete dropdown -->
+                                            <div id="search_role_in_research_journal_dropdown"
+                                                class="dropdown-menu  Autocomplete-Journal-Dropdown"
+                                                aria-labelledby="search_journal_dropdown"></div>
+
+                                            <input type="hidden" value="" name="journal_title_id"
+                                                id="article_search_journal_id" class="input-fields" required>
+                                            <a href="javascript:;" class="add_journal add_link add-journal-css"
+                                                style="display: none;" id="add_search_role_journal_btn"
+                                                data-add-popup="role_in_research_journals_box">Add Journal</a>
+                                        </div>
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">ISSN <!-- <span
+                                                        class="required-star">*</span> -->
+                                                    <p class="question-error" id="article-errors-issn"></p>
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css" type="text"
+                                                pattern="^[0-9]{4}-[0-9]{2}[0-9Xx]{2}$" value="" id="issn_article"
+                                                name="issn" placeholder="Enter issn, e.g. 1234-1258 ">
+                                        </div>
+                                    </div>
+
+
+                                    <div class="article-sub-div">
+                                        <div class="article-dep-form-group-sub-twoInput">
+                                            <div class=" article-dep-form-group-sub">
+                                                <div class="label-of-article-wrapper">
+                                                    <label class="label-of-sub-article" for="article">Volume <span
+                                                            class="required-star">*</span>
+                                                        <p class="question-error" id="article-errors-volume"></p>
+                                                    </label>
+                                                </div>
+                                                <input class="article-input-css" type="text" value=""
+                                                    id="volume_article" name="volume"
+                                                    placeholder="Enter Volume, e.g. 1 " required>
+                                            </div>
+                                            <div class=" article-dep-form-group-sub">
+                                                <div class="label-of-article-wrapper">
+                                                    <label class="label-of-sub-article" for="article">Issue <span
+                                                            class="required-star"> *</span>
+                                                        <p class="question-error" id="article-errors-Issue"></p>
+                                                    </label>
+                                                </div>
+                                                <input class="article-input-css" type="text" value="" id="issue_article"
+                                                    name="issue" placeholder="Enter Issue, e.g. 5" required>
+                                            </div>
+                                        </div>
+
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Citation
+                                                    <p class="question-error" id="article-errors-citation"></p>
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css" type="number" value=""
+                                                id="citation_article" name="citation"
+                                                placeholder="Enter Numeric Value, e.g. 487 or 1002">
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- <div class="article-sub-div">
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Volume <span
+                                                        class="required-star">*</span>
+                                                    <p class="question-error" id="article-errors-volume"></p>
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css" type="text" value="" id="volume_article"
+                                                name="volume" placeholder="Enter Volume, e.g. 1 " required>
+                                        </div>
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Issue <span
+                                                        class="required-star"> *</span>
+                                                    <p class="question-error" id="article-errors-Issue"></p>
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css" type="text" value="" id="issue_article"
+                                                name="issue" placeholder="Enter Issue, e.g. 5" required>
+                                        </div>
+                                    </div> -->
+
+                                    <div class="article-sub-div">
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Page
+                                                    No <span class="required-star">*</span>
+                                                    <p class="question-error" id="article-error-pageNo"></p>
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css" type="text" value="" id="page_no"
+                                                name="page_no" placeholder="1-10" required>
+                                        </div>
+
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">
+                                                    Publication Month-Year</label>
+                                            </div>
+                                            <input class="article-input-css" type="text" value=""
+                                                id="publication_month_year" name="publication_month_year"
+                                                placeholder="MM-YYYY">
+                                            <button type="button" onclick="$('#publication_month_year').val('')"
+                                                style="background: #198BEA;color: white;border: none;font-weight: 500;font-family: 'Inter';padding: 5px;border-radius: 6px;margin-top: 6px;">Clear
+                                                Publication Date</button>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- <div class="article-sub-div">
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Article Type</label>
+                                            </div>
+                                            <select class="article-input-css" id="article_type"
+                                                name="article_type_dropdown">
+                                                <option value="">-- Select Article Type --</option>
+                                                @foreach($articleTypes as $articleType)
+                                                    <option value="{{ $articleType->_id }}">
+                                                        {{ $articleType->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+
+                                        </div>
+                                    </div> -->
+
+                                    <div class="article-sub-div">
+                                        <!-- <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Page
+                                                    No <span class="required-star">*</span>
+                                                    <p class="question-error" id="article-error-pageNo"></p>
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css" type="text" value="" id="page_no"
+                                                pattern="/^\d+([-–]\d+)?$/" name="page_no" placeholder="1-10" required>
+                                        </div> -->
+
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">PDF URL</label>
+                                            </div>
+                                            <input class="article-input-css" type="url" value="" id="pdf-url"
+                                                name="published_paper_PDF"
+                                                placeholder="Published paper PDF URL, e.g. 'https://fake.pdf'">
+                                        </div>
+
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Landing Page
+                                                    URL</label>
+                                            </div>
+                                            <input class="article-input-css" type="url" value="" id="page-url"
+                                                name="published_paper_URL"
+                                                placeholder="Published paper landing page URL, e.g. 'https://scholar9.com/'">
+                                        </div>
+
+                                    </div>
+
+                                    <!-- <div class="article-sub-div">
+                                       
+                                    </div> -->
+                                </div>
+
+                                <div class="submit-button-article " id="next-btn-hide">
+                                    <input class="article-next" onclick="nextStep()" type="button" value="Next">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- this below for next step 2  -->
+                        <div class="step2" id="step2" style="display:none;">
+                            <div class="question-left-wrapper-block">
+                                <div
+                                    class="question-title-model-header new-question-title-model-header new-article-title-model-header ">
+                                    Step 2: Upload File and Author Details
+                                </div>
+
+                                <div class="article-dep-form-group">
+                                    <div class="label-of-article-wrapper">
+                                        <label class="label-of-article" for="article">Upload File</label>
+                                        <span class="label-of-section-thumbnail-span">supports .pdf</span>
+                                    </div>
+
+                                    <div class="file_select-article">
+                                        <p class="selectedFiles">choose your file</p>
+                                        <a class="Upload-article" href="javascript:;">Upload
+                                        </a>
+                                        <input class="article-input-file" type="file" value="" name="pdf_upload"
+                                            placeholder="" accept=".pdf">
+                                    </div>
+                                </div>
+
+                                <input type="hidden" id="author_count" name="author_count" value="1">
+                                <div class="article-sub-div-main for-remove" id="new-div-for-author">
+                                    <div class="article-sub-div">
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Author Name <span
+                                                        class="required-star">*</span>
+                                                    <p class="question-error" id="article-errors-for-all"></p>
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css author-name-input for-validation"
+                                                type="text" value="" name="author_name_1"
+                                                placeholder="Search author name Or Add" id="author_name_input"
+                                                autocomplete="off">
+                                            <input type="hidden" name="Authoruser_id[]" class="for-validation"
+                                                id="user_id_1">
+
+                                            <!-- This container holds the suggestions --><!-- Dropdown for user suggestions -->
+                                            <div id="user-suggestions" class="user-suggestions-dropdown">
+                                            </div>
+                                        </div>
+
+                                        <div class=" article-dep-form-group-sub">
+                                            <div class="label-of-article-wrapper">
+                                                <label class="label-of-sub-article" for="article">Author Affiliation
+                                                    <!-- <span class="required-star">*</span>
+                                                    <p class="question-error" id="article-errors-for-all"></p> -->
+                                                </label>
+                                            </div>
+                                            <input class="article-input-css for-validation author-affiliation-input"
+                                                type="text" value="" name="author_affiliation_1"
+                                                placeholder="Enter author affiliation">
+                                        </div>
+                                    </div>
+
+                                    <div class="article-dep-form-group">
+                                        <div class="label-of-article-wrapper">
+                                            <label class="label-of-article " for="article">Author Email <span
+                                                    class="required-star">*</span>
+                                                <!-- (Note: If Author is not found by Name Serach by Email.) -->
+                                                <p class="question-error" id="article-errors-for-all"></p>
+                                            </label>
+                                        </div>
+                                        <input class="article-input-css for-validation author-email-input" type="email"
+                                            value="" name="author_email_1"
+                                            placeholder="Enter author email, e.g. hello@scholar9.com">
+                                    </div>
+
+                                </div>
+
+                                <button type="button" class="add-author" id="add-new-author">+ Add Author</button>
+
+                                <div class="article-checkbox-inp"> <input class="article-check-box" id="checkbox-agree"
+                                        type="checkbox" name="">
+                                    <span class="article-check-box-span">confirm copyright and licensing
+                                        agreement.</span>
+                                </div>
+
+                                <!-- below for Google recaputure -->
+                                <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
+
+                                <div class="submit-button-article submit-button-article-step2 ">
+                                    <input onclick="prevStep()" class="article-prev article-next" type="button"
+                                        id="article-prev-btn-hide" value="Previous">
+                                    <input class="article-next" id="submit_form" type="submit" value="Submit">
+                                </div>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+            </section>
+
+
+
+        </div>
+        @include ('Article.section.skill')
+    </div>
+
+    <!-- This Below Model For Successfully Submit Of Form   -->
+    <div class="model-section Approved-Popup" style="z-index: 22222;display: none;">
+        <div class="mainApproval-Popup">
+            <div class="Approval-Popup">
+                <img src=" {{asset('assets/images/Approval.png')}}" alt="" srcset="">
+                <h3 class="Approvel-Popup-Thanks">Thank you for submitting your article. Our team will review its
+                    contents and relevant information. Upon successful verification, your article will be displayed on
+                    the <a href="{{ url('/articles')  }}" target="_blank">'Article List.' </a></h3>
+                <h3>In case of any questions, please reach out to us at: <a href="mailto:hello@scholar9.com">
+                        hello@scholar9.com</a> </h3>
+                <button class="Ok-Approve-btn" type="button">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- This Below Model For Check The Paper title Is already Exits. -->
+    <div class="model-section" id="Denied-Popup-section" style="z-index: 22222;display: none;">
+        <div class="mainDenied-Popup">
+            <div class="Denied-Popup">
+                <img src=" {{asset('assets/images/Denied-Cross.png')}}" alt="" srcset="">
+                <h3 class="Approvel-Popup-Thanks">This Article has already been deposited. Kindly check it at this link
+                    <a href="{{ url('/articles')  }}" target="_blank"><i class="fas fa-hand-point-right"></i> 'Article
+                        List.'</a>
+                </h3>
+                <h3>In case of any questions, please reach out to us at: <a href="mailto:hello@scholar9.com">
+                        hello@scholar9.com</a> </h3>
+                <button class="Ok-Denied-btn" type="button">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!----------------------------- Add Journal popup Start here --------------------------->
+
+    <div class="model-section journal_box_popup" style="display:none;">
+        <div class="model-section-inner">
+            <div class="model-sectionn">
+                <div class="model-body">
+                    <div class="author_box" id="journal_box">
+                        <form action="javascript:;" method="post" id="journal_box_form" class="form">
+
+                            <img src="{{ asset('assets/images/close.png') }}" alt="close" value="CANCEL" class="cancel"
+                                id="cancel_sub_popup_journal" data-close-popup="journa_box_popup">
+                            @csrf
+                            <div class="form-group">
+                                <label for="journal_name" style="width:100%">Journal Name</label>
+                                <input type="text" value="" name="journal_name" id="journal_name" class="input-fields"
+                                    aria-label="Text input with segmented dropdown button" placeholder="Journal Name"
+                                    required="true">
+                            </div>
+                            <div class="form-group">
+                                <label for="Issn" style="width:100%">ISSN</label>
+                                <input type="text" value="" name="issn" id="issn" class="input-fields"
+                                    pattern="^[0-9]{4}-[0-9]{3}[0-9X]$"
+                                    aria-label="Text input with segmented dropdown button" placeholder="ISSN">
+                            </div>
+                            <div class="form-group">
+                                <label for="P_ISSN" style="width:100%">P_ISSN</label>
+                                <input type="text" value="" name="p_issn" id="p_issn" class="input-fields"
+                                    aria-label="Text input with segmented dropdown button" placeholder="P_ISSN">
+                            </div>
+
+                            <div class="form-group submit-button model-buttons ">
+                                <input type="submit" value="SAVE" class="submit" id="add_journal_save">
+                                <input type="button" value="CANCEL" class="cancel" id="cancel_sub_popup_journal"
+                                    data-close-popup="journal_box_popup">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!----------------------------- Author popup Start here --------------------------->
+
+<div class="model-section author_box_popup" style="display:none;">
+    <div class="model-section-inner">
+        <div class="model-sectionn">
+            <div class="model-body">
+                <div class="author_box" id="author_box">
+                    <form action="javascript:;" method="post" id="author_box_form" class="form">
+
+                        <img src="{{ asset('assets/images/close.png') }}" alt="close" value="CANCEL" class="cancel"
+                            id="cancel_sub_popup" data-close-popup="author_box_popup">
+                        @csrf
+                        <div class="form-group">
+                            <label for="author_email" style="width:100%">E-Mail</label>
+                            <input type="email" value="{{ old('author_email') }}" name="author_email" id="author_email"
+                                class="input-fields @error('author_email') is-invalid @enderror"
+                                aria-label="Text input with segmented dropdown button" placeholder="Author Email"
+                                required="true">
+                            <span id="email-error" style="color:red; margin:10px;" class="invalid-feedback"
+                                role="alert"></span>
+                            @error('author_email')
+                            <span class="invalid-feedback" role="alert">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group" id='author_name_div'>
+                            <label for="author_name">Author Name (Firstname Lastname)</label>
+                            <input type="text" value="" name="author_name" id="author_name" class="input-fields"
+                                placeholder="Author Name" required="true">
+                        </div>
+                        <div class="form-group submit-button model-buttons">
+                            <input type="submit" value="SAVE" class="submit" id="add_authorname">
+                            <input type="button" value="CANCEL" class="cancel" id="cancel_sub_popup"
+                                data-close-popup="author_box_popup">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+
+<!-- Add Author Js  -->
+<!-- <script src="https://www.google.com/recaptcha/api.js?render={{ env('RECAPTCHAV3_SITEKEY') }}"></script> -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- jQuery UI -->
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
+
+<script src="https://www.google.com/recaptcha/api.js?render={{ config('recaptchav3.sitekey') }}"></script>
+<script>
+    $(document).on("blur", ".author-email-input", function () {
+        let $parentDiv = $(this).closest('.article-sub-div-main');
+        let email = $(this).val().trim();
+        let $thisInput = $(this); // Define input field reference
+        let $suggestionBox = $parentDiv.find(".user-suggestions-dropdown");
+
+
+        if (email !== "") {
+            $.ajax({
+                url: "{{ route('serachAuthorbyEmail') }}",
+                type: "GET",
+                data: { email: email },
+                dataType: "json",
+                success: function (response) {
+                    if (response.success) {
+                        // alert("Author Found: " + response.user.first_name + " " + response.user.last_name);
+                        $parentDiv.find('.author-name-input').val(response.user.first_name + " " + response.user.last_name);
+                        $parentDiv.find('input[name="Authoruser_id[]"]').val(response.user._id);
+                        $parentDiv.find('.author-email-input').val(response.user.email);
+                        var affiliation = response.affiliation_name;
+                        if (affiliation) {
+                            $parentDiv.find('input[name^="author_affiliation_"]').val(affiliation);
+                        }
+                        $suggestionBox.hide();
+
+                    } else {
+                        // alert("No Author found with this email.Please Add Author");
+
+                        // Clear respective input fields
+                        $parentDiv.find('.author-name-input').val('');
+                        $parentDiv.find('input[name="Authoruser_id[]"]').val('');
+                        $parentDiv.find('input[name^="author_affiliation_"]').val('');
+
+                        // Show "Add Journal" link when no user is found
+                        $suggestionBox.html('<a href="javascript:;" class="add_author add_link"  id="add-new-authorbtn" data-add-popup="author_box_popup" style="box-sizing: border-box;height: 31px;padding-left: 128px;" ">Add Author</a>')
+                            .css({
+                                'max-height': '100px',
+                                'overflow-y': 'auto',
+                                'border': '1px solid #ccc',
+                                'background': '#fff',
+                                'position': 'absolute',
+                                'z-index': '9999',
+                                'width': '327px'
+                            })
+                            .show();
+
+                    }
+                },
+                error: function () {
+                    alert("Error fetching author details.");
+                }
+            });
+        }
+    });
+
+</script>
+
+<script>
+    // Move toggle function to the top
+    $("#article_search_journal").autocomplete({
+        source: function (request, response) {
+            $.ajax({
+                url: 'api/search_journal_name',
+                type: 'POST',
+                dataType: "json",
+                minLength: 3,
+                data: { journal_title: request.term },
+                success: function (data) {
+                    if (data.length > 0) {
+                        $("#add_search_role_journal_btn").hide();
+                        response(data);
+                    } else {
+                        $("ul.ui-autocomplete").hide();
+                        $("#add_search_role_journal_btn").show();
+
+                        $("#add_search_role_journal_btn").off("click").on('click', function (event) {
+                            event.preventDefault();
+                            $('.journal_box_popup').show();
+                            $("#add_search_role_journal_btn").hide();
+                            $('#article_search_journal').val('');
+
+                            // Prevent multiple submit handlers
+                            $('#journal_box_form').off('submit').on('submit', function (e) {
+                                e.preventDefault();
+
+                                let journal_title = $('#journal_name').val().trim();
+                                let e_issn = $('#issn').val().trim();
+                                let p_issn = $('#p_issn').val().trim();
+
+                                if (journal_title === '') {
+                                    alert('Journal Name is required');
+                                    return;
+                                }
+
+                                if (e_issn === '' && p_issn === '') {
+                                    alert('At least one of ISSN or P_ISSN must be filled');
+                                    return;
+                                }
+
+                                $.ajax({
+                                    url: '/articleAddJournal',
+                                    type: 'POST',
+                                    dataType: "json",
+                                    data: {
+                                        journal_title: journal_title,
+                                        e_issn: e_issn,
+                                        p_issn: p_issn,
+                                        _token: $('input[name="_token"]').val()
+                                    },
+                                    success: function (data) {
+                                        if (data.result === 'ok') {
+                                            alert('Journal added successfully!');
+                                            $("#article_search_journal").val(data.journal_title);
+                                            $("#article_search_journal_id").val(data.journal_id);
+                                            $("#issn_article").val(data.e_issn);
+                                            $('#journal_box_form')[0].reset();
+                                            $('.journal_box_popup').hide();
+                                        } else if (data.result === 'error') {
+                                            if (data.message === 'Journal with the same e_issn already exists.') {
+                                                alert('Journal with the same e_issn already exists');
+                                            } else if (data.message === 'Journal with the same title already exists.') {
+                                                alert('Journal with the same Journal title already exists');
+                                            } else {
+                                                alert(data.message || 'Something went wrong!');
+                                            }
+                                        } else {
+                                            alert(data.message || 'Something went wrong!');
+                                        }
+                                    },
+                                    error: function () {
+                                        alert('Error occurred while submitting.');
+                                    }
+                                });
+                            });
+                        });
+                    }
+                }
+            });
+        },
+        open: function (event, ui) {
+            $(".ui-autocomplete").css({ "z-index": 1000, "width": "100%" });
+        },
+        select: function (event, ui) {
+            $("#role_in_research_journals_form #journal_title").val(ui.item.value);
+            $("#role_in_research_journals_form #search_role_journal").val(ui.item.label);
+            $("#role_in_research_journals_form #journal_short_name").val(ui.item.alldata.journal_short_name);
+            $("#role_in_research_journals_form #e_issn").val(ui.item.alldata.e_issn);
+            $("#role_in_research_journals_form #p_issn").val(ui.item.alldata.p_issn);
+            $("#role_in_research_journals_form #organization_name").val(ui.item.alldata.organization_name);
+            $("#role_in_research_journals_form #journal_webiste_url").val(ui.item.alldata.journal_webiste_url);
+
+            $("#article_search_journal").val(ui.item.label);
+            $("#article_search_journal_id").val(ui.item.value);
+            checkJournalName(ui.item.value);
+            $("#issn_article").val(ui.item.alldata.e_issn || ui.item.alldata.p_issn);
+
+            return false;
+        }
+    });
+
+    $("#article_search_journal").autocomplete("widget").appendTo("#search_role_in_research_journal_dropdown");
+
+</script>
+
+<script>
+
+    $(document).on('click', '#cancel_sub_popup , #cancel_sub_popup_journal ', function (e) {
+        $('.user-suggestions-dropdown').hide();
+
+        let $activeAuthorRow = $(".article-sub-div-main").last();
+        $activeAuthorRow.find('.author-name-input').val('');
+        $activeAuthorRow.find('.author-email-input').val('');
+        $activeAuthorRow.find('.author-affiliation-input').val('');
+        $activeAuthorRow.find('input[type="hidden"][name="Authoruser_id[]"]').val('');
+        $("#author_name").val('');
+
+        $('.journal_box_popup').hide();
+
+    });
+
+    $(document).on('click', '#add-new-authorbtn', function (e) {
+        var popup = $(this).attr('data-add-popup');
+        $('#author_email').val('');
+        $('#email-error').hide();
+
+        $(".model-section." + popup).show();
+        $(".model-section." + popup).css('z-index', '22222');
+        $('.experience_box').addClass("pop_up_setup");
+    });
+
+    // function checkUserbyEmailAtAddAuthorTime(emailValueUser) {
+    let isCheckingEmail = false; // Add this flag at the top
+
+    $('#author_email').off().on('keyup', function (e) {
+        if (isCheckingEmail) {
+            return; // Skip if already checking
+        }
+        isCheckingEmail = true; // Set flag
+
+        var emailValue = $(this).val();
+
+        $.ajax({
+            url: "/check-email-user",
+            type: "POST",
+            data: {
+                _token: '{{ csrf_token() }}',
+                author_email: emailValue
+            },
+            success: function (response) {
+                if (response.success === 'found') {
+
+                    // Populate main input
+                    $("#author_email").val(response.data.email);
+                    $("#author_name").val(response.data.first_name + " " + response.data.last_name);
+
+                    // Populate last row
+                    let $activeAuthorRow = $(".article-sub-div-main").last();
+
+                    $activeAuthorRow.find('.author-name-input').val(response.data.first_name + " " + response.data.last_name);
+                    $activeAuthorRow.find('.author-email-input').val(response.data.email);
+                    $activeAuthorRow.find('.author-affiliation-input').val(response.data.affiliation_name);
+                    $activeAuthorRow.find('input[type="hidden"][name="Authoruser_id[]"]').val(response.data._id);
+
+                    // Duplicate email check
+                    let emails = [];
+                    let duplicateFound = false;
+
+                    $('input[name^="author_email_"]').each(function () {
+                        let email = $(this).val().trim();
+                        if (email !== '') {
+                            if (emails.includes(email)) {
+                                duplicateFound = true;
+                                return false;
+                            }
+                            emails.push(email);
+                        }
+                    });
+
+                    if (duplicateFound) {
+                        alert('Duplicate email found. Please ensure all author emails are unique.');
+                        $activeAuthorRow.find('.author-name-input').val('');
+                        $activeAuthorRow.find('.author-email-input').val('');
+                        $activeAuthorRow.find('.author-affiliation-input').val('');
+                        $activeAuthorRow.find('input[type="hidden"][name="Authoruser_id[]"]').val('');
+                        $("#author_name").val('');
+                    }
+
+                } else {
+                    // Email not found
+                }
+                isCheckingEmail = false; // Reset flag
+            },
+            error: function () {
+                console.log("AJAX error!");
+                isCheckingEmail = false; // Reset flag on error
+            }
+        });
+    });
+
+    // }
+
+    $("form#author_box_form").submit(function (e) {
+        e.preventDefault();
+
+        // // Duplicate email check
+        // let emails = [];
+        // let duplicateFound = false;
+
+        // $('input[name^="author_email_"]').each(function () {
+        //     let email = $(this).val().trim();
+        //     if (email !== '') {
+        //         if (emails.includes(email)) {
+        //             duplicateFound = true;
+        //             return false; // Break loop
+        //         }
+        //         emails.push(email);
+        //     }
+        // });
+
+        // if (duplicateFound) {
+        //     alert('Duplicate email found. Please ensure all author emails are unique.');
+        //     return; // Stop form submission
+        // }
+
+
+        // console.log("wwk");
+        // return;  
+        $.ajax({
+            url: "api/add_author",
+            type: 'POST',
+            data: new FormData(this),
+            dataType: 'JSON',
+            contentType: false,
+            cache: false,
+            processData: false,
+            success: function (data) {
+                // alert("New Author Added Successfully");
+                if ($.isEmptyObject(data.error)) {
+                    $(".model-section.author_box_popup").hide();
+                    let authorId = data.author_id;
+                    let authorName = data.author_name;
+                    let authorEmail = $("#author_email").val();
+
+                    // Find the active author input row where the author is being added
+                    let $activeAuthorRow = $(".article-sub-div-main").last();
+
+                    // Populate the input fields with the newly added author's details
+                    $activeAuthorRow.find('.author-name-input').val(authorName);
+                    $activeAuthorRow.find('.author-email-input').val(authorEmail).trigger('change');
+                    $activeAuthorRow.find('input[type="hidden"][name="Authoruser_id[]"]').val(authorId);
+
+                    // Hide the suggestion dropdown if visible
+                    $(".user-suggestions-dropdown").hide();
+                } else {
+                    $(".model-section.author_box_popup").hide();
+                    if (data.error === "Author already exists.") {
+                        // Show alert
+                        // alert("This author already exists: " + data.first_name + " " + data.last_name);
+                        $(".user-suggestions-dropdown").hide();
+                    }
+
+                    if ($('#registered_co_author').val() != "") {
+                        $('#registered_co_author').val($('#registered_co_author').val() + "," + data._id);
+                    } else {
+                        $('#registered_co_author').val(data._id);
+                    }
+
+                    showErrorMsg(data.error);
+
+                    $('#author_name_div').hide();
+                    $("#publication_form .no-result").hide();
+                    $("#publication_form #search_author").val('');
+                    var authorList = '<div class="search-result-sub"><div class="search-result-middle display-flex-css"><div class="search-result-left"><img src="assets/images/vector.png" alt="' + data.first_name + ' ' + data.last_name + '" title="' + data.first_name + ' ' + data.last_name + '"></div><div class="search-result-right"><span>' + data.first_name + ' ' + data.last_name + '</span></div></div></div>';
+                    $('#publication_form .search-result .search-result-in').append(authorList);
+
+                }
+            },
+
+
+            error: function (xhr) {
+                console.log(xhr.responseText);
+                alert('An error occurred. Please try again.');
+            }
+
+
+        });
+        $("#author_name").val("");
+    });
+</script>
+
+<!-- JavaScript to handle adding keywords dynamically -->
+
+<script>
+    let keywords = [];
+    document.addEventListener("DOMContentLoaded", function () {
+        const container = document.getElementById("keyword-input");
+        const hiddenInput = document.getElementById("keywords-hidden");
+        const errorMessage = document.getElementById("keyword-error");
+
+        // When container is clicked, focus the editable area
+        container.addEventListener("click", function (e) {
+            const editable = document.getElementById("editable-area");
+            if (!e.target.classList.contains("keyword-tag") && !e.target.classList.contains("remove-tag")) {
+                editable.focus();
+            }
+        });
+
+        // Function to re-render the container with tags and an editable area
+        function updateInput() {
+            container.innerHTML = "";
+            keywords.forEach(keyword => {
+                let tag = document.createElement("span");
+                tag.className = "keyword-tag";
+                tag.textContent = keyword;
+                tag.style.marginRight = "5px";
+                tag.style.padding = "2px 5px";
+                tag.style.backgroundColor = "#e0e0e0";
+                tag.style.borderRadius = "3px";
+
+                let removeBtn = document.createElement("span");
+                removeBtn.textContent = " ×";
+                removeBtn.style.cursor = "pointer";
+                removeBtn.style.color = "red";
+                removeBtn.style.fontSize = "16px";
+                removeBtn.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    keywords = keywords.filter(k => k !== keyword);
+                    updateInput();
+                });
+                tag.appendChild(removeBtn);
+                container.appendChild(tag);
+            });
+
+            // Create a new editable area for new input with a placeholder
+            const newEditable = document.createElement("span");
+            newEditable.id = "editable-area";
+            newEditable.className = "editable-area";
+            newEditable.contentEditable = "true";
+            newEditable.style.outline = "none";
+            newEditable.style.color = "#888"; // Placeholder color
+            newEditable.innerHTML = "Enter the Key Word";
+
+            // Remove placeholder on focus
+            newEditable.addEventListener("focus", function () {
+                if (newEditable.textContent.trim() === "Enter the Key Word") {
+                    newEditable.textContent = "";
+                    newEditable.style.color = "#000"; // Normal text color
+                }
+            });
+
+            // Add placeholder if empty on blur
+            newEditable.addEventListener("blur", function () {
+                if (newEditable.textContent.trim() === "") {
+                    //   newEditable.textContent = "Enter the Key Word";
+                    newEditable.style.color = "#888"; // Placeholder color
+                }
+            });
+
+            container.appendChild(newEditable);
+            newEditable.focus();
+
+            // Update hidden input
+            hiddenInput.value = keywords.join(",");
+        }
+
+        // Process text from the editable area when Enter or Tab is pressed
+        function processCurrentText() {
+            const editable = document.getElementById("editable-area");
+            let text = editable.textContent.trim();
+            if (text && text !== "Enter the Key Word") {
+                let newKeywords = text.split(/,\s*/).map(k => k.trim().toLowerCase()).filter(k => k);
+                newKeywords.forEach(keyword => {
+                    if (!keywords.includes(keyword)) {
+                        keywords.push(keyword);
+                    } else {
+                        errorMessage.textContent = "This keyword is already added!";
+                        setTimeout(() => { errorMessage.textContent = ""; }, 2000);
+                    }
+                });
+                updateInput();
+            }
+        }
+
+        // Listen for keydown events in the container (using event delegation)
+        container.addEventListener("keydown", function (e) {
+            const editable = document.getElementById("editable-area");
+            // If Backspace is pressed and editable area is empty, remove the last tag
+            if (e.key === "Backspace") {
+                if (editable.textContent.trim() === "") {
+                    if (keywords.length > 0) {
+                        keywords.pop();
+                        updateInput();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+            }
+            // Process Enter or Tab key to add new keywords
+            if (e.key === "Enter" || e.key === "Tab") {
+                e.preventDefault();
+                processCurrentText();
+            }
+        });
+
+        // Listen for paste events in the container on the editable area
+        container.addEventListener("paste", function (e) {
+            const target = e.target;
+            if (target.id === "editable-area") {
+                e.preventDefault();
+                let pastedText = (e.clipboardData || window.clipboardData).getData("text");
+                if (pastedText) {
+                    let newKeywords = pastedText.split(/,\s*/).map(k => k.trim().toLowerCase()).filter(k => k);
+                    newKeywords.forEach(keyword => {
+                        if (!keywords.includes(keyword)) {
+                            keywords.push(keyword);
+                        } else {
+                            errorMessage.textContent = "This keyword is already added!";
+                            setTimeout(() => { errorMessage.textContent = ""; }, 2000);
+                        }
+                    });
+                    updateInput();
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<script>
+    // Function to go to the next step after validating required fields
+    function nextStep() {
+        var paper_title = document.getElementById('paper_title');
+        var abstract = document.getElementById('abstract');
+        var article_journal = document.getElementById('article_search_journal');
+        var article_journal_id = document.getElementById('article_search_journal_id');
+        var issn_article = document.getElementById('issn_article');
+        var volume_article = document.getElementById('volume_article');
+        var issue_article = document.getElementById('issue_article');
+        var page_no_article = document.getElementById('page_no');
+        var page_url_article = document.getElementById('page-url');
+        var page_pdf_article = document.getElementById('pdf-url');
+
+        var isValid = true;
+        var firstEmptyField = null;
+
+        // Validation for Paper Title
+        if (paper_title.value.trim() === "") {
+            paper_title.style.border = "2px solid red";
+            $("#article-errors-paper-title").text("Please enter proper details.");
+            if (!firstEmptyField) firstEmptyField = paper_title;
+            setTimeout(() => {
+                $("#article-errors-paper-title").text("");
+                paper_title.style.border = "";
+            }, 3000);
+            isValid = false;
+        }
+
+        // Validation for Abstract
+        if (abstract.value.trim() === "") {
+            abstract.style.border = "2px solid red";
+            $("#article-errors-abstract").text("Please enter proper details.");
+            if (!firstEmptyField) firstEmptyField = abstract;
+            setTimeout(() => {
+                $("#article-errors-abstract").text("");
+                abstract.style.border = "";
+            }, 3000);
+            isValid = false;
+        }
+
+        // Validate keywords input
+        if (keywords.length === 0) {
+            $("#keyword-input").css("border", "2px solid red");
+            $("#keyword-error").text("Please enter at least one keyword.");
+            if (!firstEmptyField) firstEmptyField = document.getElementById("keyword-input");
+            setTimeout(() => {
+                $("#keyword-input").css("border", "");
+                $("#keyword-error").text("");
+            }, 3000);
+            isValid = false;
+        }
+
+        if ($("#published-check").is(":checked")) {
+            // Validation for Journal
+            if (article_journal.value.trim() === "" || article_journal_id.value.trim() === "") {
+                article_journal.style.border = "2px solid red";
+                $("#article-errors-journal").text("Please Search Or ADD.");
+                if (!firstEmptyField) firstEmptyField = article_journal;
+                setTimeout(() => {
+                    $("#article-errors-journal").text("");
+                    article_journal.style.border = "";
+                }, 3000);
+                isValid = false;
+            }
+
+            // Validation for ISSN
+            // const issnPattern = /^[0-9]{4}-([0-9]{4}|[0-9]{2}XX)$/;
+
+            // const issnPattern = /^[0-9]{4}-[0-9]{3}[0-9X]$/;
+            // if (!issnPattern.test(issn_article.value.trim())) {
+            //     issn_article.style.border = "2px solid red";
+            //     $("#article-errors-issn").text("Enter a valid ISSN format(e.g,1234-1258 or 1234-12XX).");
+            //     if (!firstEmptyField) firstEmptyField = issn_article;
+            //     setTimeout(() => {
+            //         $("#article-errors-issn").text("");
+            //         issn_article.style.border = "";
+            //     }, 3000);
+            //     isValid = false;
+            // }
+
+            if (issn_article.value.trim() !== "") {  // Only validate if input is not empty
+                const issnPattern = /^[0-9]{4}-[0-9]{3}[0-9X]$/;
+                if (!issnPattern.test(issn_article.value.trim())) {
+                    issn_article.style.border = "2px solid red";
+                    $("#article-errors-issn").text("Enter a valid ISSN format (e.g., 1234-1258 or 1234-12XX).");
+                    if (!firstEmptyField) firstEmptyField = issn_article;
+                    setTimeout(() => {
+                        $("#article-errors-issn").text("");
+                        issn_article.style.border = "";
+                    }, 3000);
+                    isValid = false;
+                }
+            }
+
+
+            // Validation for Volume
+            if (volume_article.value.trim() === "") {
+                volume_article.style.border = "2px solid red";
+                $("#article-errors-volume").text("Please enter proper details.");
+                if (!firstEmptyField) firstEmptyField = volume_article;
+                setTimeout(() => {
+                    $("#article-errors-volume").text("");
+                    volume_article.style.border = "";
+                }, 3000);
+                isValid = false;
+            }
+
+            // Validation for Issue
+            // if (issue_article.value.trim() === "") {
+            //     issue_article.style.border = "2px solid red";
+            //     $("#article-errors-Issue").text("Please enter proper details.");
+            //     if (!firstEmptyField) firstEmptyField = issue_article;
+            //     setTimeout(() => {
+            //         $("#article-errors-Issue").text("");
+            //         issue_article.style.border = "";
+            //     }, 3000);
+            //     isValid = false;
+            // }
+            var issueError = document.getElementById("article-errors-Issue");
+            if (issue_article) {
+                let issueValue = issue_article.value.trim();
+                // let regex = /^\d+([-–]\d+)?$/; // Allows "5" or "1-2"
+                let regex = /^[a-zA-Z0-9]+([-–][a-zA-Z0-9]+)*$/; // Allows "25a" or "1-2"
+
+                if (!regex.test(issueValue) || issueValue === "") {
+                    issue_article.style.border = "2px solid red";
+                    issueError.innerText = "Enter proper format (e.g., 1 or 1-2)";
+                    if (!firstEmptyField) firstEmptyField = issue_article;
+
+                    setTimeout(() => {
+                        $(issueError).text("");
+                        issue_article.style.border = "";
+                    }, 3000);
+
+                    isValid = false;
+                }
+            }
+
+            // Validate page_no input
+            var pageNoError = document.getElementById("article-error-pageNo");
+            if (page_no_article) {
+                let pageValue = page_no_article.value.trim();
+
+                // let regex = /^\d+([-–]\d+)?$/;       // Allows "1" or "1-2"
+                // if (!regex.test(pageValue) || pageValue === "") {
+                if (pageValue === "") {
+                    page_no_article.style.border = "2px solid red";
+                    // pageNoError.innerText = "Enter proper format (e.g., 1 or 1-2)";
+                    pageNoError.innerText = "Enter proper page no";
+                    if (!firstEmptyField) firstEmptyField = page_no_article;
+                    setTimeout(() => {
+                        $(pageNoError).text("");
+                        page_no_article.style.border = "";
+                    }, 3000);
+                    isValid = false;
+                }
+            }
+
+            // Validate URL field
+            if (page_url_article && page_url_article.value.trim()) {
+                try {
+                    new URL(page_url_article.value); // Check if it's a valid URL
+                    page_url_article.style.border = ""; // Clear border if valid
+                } catch (e) {
+                    page_url_article.style.border = "2px solid red"; // Highlight error
+                    if (!firstEmptyField) firstEmptyField = page_url_article;
+                    setTimeout(() => {
+                        page_url_article.style.border = "";
+                    }, 3000);
+                    isValid = false;
+                }
+            }
+
+            if (page_pdf_article && page_pdf_article.value.trim()) {
+                try {
+                    new URL(page_pdf_article.value); // Check if it's a valid URL
+                    page_pdf_article.style.border = ""; // Clear border if valid
+                } catch (e) {
+                    page_pdf_article.style.border = "2px solid red"; // Highlight error
+                    if (!firstEmptyField) firstEmptyField = page_pdf_article;
+                    setTimeout(() => {
+                        page_pdf_article.style.border = "";
+                    }, 3000);
+                    isValid = false;
+                }
+            }
+        } else {
+            $("#article_search_journal_id, #article_search_journal, #issn_article, #volume_article, #issue_article, #page_no, #page-url, #pdf-url").val("");
+        }
+        // Focus and Scroll to First Empty Field if Validation Fails
+        if (!isValid && firstEmptyField) {
+            firstEmptyField.focus();
+            firstEmptyField.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        if (isValid) {
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+        }
+    }
+
+    // Function to go to the previous step
+    function prevStep() {
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('step1').style.display = 'block';
+    }
+
+    $(document).ready(function () {
+
+        $(".radio-span").click(function () {
+            $(this).prev().prop("checked", true).trigger("change"); // Trigger 'change' event
+        });  //this code help to select the radio button by it label
+        $(".article-check-box-span").click(function () {
+            let checkbox = $(this).prev("input[type=checkbox]");
+            checkbox.prop("checked", !checkbox.prop("checked"));
+        }); //this code help to select the checkbox button by it label
+
+
+        //hide the fields
+        function toggleFields() {
+            if ($("#pre-print-check").is(":checked")) {
+                $("#journalDetails").hide();
+                // Remove required attribute from all inputs inside journalDetails
+                $("#journalDetails").find("input").removeAttr("required");
+            } else {
+                $("#journalDetails").show();
+                // Add required attribute back to the inputs
+                // You can either add individually or add a common class in HTML and use that selector.
+                $("#journalDetails input[name='journal_name']").attr("required", true);
+                // $("#journalDetails input[name='issn']").attr({ "required": true });
+                $("#journalDetails input[name='volume']").attr({ "required": true, "type": "number" });
+                $("#journalDetails input[name='issue']").attr({ "required": true, "type": "text" });
+                $("#journalDetails input[name='page_no']").attr({ "required": true, "type": "text" });
+            }
+        }
+        // Run function on radio button change
+        $("input[name='article_status']").change(toggleFields);
+        // Run function on page load in case of pre-selected option
+        toggleFields();
+        // });
+        // Handle file selection and show the file name
+        // $('.article-input-file').change(function (e) {
+        //     var fileName = e.target.files[0].name; // Get the name of the selected file
+        //     $('.selectedFiles').text("Selected File: " + fileName); // Update the text of the selectedFiles element
+        //     $('.file_select-article').css({ 'border': '2px solid green' });
+        // });
+        $('.article-input-file').change(function (e) {
+            if (e.target.files.length > 0) {
+                var fileName = e.target.files[0].name; // Get the file name
+                $('.selectedFiles').text("Selected File: " + fileName); // Display file name
+                $('.file_select-article').css({ 'border': '3px dashed green' }); // Add green border
+            } else {
+                $('.selectedFiles').text("choose your file"); // Reset text
+                $('.file_select-article').css({ 'border': '1px dashed #98A2B3' }); // Reset border (or default styling)
+            }
+        });
+
+
+        let authorCount = 2;
+        $('#add-new-author').click(function (e) {
+            e.preventDefault();
+            let $originalDiv = $('#new-div-for-author');
+            let $newDiv = $originalDiv.clone();
+
+            // Clear input values and remove ID from the new div
+            $newDiv.find('input').val('');
+            $newDiv.removeAttr('id');
+
+            // Make the 'name' attributes unique by appending the counter
+            $newDiv.find('input[name="author_name_1"]').attr('name', 'author_name_' + authorCount);
+            $newDiv.find('input[name="author_affiliation_1"]').attr('name', 'author_affiliation_' + authorCount);
+            $newDiv.find('input[name="author_email_1"]').attr('name', 'author_email_' + authorCount);
+
+            // Add a delete button to the new div
+            let $deleteBtn = $("<button type='button' class='delete-author' style=' padding:0; background: none; align-self:center; height: 40px;width: 63px; cursor:pointer; border: none;'><i class='fa-solid fa-trash fa-xl' style='color: #198BEA'></i></button>");
+            // $newDiv.append($deleteBtn);
+            $newDiv.find('.article-sub-div').first().append($deleteBtn);
+
+            // Append the new author div
+            $('.article-sub-div-main').last().after($newDiv);
+            // Update the hidden input field
+            $('#author_count').val(authorCount);
+            // Increment the counter for the next author
+            authorCount++;
+        });
+
+        // Delete button functionality
+        $(document).on('click', '.delete-author', function () {
+            $(this).closest('.article-sub-div-main').remove();
+        });
+
+        // let emails = [];
+        // let duplicateFound = false;
+
+        // $('input[name^="author_email_"]').each(function () {
+        //     let email = $(this).val().trim();
+        //     if (email !== '') {
+        //         if (emails.includes(email)) {
+        //             duplicateFound = true;
+        //             return false; // Break loop
+        //         }
+        //         emails.push(email);
+        //     }
+        // });
+
+        // if (duplicateFound) {
+        //     e.preventDefault(); // Prevent form submission
+        //     alert('Duplicate email found. Please ensure all author emails are unique.');
+        // }
+
+
+        // Handle searching for users based on input
+
+        let searchRequest = null; // Store the AJAX request
+        var baseUrl = "{{ asset('') }}";
+        $(document).on('keyup', '.author-name-input', function () {
+            let query = $(this).val();
+            let $thisInput = $(this);
+            let $suggestionBox = $thisInput.siblings('.user-suggestions-dropdown');
+            if (searchRequest) {
+                searchRequest.abort(); // Abort previous request
+            }
+            clearTimeout($.data(this, 'timer'));
+            let wait = setTimeout(() => {
+                if (query.length >= 3) {
+                    searchRequest = $.ajax({
+                        url: "{{ route('searchAutoNameDeposit') }}",
+                        type: 'GET',
+                        data: {
+                            author_name: query
+                        },
+                        success: function (data) {
+                            let suggestions = data.register ? data.register : data;
+                            let suggestionHtml = '';
+                            if (suggestions && suggestions.length > 0) {
+                                suggestions.forEach(function (user) {
+                                    const userLabel = `${user.first_name} ${user.last_name}`;
+                                    const organizationName = user.affiliation_name ? user.affiliation_name : ''; // Handle null
+
+                                    suggestionHtml += `
+            <div class="main-dropdownAuthor" style="border: 2px solid #DADADA;padding: 1px 1px 1px 1px; display: flex;gap: 10px;cursor: pointer;">
+                <div class="user-suggestion-img" style="display: flex;align-items: center;">
+                    <img src="${baseUrl}${user.photo}" alt="" srcset="" style="width: 35px;height: 35px;">
+                </div>
+                <div>
+                    <div class="user-suggestion-item" data-user-email="${user.email}"
+                        data-user-id="${user.id}" 
+                        data-user-name="${userLabel}" style="font-family: Inter;font-size: 15px;font-weight: 600;line-height: 16.94px;">
+                        ${userLabel}
+                    </div>
+                    
+                    <div class="authorDegination" style="font-family: Inter;font-size: 13px;font-weight: 400;line-height: 16.94px;color: #4f4e4e;">
+                        ${organizationName}
+                    </div>
+                </div>
+            </div>`;
+                                });
+                                // Set a fixed max height and enable scroll
+                                $suggestionBox.html(suggestionHtml)
+                                    .css({
+                                        'max-height': '200px',
+                                        'overflow-y': 'auto',
+                                        'border': '1px solid #ccc',
+                                        'background': '#fff',
+                                        'position': 'absolute',
+                                        'z-index': '9999',
+                                        'border-radius': '6px',
+                                        'width': $thisInput.outerWidth()
+                                    })
+                                    .show();
+                            } else {
+                                $suggestionBox.html('<a href="javascript:;" class="add_author add_link" id="add-new-authorbtn" data-add-popup="author_box_popup" style="box-sizing: border-box;height: 31px;padding-left: 128px;">Add Author</a>')
+                                    .css({
+                                        'max-height': '100px',
+                                        'overflow-y': 'auto',
+                                        'border': '1px solid #ccc',
+                                        'background': '#fff',
+                                        'position': 'absolute',
+                                        'z-index': '9999',
+                                        'width': $thisInput.outerWidth()
+                                    })
+                                    .show();
+                            }
+                        }
+                    });
+                } else {
+                    $suggestionBox.hide();
+                }
+            }, 300);// Debounce delay (300ms)
+            $(this).data('timer', wait);
+        });
+
+        $(document).on('click', '.main-dropdownAuthor, .user-suggestion-item, .authorDegination', function (e) {
+            e.stopPropagation();
+            $('#loader').show();
+            let $suggestionContainer = $(this).closest('.main-dropdownAuthor');
+            let userName = $suggestionContainer.find('.user-suggestion-item').data('user-name');
+            let userId = $suggestionContainer.find('.user-suggestion-item').data('user-id');
+            let userEmail = $suggestionContainer.find('.user-suggestion-item').data('user-email');
+            let organizationName = $suggestionContainer.find('.authorDegination').text().trim();
+            setTimeout(function () {
+                $('#loader').hide();
+            }, 400);
+            // Get the current author row container
+            let $parentDiv = $(this).closest('.article-sub-div-main');
+            let $currentUserIdInput = $parentDiv.find('input[type="hidden"]');
+
+            // Check for duplicate selection in other author rows, excluding the current one
+            var alreadySelected = false;
+            $("input[name='Authoruser_id[]']").not($currentUserIdInput).each(function () {
+                let val = $(this).val();
+                if (val !== "" && val == userId) {
+                    alreadySelected = true;
+                    return false;
+                }
+            });
+
+            if (alreadySelected) {
+                alert("User already selected");
+                $suggestionContainer.closest('.user-suggestions-dropdown').hide();
+                return;
+            }
+
+            // Populate the current row with the selected user details
+            let $nameInput = $parentDiv.find('.author-name-input');
+            let $emailInput = $parentDiv.find('.author-email-input');
+            let $affiliationInput = $parentDiv.find('input[name^="author_affiliation"]');
+
+            $nameInput.val(userName);
+            $currentUserIdInput.val(userId);
+            $affiliationInput.val(organizationName);
+            $emailInput.val(userEmail);
+
+            // Hide the suggestion dropdown container after selection
+            $suggestionContainer.closest('.user-suggestions-dropdown').hide();
+        });
+
+        // Handle form submission using AJAX (without login check)
+        let isSubmitting = false; // Flag to track submission status
+        $("form#form_deposit").off('submit').on('submit', function (e) {
+            e.preventDefault();
+            // console.log("sjsj");
+
+
+            if (isSubmitting) return; // Prevent multiple submissions
+            isSubmitting = true; // Set flag to true on first submit
+
+            //  **Form Validation** (Check Empty Fields)
+            // ############  this below comment check validation for all input only for 2 Step ########### So Save for Future.
+            // var firstEmptyField = null;
+            // $(".for-validation").each(function () {
+            //     if (!$(this).val().trim() && !firstEmptyField) {
+            //         $(this).css("border", "2px solid red");
+            //         firstEmptyField = this;
+            //         return false; // Break loop
+            //     } else {
+            //         $(this).css("border", "");
+            //     }
+            // });
+
+            // if (firstEmptyField) {
+            //     $(firstEmptyField).focus();
+            //     firstEmptyField.scrollIntoView({ behavior: "smooth", block: "center" });
+            //     return;
+            // }
+
+            // ############  this above comment check validation for all input only for 2 Step ########### So Save for Future.
+
+            //  **Form Validation** (Check Empty Fields)
+            var firstEmptyField = null;
+            $(".for-validation").each(function () {
+                let $field = $(this);
+
+                // Skip validation for Author Affiliation field
+                if ($field.hasClass("author-affiliation") || $field.attr("name").startsWith("author_affiliation_")) {
+                    return; // Skip this field
+                }
+
+                if (!$field.val().trim() && !firstEmptyField) {
+                    $field.css("border", "2px solid red");
+                    firstEmptyField = this;
+
+                    setTimeout(function () {
+                        $field.css("border", ""); // Remove the red border after 2 seconds
+                    }, 2000);
+                    return false; // Break loop
+                } else {
+                    $field.css("border", "");
+                }
+            });
+
+            if (firstEmptyField) {
+                $(firstEmptyField).focus();
+                firstEmptyField.scrollIntoView({ behavior: "smooth", block: "center" });
+                isSubmitting = false; // Reset flag if validation fails
+                return;
+            }
+
+            //  **Checkbox Validation**
+            if (!$('#checkbox-agree').is(':checked')) {
+                alert('Please confirm the copyright and licensing agreement by checking the box.');
+                isSubmitting = false; // Reset flag if validation fails
+                return;
+            }
+
+
+            setTimeout(() => submitBtn.prop("disabled", false), 2000);
+
+            //  **Execute reCAPTCHA v3 Before Submitting Form**
+            grecaptcha.ready(function () {
+                grecaptcha.execute("{{ config('recaptchav3.sitekey') }}", { action: "deposit" }).then(function (token) {
+                    $("#g-recaptcha-response").val(token); // Store Token
+
+                    //  **Now Submit AJAX Request**
+                    $.ajax({
+                        url: "{{ url('/deposit-article/store') }}",
+                        type: 'POST',
+                        headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                        data: new FormData(document.getElementById('form_deposit')),
+                        dataType: 'JSON',
+                        contentType: false,
+                        cache: false,
+                        processData: false,
+                        success: function (response) {
+                            let $popupApp = $('.Approved-Popup');
+                            $popupApp.css('display', 'block').fadeIn(300);
+
+                            // Bind OK button click event
+                            $popupApp.find('button').on('click', function () {
+                                // $popupApp.css('display', 'block').fadeIn(300).delay(3000).fadeOut(500, function () {
+                                //     $(this).hide();
+                                // });
+                                $popupApp.fadeOut(300, function () {
+                                    $(this).hide();
+
+                                    setTimeout(function () {
+                                        document.getElementById('step2').style.display = 'none';
+                                        document.getElementById('step1').style.display = 'block';
+                                    }, 1000);
+
+                                    //  **Reset Form & UI**
+                                    $('#form_deposit').find('.for-remove').not('#new-div-for-author').remove();
+                                    $("#keywords-hidden, #article_search_journal_id").val("");
+                                    $(".keyword-tag").remove();
+                                    checkJournalName("");
+                                    $('#journal-check-icon').hide();
+                                    keywords = [];
+                                    $('.selectedFiles').text('choose your file');
+                                    $('.file_select-article').css({ 'border': '1px dashed #98A2B3' });
+                                    $('#form_deposit')[0].reset();
+                                    $('#form_deposit').trigger('reset');
+                                    toggleFields();
+                                    // window.location.href = "{ url('/deposit-article') }}";
+                                });
+                            });
+                            isSubmitting = false;
+                        },
+                        error: function (xhr) {
+                            let response = JSON.parse(xhr.responseText);
+                            console.log(xhr.responseText);
+                            alert('An error occurred. Please try again.');
+                            // alert(response.message);
+                            isSubmitting = false;
+                        }
+                    });
+                });
+            });
+        });
+
+    });
+
+</script>
+<script>
+
+    $(document).on('input change', '.author-email-input', function () {
+        let currentEmail = $(this).val().trim();
+        let $currentInput = $(this);
+        let isDuplicate = false;
+
+        $(".author-email-input").not($currentInput).each(function () {
+            if ($(this).val().trim() === currentEmail && currentEmail !== "") {
+                isDuplicate = true;
+                return false; // Break the loop
+            }
+        });
+
+        if (isDuplicate) {
+            alert("This email is already assigned to another author.");
+            $currentInput.val(''); // Clear the duplicate input
+        }
+    });
+
+</script>
+<script>
+    $(document).ready(function () {
+        // $('#issn_article').on('blur', function () {
+        //     let issn = $(this).val().trim(); // Trim whitespace
+        //     if (issn === '') {
+        //     return; // Stop execution if input is empty
+        // }
+        // let issnPattern = /^[0-9]{4}-[0-9]{2}[0-9Xx]{2}$/; // ISSN pattern
+
+        // If ISSN is empty or doesn't match the pattern, clear fields
+        // if (!issn || !issnPattern.test(issn)) {
+        //     $('#article_search_journal').val('');
+        //     $('#article_search_journal_id').val('');
+        //     return; // Stop further execution
+        // }
+        // if (!issnPattern.test(issn)) {
+        //     $('#article_search_journal').val('');
+        //     $('#article_search_journal_id').val('');
+        //     return; // Stop further execution
+        // }
+
+        // $('#issn_article').on('blur', function () {
+        //     let issn = $(this).val().trim();
+        //     let issnPattern = /^[0-9]{4}-[0-9]{2}[0-9Xx]{2}$/;
+
+        //     if (issn !== '' && !issnPattern.test(issn)) {
+        //         $('#article_search_journal').val('');
+        //         $('#article_search_journal_id').val('');
+        //         return;
+        //     }
+
+        //     if (issn === '') {
+        //         return;
+        //     }
+
+        //     // If ISSN is valid, proceed with AJAX request
+        //     $.ajax({
+        //         url: 'get-journal-by-issn',
+        //         type: 'GET',
+        //         data: { issn: issn }, // Pass the correct variable
+        //         success: function (response) {
+
+        //             if (response.success) {
+        //                 $('#article_search_journal').val(response.journal_name);
+        //                 $('#article_search_journal_id').val(response.journal_id);
+        //                 $("#add_search_role_journal").hide();
+        //             } else {
+        //                 // $('#article_search_journal').val('');
+        //                 // $('#article_search_journal_id').val('');
+        //                 // $("#add_search_role_journal").show();
+        //             }
+        //         }
+        //     });
+        // });
+    });
+</script>
+<script>
+    $(function () {
+        $('#publication_month_year').datepicker({
+            changeMonth: true,
+            changeYear: true,
+            showButtonPanel: true,
+            dateFormat: 'MM yy',
+            yearRange: '1700:+nn',
+            beforeShow: function (input, inst) {
+                // Hide calendar dates (show only month-year)
+                $(".ui-datepicker-calendar").hide();
+            },
+            onClose: function (dateText, inst) {
+                var month = $("#ui-datepicker-div .ui-datepicker-month :selected").val();
+                var year = $("#ui-datepicker-div .ui-datepicker-year :selected").val();
+
+                // Check if month/year are selected
+                if (month !== null && year !== null) {
+                    $(this).val($.datepicker.formatDate('MM yy', new Date(year, month, 1)));
+                }
+            }
+        });
+
+        // When user focuses the input again, hide dates
+        $("#publication_month_year").focus(function () {
+            $(".ui-datepicker-calendar").hide();
+        });
+    });
+</script>
+<script>
+    function checkJournalName(journalIdOrName) {
+        if (journalIdOrName.trim().length > 0) {
+            $.ajax({
+                url: "{{ route('check.journal') }}", // Match your route name
+                method: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    value: journalIdOrName // Sending input
+                },
+                success: function (response) {
+                    if (response.exists) {
+                        $('#journal-check-icon').show();
+
+                        if (response.journal_id) {
+                            $('#article_search_journal_id').val(response.journal_id);
+                        }
+                    } else {
+                        $('#journal-check-icon').hide();
+                        $('#article_search_journal_id').val('');
+                    }
+                }
+            });
+        } else {
+            $('#journal-check-icon').hide();
+            $('#article_search_journal_id').val('');
+        }
+    }
+    checkJournalName("");
+
+    $(document).ready(function () {
+        $('#article_search_journal').on('input', function () {
+            const journalIdOrName = $(this).val();
+            checkJournalName(journalIdOrName);
+        });
+    });
+
+    $(document).ready(function () {
+        $('#paper_title').on('blur', function () {
+            let title = $(this).val().trim();
+
+            if (title !== "") {
+                $.ajax({
+                    url: "{{ route('check.publication.title') }}", // Updated route name
+                    type: "GET",
+                    data: { title: title },
+                    success: function (response) {
+                        if (response.exists) {
+                            // alert("This Paper title already exists in the Article List");
+                            // let $popupDenied = $('#Denied-Popup-section');
+                            // $popupDenied.css('display', 'block').fadeIn(300);
+
+                            // setTimeout(function () {
+                            //     $popupDenied.fadeOut(300);
+                            // }, 2000);
+                            $("#Denied-Popup-section").fadeIn(300);
+                            $('#paper_title').val("");
+                        }
+                    }
+                });
+            }
+        });
+        $(".Ok-Denied-btn").click(function () {
+            $("#Denied-Popup-section").fadeOut(300);
+        });
+    });
+
+</script>

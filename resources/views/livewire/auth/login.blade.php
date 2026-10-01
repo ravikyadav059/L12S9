@@ -10,7 +10,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 
-new #[Layout('components.layouts.auth')] class extends Component {
+new #[Layout('components.layouts.app')] class extends Component {
     #[Validate('required|string|email')]
     public string $email = '';
 
@@ -39,7 +39,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $user = Auth::user();
+        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            $this->redirectIntended(default: route('admin.dashboard', absolute: false), navigate: true);
+        } else {
+            $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        }
     }
 
     /**
@@ -71,6 +76,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         return Str::transliterate(Str::lower($this->email).'|'.request()->ip());
     }
 }; ?>
+
 
 <div class="flex flex-col gap-6">
     <x-auth-header title="Log in to your account" description="Enter your email and password below to log in" />

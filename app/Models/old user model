@@ -1,0 +1,203 @@
+  protected $fillable = [
+        'prefix',
+        'first_name',
+        'last_name',
+        'fullname',
+        'email',
+        'password',
+        'type',
+        'status',
+        'profile_status',
+        'provider',
+        'provider_id',
+        'countrycode',
+        'countryiso2',
+        'mobile',
+        'photo',
+        'badge_type',
+        'slug',
+        'unique_id',
+        'sequence_number',
+        'admin_permission',
+        'last_notification_date',
+        'publisher_name',
+        'publisher_address',
+    
+        'publisher_city',
+        'publisher_state',
+        'country_code',
+      
+        'publisher_country',
+        'publisher_website',
+        'publisher_organization',
+        'review_request_status',
+        'clicked_go_reviewer_dash',
+
+        'reviewer_status',
+        'reviewer_date',
+        'publisher_status',
+        'followers',
+        'following',
+        'email_verified_at',
+        'success_status',
+        'welcome_notification',
+        'question_notification',
+        'one_time_token',
+        'profile_type',
+        'publisher_logo',
+        'last_login_with',
+        'verified',
+        'timezone',
+        'verification_request_status',
+        'verification_rejection_reason',
+        'verification_requested_at',
+        'user_profile_count',
+        'user_role'
+    ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['avatar'];
+
+    public $sortable = [
+        'first_name',
+        'last_name',
+        'fullname',
+        'email',
+        'type',
+        'status'
+    ];
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'verification_requested_at' => 'datetime',
+    ];
+
+    /**
+     * Interact with the user's first name.
+     *
+     * @param  string  $value
+     * @return \Illuminate\Database\Eloquent\Casts\Attribute
+     */
+    protected function type(): Attribute
+    {
+        // return new Attribute(
+        //     get: fn ($value) =>  ["user", "admin"][$value],
+        // );
+        return new Attribute(
+            get: fn($value) => isset($value) && array_key_exists($value, ["user", "admin"])
+            ? ["user", "admin"][$value]
+            : null, // Default to null if `$value` is missing or invalid
+        );
+    }
+
+    protected function status(): Attribute
+    {
+        return new Attribute(
+            get: fn($value) => ["Pending", "Active", "Re-Document", "Reject"][$value] ?? 'Unknown',
+        );
+    }
+
+    protected function verified(): Attribute
+    {
+        return new Attribute(
+            get: fn($value) => ["Pending", "Active"][$value] ?? 'Unknown',
+        );
+    }
+
+    public function educationCategory()
+    {
+        return $this->belongsTo(Category::class, 'education_cat', '_id');
+    }
+
+    public function reviewerProfile()
+    {
+        return $this->hasOne(ReviewerProfile::class, 'user_id', '_id');
+    }
+
+
+    public function reviewerDetails()
+    {
+        return $this->hasMany(ReviewerDetails::class, 'reviewer_id', '_id');
+    }
+
+
+    public function sendEmailVerificationNotification()
+    {
+        $this->forceFill([
+            'verification_token' => Str::random(64),
+        ])->save();
+
+        $this->notify(new CustomVerifyEmail($this->verification_token));
+    }
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'publisher_country', 'id');
+    }
+
+    public function state()
+    {
+        return $this->belongsTo(State::class, 'publisher_state', 'id');
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'publisher_city', 'id');
+    }
+
+    
+    // Created by Tony 10/02/2026 this is under Testing version.
+
+public function getAvatarAttribute()
+{
+    $name = trim($this->first_name . ' ' . $this->last_name);
+
+    if ($this->photo) {
+        if (Str::startsWith($this->photo, ['http://', 'https://'])) {
+            return $this->photo; // External URL, return directly
+        } else {
+            $photoPath = public_path($this->photo); // Full file path on server
+
+            if (file_exists($photoPath) && is_file($photoPath)) {
+                return asset($this->photo); // File exists, return URL
+            }
+            // File doesn't exist, fall back to avatar below
+        }
+    }
+
+    // Default avatar if no photo or file missing
+    return 'https://ui-avatars.com/api/?name='
+        . urlencode($name ?: 'User')
+        . '&background=198BEA&color=fff';
+}
+
+// Then in Blade: use like this <img src="{{ $user->avatar }}">
+}

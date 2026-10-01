@@ -1,0 +1,217 @@
+<?php use App\Models\User;?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Template</title>
+    <style>
+        @page {
+            margin: 0;
+        }
+        body {
+            width: 100%;
+            height: 900px;
+            background-image: url("data:image/png;base64,{{ base64_encode(file_get_contents(public_path('assets/images/Peer_Review_Certificate.png'))) }}");
+
+            background-repeat: no-repeat;
+            background-size: contain;
+            font-family: 'Inter', sans-serif;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            position: relative;
+            padding: 20px;
+        }
+        .certificate-title-wrapper{
+            margin: 5px 0;
+            text-align: center
+        }
+        .title {
+            font-size: 26px;
+            /* margin-bottom: 30px; */
+            word-spacing: 0px;
+            margin: 20px 80px;
+        }
+        .user-data{
+            margin: 0px 80px;
+            padding-top: 22%;
+            display: flex;
+            justify-content: space-between;
+        }
+        .user-data p {
+            display: inline-block;
+            width: 49%; /* Adjust width if necessary */
+        }
+        .user-data p {
+            font-size: 16px;
+            margin: 0;
+        }
+        .details {
+            font-size: 20px; /* Adjust font size as needed */
+            text-align: center;
+        }
+        .details h3{
+            margin: 0px 80px;
+            
+        }
+        
+        .details p {
+            font-size: 16px;
+            margin: 10px 80px;
+            text-align: justify;
+            line-height: 25px;
+            color: #092A45;
+        }
+        .signature {
+            font-size: 30px; /* Adjust font size as needed */
+            text-align: center;
+            word-spacing: 5px; /* Increase space between words */
+            width: 100%;
+            margin: 0;
+            margin-bottom: 20px;
+        }
+        .signatureimage{
+            text-align: left;
+            display: block;
+            width: 100%;
+            margin:0;
+        }
+     
+        .official-info {
+            width: 100%;
+            margin: 0px 80px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .official-info .stamp {
+            display: inline-block;
+            vertical-align: middle;
+            
+            width: 28%; /*Adjust as needed */
+            margin: 0;
+            /* margin-left: 80px; */
+            /* margin-right: 20px */
+            
+        }
+       
+        .official-info p {
+            font-size: 16px;
+            margin: 0;
+            
+            /* text-align: center; */
+        }
+        .stamp{
+            width: 100%;
+            /* margin-left:100px; */
+            /* margin-right:155px; */
+            margin: 0;
+        }
+        .details h4{
+            margin-bottom: 10px;
+        }
+        .signaturetest {
+            margin: 0;
+            text-align: center;
+        }
+        .validity{
+            font-size: 16px;
+            margin: 0px 80px;
+            /* line-height: 30px; */
+            text-align: justify;
+            line-height: 25px;
+        }
+        .details .journal-name{
+            color: #1783DC;
+            margin-top: 20px;
+        }
+        .signature-data .signaturetest img{
+            text-align: right;
+            margin: 0 -15px;
+        }
+        .signature-data .signaturetest,
+        .signature-data .signature{
+            text-align: right;
+            
+            margin: 0;
+        }
+        .certificate-title{
+            color: #092A45;
+        }
+        .journal-link{
+            margin: 10px 0px;
+            font-size: 16px;
+            /* line-height: 30px; */
+            
+        }
+        .journal-link p{
+            margin: 0 80px;
+        }
+        .journal-link a{
+            color: #1783DC;
+        }
+        .date{
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="container">
+        <div class="certificate-container">
+            <div class="user-data">
+                @php
+                    $serial_number = str_pad($journal->serial_number, 8, '0', STR_PAD_LEFT);
+                    $certificate_id = "PRC".$serial_number;
+
+                    $created_at = date('d/m/Y', strtotime($journal->created_at));
+                    // $publisher is passed from controller
+                @endphp
+                <p class="serial-number"><strong>Certificate ID: </strong>{{$certificate_id}}</p>
+                <p class="date"><strong>Date of Issue: </strong>{{$created_at}}</p>
+            </div>
+            <div class="certificate-title-wrapper">
+                <h1 class="title certificate-title">Certificate of Peer-Reviewed Journal</h1>
+            </div>
+
+            <div class="details">
+                <h3 class="certificate-title">This Certificate is Proudly Awarded To</h3>
+                <h3 class="journal-name">{{$journal->journal_title}}</h3>
+                <p>Scholar9 proudly certifies that the <strong>Journal: </strong> "{{$journal->journal_title}}", <strong>ISSN No: </strong> {{!empty($journal->e_issn) ? $journal->e_issn : $journal->p_issn}}, <strong>Published by: </strong> {{$publisher->publisher_name}}, fully adheres to the principles and standards of the peer-review process, as verified during its onboarding through Scholar9. By meeting the rigorous academic integrity criteria, this journal has been recognized as a verified peer-reviewed journal. All peer-review records for this journal are securely stored and preserved on Scholar9’s servers. This certificate has been issued based on the verified peer-review practices and compliance demonstrated by the journal.</p>
+            </div>
+            <div class="journal-link">
+                <p><strong>Explorare Journals:</strong> <a href="https://scholar9.com/journal/{{$journal->slug}}" target="_blank">https://scholar9.com/journal/{{$journal->slug}}</a></p>
+            </div>
+            <div class="official-info">
+                <div class="stamp"> 
+                    <p class="signatureimage">
+                    @php
+                        $stampPath = public_path('assets/images/Stamp.png');
+                        $stampBase64 = "data:image/png;base64," . base64_encode(file_get_contents($stampPath));
+                    @endphp    
+                        <img src="{{$stampBase64}}" width="80px" height="80px" alt="">
+
+                    </p>
+                </div>
+                <div class="stamp signature-data">
+                    @php
+                        $stampPath = public_path('assets/images/signature.png');
+                        $stampBase64 = "data:image/png;base64," . base64_encode(file_get_contents($stampPath));
+                    @endphp    
+                    <!-- <h4>Authorized by</h4> -->
+                    <p class="signaturetest"><img src="{{$stampBase64}}" width="155px" height="80" alt=""></p>
+                    <p class="signature"><strong>Hitesh Patel,</strong><br>Director, Scholar9</p>
+                </div>
+            </div>
+            <div class="validity">
+                <p><strong>Verification Validity & Disclaimer:</strong>
+                    This certification remains valid as long as the journal upholds the peer-review process on Scholar9. This certificate confirms the journal’s compliance with Scholar9’s peer-review verification standards. Scholar9 is not responsible for the operational practices or content published in the journal beyond this verification scope.
+                </p>
+            </div>
+            
+        </div>
+    </div>
+</body>
+</html>

@@ -5,3 +5,12 @@
  */
 
 import './echo';
+import flatpickr from 'flatpickr';
+import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js';
+import 'flatpickr/dist/flatpickr.min.css';
+import 'flatpickr/dist/plugins/monthSelect/style.css';
+
+window.flatpickr = flatpickr;
+window.monthSelectPlugin = monthSelectPlugin;
+
+
