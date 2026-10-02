@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\HandlesAddAuthorModal;
 use App\Livewire\Concerns\HandlesAddJournalModal;
 use App\Livewire\Concerns\HandlesDuplicateChecks;
 use App\Models\Article;
@@ -10,13 +11,16 @@ use App\Models\ReviewerJournal;
 use App\Models\ReviewerProfile;
 use App\Models\User;
 use App\Rules\ValidIssn;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 use MongoDB\BSON\Regex;
 
 new #[Layout('components.layouts.app')] class extends Component {
+    use HandlesAddAuthorModal;
     use HandlesAddJournalModal;
     use HandlesDuplicateChecks;
     use WithFileUploads;
@@ -56,9 +60,11 @@ new #[Layout('components.layouts.app')] class extends Component {
     public array $authors = [
         ['name' => '', 'email' => '', 'affiliation' => '']
     ];
-    public array $authorSearchResults = [];
-    public array $showAuthorDropdown = [];
-    public array $authorSearchSequence = [];
+    public array $authorSearchResults = [[]];
+    public array $authorSearchNoResults = [false];
+    public array $showAuthorDropdown = [false];
+    public array $authorSearchSequence = [0];
+    public array $isAuthorSelected = [false];
     public bool $agreeCopyright = false;
 
     public function with(): array
@@ -90,16 +96,29 @@ new #[Layout('components.layouts.app')] class extends Component {
     public function addAuthor(): void
     {
         $this->authors[] = ['name' => '', 'email' => '', 'affiliation' => ''];
+        $this->authorSearchResults[] = [];
+        $this->authorSearchNoResults[] = false;
+        $this->showAuthorDropdown[] = false;
+        $this->authorSearchSequence[] = 0;
+        $this->isAuthorSelected[] = false;
     }
 
     public function removeAuthor(int $index): void
     {
         if (count($this->authors) > 1 && isset($this->authors[$index])) {
             array_splice($this->authors, $index, 1);
-            unset($this->authorSearchResults[$index], $this->showAuthorDropdown[$index], $this->authorSearchSequence[$index]);
+            unset(
+                $this->authorSearchResults[$index],
+                $this->authorSearchNoResults[$index],
+                $this->showAuthorDropdown[$index],
+                $this->authorSearchSequence[$index],
+                $this->isAuthorSelected[$index]
+            );
             $this->authorSearchResults = array_values($this->authorSearchResults);
+            $this->authorSearchNoResults = array_values($this->authorSearchNoResults);
             $this->showAuthorDropdown = array_values($this->showAuthorDropdown);
             $this->authorSearchSequence = array_values($this->authorSearchSequence);
+            $this->isAuthorSelected = array_values($this->isAuthorSelected);
         }
     }
 
@@ -109,11 +128,110 @@ new #[Layout('components.layouts.app')] class extends Component {
             $parts = explode('.', $key);
             $index = (int) $parts[0];
             $this->searchAuthor($index, (string) $value);
+        } elseif (str_ends_with($key, '.email')) {
+            $parts = explode('.', $key);
+            $index = (int) $parts[0];
+            $this->lookupAuthorByEmail($index, (string) $value);
+        }
+    }
+
+    public function resolveUserAffiliation(User|string $user): string
+    {
+        $userObj = is_string($user) ? User::find($user) : $user;
+        if (! $userObj) {
+            return '';
+        }
+
+        $uId = (string) ($userObj->_id ?? $userObj->id ?? '');
+
+        // 1. Try resolving through ReviewerProfile -> Experience -> Organization
+        $profile = ReviewerProfile::where('user_id', $uId)->first();
+        if ($profile && ! empty($profile->experience)) {
+            $exp = $profile->experience;
+            $firstExpId = null;
+
+            if (is_string($exp)) {
+                $decoded = json_decode($exp, true);
+                if (is_array($decoded) && ! empty($decoded)) {
+                    $firstExpId = is_array($decoded[0]) ? ($decoded[0]['_id'] ?? $decoded[0]['organization_id'] ?? null) : $decoded[0];
+                }
+            } elseif (is_array($exp) && ! empty($exp)) {
+                $firstExpId = is_array($exp[0]) ? ($exp[0]['_id'] ?? $exp[0]['organization_id'] ?? null) : $exp[0];
+            }
+
+            if ($firstExpId) {
+                $experience = Experience::find((string) $firstExpId);
+                if ($experience && ! empty($experience->organization_id)) {
+                    $org = Organization::find((string) $experience->organization_id);
+                    if ($org && ! empty($org->organization_name)) {
+                        return (string) $org->organization_name;
+                    }
+                }
+            }
+        }
+
+        // 2. Direct user affiliation attribute fallback
+        if (! empty($userObj->affiliation)) {
+            if (is_object($userObj->affiliation) && isset($userObj->affiliation->name)) {
+                return (string) $userObj->affiliation->name;
+            } elseif (is_string($userObj->affiliation)) {
+                return (string) $userObj->affiliation;
+            }
+        }
+
+        return '';
+    }
+
+    public function lookupAuthorByEmail(int $index, string $email): void
+    {
+        $email = strtolower(trim($email));
+
+        if (empty($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        $escaped = preg_quote($email, '/');
+        $user = User::where(function ($q) {
+            $q->where('type', 0)
+                ->orWhere('type', '0')
+                ->orWhereNull('type');
+        })
+            ->where('status', '!=', 3)
+            ->where('status', '!=', '3')
+            ->where('email', 'regex', new Regex('^'.$escaped.'$', 'i'))
+            ->first();
+
+        if ($user) {
+            $authorName = trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
+            if ($authorName === '') {
+                $authorName = trim((string) (($user->first_name ?? '') ?: ($user->last_name ?? '')));
+            }
+            if ($authorName === '' && ! empty($user->fullname)) {
+                $authorName = $user->fullname;
+            }
+
+            $affiliationName = $this->resolveUserAffiliation($user);
+
+            if ($authorName !== '') {
+                $this->authors[$index]['name'] = $authorName;
+            }
+
+            $this->authors[$index]['affiliation'] = $affiliationName;
+
+            $this->showAuthorDropdown[$index] = false;
+            $this->authorSearchResults[$index] = [];
+            $this->authorSearchNoResults[$index] = false;
+
+            $this->resetValidation("authors.{$index}.name");
+            $this->resetValidation("authors.{$index}.email");
+            $this->resetValidation("authors.{$index}.affiliation");
         }
     }
 
     public function searchAuthor(int $index, ?string $name = null): void
     {
+        $this->isAuthorSelected[$index] = false;
+
         $query = trim($name ?? ($this->authors[$index]['name'] ?? ''));
 
         // Initialize sequence tracking to discard older async responses
@@ -122,6 +240,7 @@ new #[Layout('components.layouts.app')] class extends Component {
 
         if (mb_strlen($query) < 3) {
             $this->authorSearchResults[$index] = [];
+            $this->authorSearchNoResults[$index] = false;
             $this->showAuthorDropdown[$index] = false;
 
             return;
@@ -170,7 +289,8 @@ new #[Layout('components.layouts.app')] class extends Component {
 
         if ($users->isEmpty()) {
             $this->authorSearchResults[$index] = [];
-            $this->showAuthorDropdown[$index] = false;
+            $this->authorSearchNoResults[$index] = true;
+            $this->showAuthorDropdown[$index] = true;
 
             return;
         }
@@ -289,6 +409,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         }
 
         $this->authorSearchResults[$index] = $results;
+        $this->authorSearchNoResults[$index] = false;
         $this->showAuthorDropdown[$index] = !empty($results);
     }
 
@@ -303,7 +424,9 @@ new #[Layout('components.layouts.app')] class extends Component {
             $this->resetValidation("authors.{$index}.email");
         }
 
+        $this->isAuthorSelected[$index] = true;
         $this->authorSearchResults[$index] = [];
+        $this->authorSearchNoResults[$index] = false;
         $this->showAuthorDropdown[$index] = false;
     }
 
@@ -423,18 +546,27 @@ new #[Layout('components.layouts.app')] class extends Component {
                 return;
             }
 
-            if ($this->option === 'published' && !empty($this->pubMonthYear)) {
-                $parts = explode('-', $this->pubMonthYear);
-                if (count($parts) === 2) {
-                    $m = (int) $parts[0];
-                    $y = (int) $parts[1];
-                    $currY = (int) date('Y');
-                    $currM = (int) date('n');
-                    if ($y > $currY || ($y === $currY && $m > $currM)) {
+            if ($this->option === 'published' && ! empty($this->pubMonthYear)) {
+                try {
+                    $pubDate = null;
+                    if (str_contains($this->pubMonthYear, '-')) {
+                        $parts = explode('-', $this->pubMonthYear);
+                        if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
+                            $pubDate = Carbon::createFromDate((int) $parts[1], (int) $parts[0], 1)->endOfMonth();
+                        }
+                    }
+                    if (! $pubDate) {
+                        $pubDate = Carbon::parse($this->pubMonthYear)->endOfMonth();
+                    }
+
+                    if ($pubDate && $pubDate->isFuture()) {
                         $this->addError('pubMonthYear', 'Publication date cannot be in the future.');
                         $this->dispatch('scroll-to-first-error');
+
                         return;
                     }
+                } catch (\Throwable $e) {
+                    // Fallback if parsing fails
                 }
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -629,41 +761,151 @@ new #[Layout('components.layouts.app')] class extends Component {
             throw $e;
         }
 
-        $filePath = null;
-        if ($this->file) {
-            $filePath = $this->file->store('articles', 'public');
+        // 1. Determine publication_type and user_id
+        $isLoggedIn = Auth::check();
+        $publicationType = $isLoggedIn ? 'auth_person' : 'guest';
+        $userId = $isLoggedIn ? (string) Auth::id() : null;
+
+        // 2. Resolve registered co-authors array & format authors
+        $registeredCoAuthors = [];
+        if ($isLoggedIn && $userId) {
+            $registeredCoAuthors[] = $userId;
         }
 
-        $finalEIssn = trim($this->eIssn);
-        $finalPIssn = trim($this->pIssn);
-        $finalIssn = $finalEIssn ?: ($finalPIssn ?: trim($this->issn));
+        $formattedAuthors = [];
+        foreach ($this->authors as $author) {
+            $authorName = trim($author['name'] ?? '');
+            $authorEmail = strtolower(trim($author['email'] ?? ''));
+            $authorAffiliation = trim($author['affiliation'] ?? '');
 
-        Publication::create([
-            'title' => $this->title,
-            'abstract' => $this->abstract,
-            'keywords' => $this->keywordsList,
-            'option' => $this->option,
-            'doi' => $this->doi,
-            'article_type' => $this->articleType,
-            'type' => $this->articleType,
-            'journal_name' => $this->journalName,
-            'journal_title' => $this->selectedJournalId ?: null,
-            'issn' => $finalIssn,
-            'e_issn' => $finalEIssn,
-            'p_issn' => $finalPIssn,
-            'volume' => $this->volume,
-            'issue' => $this->issue,
-            'citation' => $this->citation,
-            'page_no' => $this->pageNo,
-            'publication_month_year' => $this->pubMonthYear,
-            'pdf_url' => $this->pdfUrl,
-            'landing_page_url' => $this->landingPageUrl,
-            'file_path' => $filePath,
-            'authors' => $this->authors,
-            'agree_copyright' => $this->agreeCopyright,
-            'status' => 0,
-            'user_id' => Auth::id(),
-        ]);
+            $formattedAuthors[] = [
+                'name' => $authorName,
+                'affiliation' => $authorAffiliation !== '' ? $authorAffiliation : null,
+                'email' => $authorEmail,
+            ];
+
+            if (! empty($authorEmail)) {
+                $escaped = preg_quote($authorEmail, '/');
+                $matchedUser = User::where(function ($q) {
+                    $q->where('type', 0)
+                        ->orWhere('type', '0')
+                        ->orWhereNull('type');
+                })
+                    ->where('status', '!=', 3)
+                    ->where('status', '!=', '3')
+                    ->where('email', 'regex', new Regex('^'.$escaped.'$', 'i'))
+                    ->first();
+
+                if ($matchedUser) {
+                    $uIdStr = (string) ($matchedUser->_id ?? $matchedUser->id);
+                    if (! in_array($uIdStr, $registeredCoAuthors, true)) {
+                        $registeredCoAuthors[] = $uIdStr;
+                    }
+                }
+            }
+        }
+
+        $registeredCoAuthors = array_values($registeredCoAuthors);
+        $formattedAuthors = array_values($formattedAuthors);
+
+        // 3. Generate unique serial_number & slug
+        $maxSerial = (int) (Publication::max('serial_number') ?? 0);
+        $serialNumber = $maxSerial > 0 ? $maxSerial + 1 : 1;
+
+        while (Publication::where('serial_number', $serialNumber)->exists()) {
+            $serialNumber++;
+        }
+
+        $slugBase = Str::slug($this->title);
+        if ($slugBase === '') {
+            $slugBase = 'article';
+        }
+        $slug = "{$slugBase}-{$serialNumber}";
+
+        // 4. File handling (stored into publication directory)
+        $imagePath = null;
+        if ($this->file) {
+            $origName = pathinfo($this->file->getClientOriginalName(), PATHINFO_FILENAME);
+            $ext = $this->file->getClientOriginalExtension() ?: 'pdf';
+            $fileName = "{$origName}_".time().".{$ext}";
+            $imagePath = $this->file->storeAs('publication', $fileName, 'public');
+        }
+
+        // 5. Build Publication data conditionally based on option
+        $isPreprint = ($this->option === 'preprint');
+
+        if ($isPreprint) {
+            $publicationData = [
+                'publication_type' => $publicationType,
+                'user_id' => $userId,
+                'registered_co_author' => $registeredCoAuthors,
+                'serial_number' => $serialNumber,
+                'slug' => $slug,
+                'title' => $this->title,
+                'description' => $this->abstract,
+                'publication_keywords' => $this->keywordsList,
+                'article_type' => 'pre-print',
+                'status' => 0,
+                'image' => $imagePath,
+                'authors' => $formattedAuthors,
+                'agree_copyright' => $this->agreeCopyright,
+            ];
+        } else {
+            $finalEIssn = trim($this->eIssn);
+            $finalPIssn = trim($this->pIssn);
+            $finalIssn = $finalEIssn ?: ($finalPIssn ?: trim($this->issn));
+
+            $publishedDateValue = null;
+            if (! empty($this->pubMonthYear)) {
+                try {
+                    if (str_contains($this->pubMonthYear, '-')) {
+                        $parts = explode('-', $this->pubMonthYear);
+                        if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
+                            $publishedDateValue = Carbon::createFromDate((int) $parts[1], (int) $parts[0], 1)->format('F Y');
+                        }
+                    }
+                    if (! $publishedDateValue) {
+                        $publishedDateValue = Carbon::parse($this->pubMonthYear)->format('F Y');
+                    }
+                } catch (\Throwable $e) {
+                    $publishedDateValue = trim($this->pubMonthYear);
+                }
+            } else {
+                $publishedDateValue = date('F Y');
+            }
+
+            $publicationData = [
+                'publication_type' => $publicationType,
+                'user_id' => $userId,
+                'registered_co_author' => $registeredCoAuthors,
+                'serial_number' => $serialNumber,
+                'slug' => $slug,
+                'title' => $this->title,
+                'description' => $this->abstract,
+                'publication_keywords' => $this->keywordsList,
+                'type' => $this->articleType ?: null,
+                'article_type' => 'published',
+                'published_date' => $publishedDateValue,
+                'status' => 0,
+                'journal_title' => $this->selectedJournalId ?: null,
+                'journal_name' => $this->journalName ?: null,
+                'issn' => $finalIssn ?: null,
+                'e_issn' => $finalEIssn ?: null,
+                'p_issn' => $finalPIssn ?: null,
+                'volume' => $this->volume ?: null,
+                'issue' => $this->issue ?: null,
+                'citations' => $this->citation ?: null,
+                'page_no' => $this->pageNo ?: null,
+                'doi' => $this->doi ?: null,
+                'published_paper_PDF' => $this->pdfUrl ?: null,
+                'url' => $this->landingPageUrl ?: null,
+                'image' => $imagePath,
+                'authors' => $formattedAuthors,
+                'agree_copyright' => $this->agreeCopyright,
+            ];
+        }
+
+        Publication::create($publicationData);
 
         session()->flash('status', 'Thank you for submitting your article! Our team will review its contents.');
 
@@ -673,7 +915,7 @@ new #[Layout('components.layouts.app')] class extends Component {
             'isJournalVerified', 'showAddJournalModal', 'newJournalTitle', 'newJournalEIssn', 'newJournalPIssn',
             'issnType', 'eIssn', 'pIssn', 'issn', 'volume', 'issue', 'citation',
             'pageNo', 'pubMonthYear', 'pdfUrl', 'landingPageUrl', 'file', 'agreeCopyright',
-            'authorSearchResults', 'showAuthorDropdown', 'authorSearchSequence'
+            'authorSearchResults', 'authorSearchNoResults', 'showAuthorDropdown', 'authorSearchSequence', 'isAuthorSelected'
         ]);
         $this->issnType = 'both';
         $this->authors = [['name' => '', 'email' => '', 'affiliation' => '']];
@@ -686,7 +928,18 @@ new #[Layout('components.layouts.app')] class extends Component {
         scrollToFirstError() {
             this.$nextTick(() => {
                 setTimeout(() => {
-                    const errorEl = document.querySelector('.text-red-500:not([x-cloak]):not(.hidden), .border-red-500, [data-error]');
+                    const list = Array.from(document.querySelectorAll('p.text-red-500:not([x-cloak]):not(.hidden), div.text-red-500:not([x-cloak]):not(.hidden), .border-red-500:not(span), [aria-invalid=\'true\'], [data-invalid], [data-error]'));
+                    const errorEl = list.find(function(el) {
+                        const txt = (el.textContent || '').trim();
+                        if (txt === '*' || (el.tagName === 'SPAN' && txt === '*')) {
+                            return false;
+                        }
+                        if (el.closest('label') && txt === '*') {
+                            return false;
+                        }
+                        return Boolean(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+                    });
+
                     if (errorEl) {
                         const field = errorEl.closest('.space-y-1\\.5, .space-y-1, .space-y-2, [id^=\'field-\']') || errorEl;
                         const headerOffset = 100;
@@ -700,7 +953,7 @@ new #[Layout('components.layouts.app')] class extends Component {
 
                         const input = field.querySelector('input:not([type=\'hidden\']), select, textarea, .flatpickr-input');
                         if (input && typeof input.focus === 'function') {
-                            setTimeout(() => {
+                            setTimeout(function() {
                                 input.focus({ preventScroll: true });
                             }, 350);
                         }
@@ -1383,8 +1636,8 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                                 maxDate: new Date(),
                                                                 plugins: typeof monthSelectPlugin !== 'undefined' ? [
                                                                     new monthSelectPlugin({
-                                                                        shorthand: true,
-                                                                        dateFormat: 'm-Y',
+                                                                        shorthand: false,
+                                                                        dateFormat: 'F Y',
                                                                         altFormat: 'F Y',
                                                                         theme: 'light'
                                                                     })
@@ -1590,7 +1843,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                             class="space-y-1 relative" 
                                             id="field-authors-{{ $index }}-name"
                                             x-data="{ 
-                                                open: @entangle('showAuthorDropdown.' . $index),
+                                                open: true,
                                                 queryLength: $wire.authors[{{ $index }}]?.name ? $wire.authors[{{ $index }}].name.length : 0 
                                             }" 
                                             @click.outside="open = false"
@@ -1601,7 +1854,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                             
                                             <div class="relative">
                                                 <flux:input 
-                                                    wire:model.live.debounce.400ms="authors.{{ $index }}.name" 
+                                                    wire:model.live.debounce.300ms="authors.{{ $index }}.name" 
                                                     x-on:input="queryLength = $event.target.value.trim().length; if (queryLength >= 3) { open = true; }"
                                                     x-on:focus="if (queryLength >= 3) { open = true; }"
                                                     placeholder="Search author name Or Add" 
@@ -1622,7 +1875,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                             </template>
 
                                             <!-- Dropdown Results -->
-                                            @if(!empty($authorSearchResults[$index] ?? []))
+                                            @if(!empty($showAuthorDropdown[$index]) && !empty($authorSearchResults[$index]))
                                                 <div 
                                                     x-show="open" 
                                                     x-transition:enter="transition ease-out duration-150"
@@ -1648,6 +1901,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                         @endphp
                                                         <button 
                                                             type="button"
+                                                            @click="open = false"
                                                             wire:click="selectAuthor({{ $index }}, '{{ addslashes($uName) }}', '{{ addslashes($uEmail) }}', '{{ addslashes($uAffiliation) }}')"
                                                             class="w-full text-left px-3.5 py-2.5 hover:bg-sky-50/70 dark:hover:bg-zinc-700/60 transition-colors flex items-center gap-3 group cursor-pointer"
                                                         >
@@ -1664,13 +1918,11 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                                 <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100 group-hover:text-[#198BEA] transition leading-snug truncate">
                                                                     {{ $uName }}
                                                                 </div>
-                                                                <div class="text-xs text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-2 mt-0.5">
-                                                                    <span class="text-zinc-600 dark:text-zinc-300 font-medium">{{ $uEmail }}</span>
-                                                                    @if(!empty($uAffiliation))
-                                                                        <span class="text-zinc-400">•</span>
-                                                                        <span class="truncate text-zinc-500">{{ $uAffiliation }}</span>
-                                                                    @endif
-                                                                </div>
+                                                                @if(!empty($uAffiliation))
+                                                                    <div class="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                                                                        <span>{{ $uAffiliation }}</span>
+                                                                    </div>
+                                                                @endif
                                                             </div>
 
                                                             <div class="text-xs font-semibold text-[#198BEA] opacity-0 group-hover:opacity-100 transition shrink-0">
@@ -1678,12 +1930,52 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                             </div>
                                                         </button>
                                                     @endforeach
+
+                                                    <!-- Dropdown Footer Add Author Action -->
+                                                    <div class="p-2 bg-zinc-50 dark:bg-zinc-800/80 border-t border-zinc-100 dark:border-zinc-700/60 text-center">
+                                                        <button 
+                                                            type="button"
+                                                            @click="open = false"
+                                                            wire:click="openAddAuthorModal({{ $index }})"
+                                                            class="w-full py-1.5 px-3 text-xs font-semibold text-[#198BEA] hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                                        >
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                                            </svg>
+                                                            <span>Add new author instead</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            @elseif(!empty($showAuthorDropdown[$index]) && empty($authorSearchResults[$index]) && mb_strlen(trim($authors[$index]['name'] ?? '')) >= 3)
+                                                <!-- No Results Found: Clean Add Author Prompt -->
+                                                <div 
+                                                    x-show="open" 
+                                                    class="absolute left-0 right-0 z-30 mt-1 p-4 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl text-center space-y-2"
+                                                >
+                                                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                                        No registered author found for "<span class="font-semibold text-zinc-700 dark:text-zinc-200">{{ $authors[$index]['name'] ?? '' }}</span>"
+                                                    </p>
+                                                    <button 
+                                                        type="button" 
+                                                        @click="open = false"
+                                                        wire:click="openAddAuthorModal({{ $index }})" 
+                                                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#198BEA] hover:bg-[#1476c9] text-white text-xs font-semibold rounded-lg transition shadow-xs cursor-pointer"
+                                                    >
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                                        </svg>
+                                                        <span>Add Author</span>
+                                                    </button>
                                                 </div>
                                             @endif
 
                                             @error("authors.{$index}.name") 
                                                 <p x-data="{ show: true }" x-init="setTimeout(() => { show = false; $wire.clearFieldValidation('authors.{{ $index }}.name'); }, 5000)" x-show="show" x-transition.opacity.duration.300ms class="text-xs text-red-500 font-medium">{{ $message }}</p> 
                                             @enderror
+
+                                            @if(session('author_added_success'))
+                                                <p x-data="{ show: true }" x-init="setTimeout(() => show = false, 5000)" x-show="show" x-transition.opacity.duration.300ms class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">{{ session('author_added_success') }}</p>
+                                            @endif
                                         </div>
 
                                         <!-- Author Affiliation -->
@@ -1703,11 +1995,21 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         <label class="block text-sm font-bold text-zinc-800 dark:text-zinc-200">
                                             Author Email <span class="text-red-500">*</span>
                                         </label>
-                                        <flux:input 
-                                            type="email" 
-                                            wire:model="authors.{{ $index }}.email" 
-                                            placeholder="Enter author email, e.g. hello@scholar9.com" 
-                                        />
+                                        <div class="relative">
+                                            <flux:input 
+                                                type="email" 
+                                                wire:model.live.debounce.400ms="authors.{{ $index }}.email" 
+                                                placeholder="Enter author email, e.g. rahul@gmail.com" 
+                                            />
+                                            
+                                            <!-- Email lookup loading spinner -->
+                                            <div wire:loading wire:target="authors.{{ $index }}.email" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <svg class="animate-spin h-4 w-4 text-[#198BEA]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
                                         @error("authors.{$index}.email") 
                                             <p x-data="{ show: true }" x-init="setTimeout(() => { show = false; $wire.clearFieldValidation('authors.{{ $index }}.email'); }, 5000)" x-show="show" x-transition.opacity.duration.300ms class="text-xs text-red-500 font-medium">{{ $message }}</p> 
                                         @enderror
@@ -1780,5 +2082,8 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     <!-- ================= REUSABLE ADD NEW JOURNAL POPUP MODAL ================= -->
     <x-modals.add-journal />
+
+    <!-- ================= REUSABLE ADD NEW AUTHOR POPUP MODAL ================= -->
+    <x-modals.add-author />
 </div>
 

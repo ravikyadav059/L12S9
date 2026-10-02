@@ -10,7 +10,7 @@ This directory serves as the centralized catalog and knowledge base for all Mong
 | :--- | :--- | :--- | :--- |
 | **`publications`** | [publications.md](./publications.md) | 19 Indexes | Status filtering, title search/sorting, multikey author lookups, article categories, journal relationship lookups (`journal_title`), DOI, views, and citations. |
 | **`reviewer_journal`** | [reviewer_journal.md](./reviewer_journal.md) | 7 Indexes | Journal title resolution, slug routing (`/journal/{slug}`), ISSN verification, status, and created date sorting. |
-| **`users`** | [users.md](./users.md) | 8 Indexes | Primary `_id_`, author slug routing (`/profile/{slug}`), email authentication, status, author fullname, and author first/last name auto-complete lookup. |
+| **`users`** | [users.md](./users.md) | 10 Indexes | Primary `_id_`, unique author slug routing (`/profile/{slug}`), unique institutional scholar ID (`unique_id`), unique `sequence_number`, unique `email` authentication, status, author fullname, and author first/last name auto-complete lookup. |
 | **`article_type`** | [article_type.md](./article_type.md) | 2 Indexes | Primary `_id_` and category name sorting/filtering. |
 | **`indexing_agency`** | [indexing_agency.md](./indexing_agency.md) | 3 Indexes | Primary `_id_`, compound status & serial number sort, and agency name lookup. |
 | **`role_in_research_journals`** | [role_in_research_journals.md](./role_in_research_journals.md) | 4 Indexes | Primary `_id_`, journal title/ID resolution, user ID lookups, and status filtering. |

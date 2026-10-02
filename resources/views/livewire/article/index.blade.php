@@ -76,9 +76,11 @@ new #[Layout('components.layouts.app')] class extends Component {
                 'view_counts',
                 'published_date',
                 'publication_month_year',
+                'status',
                 'created_at',
             ])
             ->with(['reviewerJournal' => fn ($q) => $q->select(['_id', 'journal_title', 'title'])])
+            ->whereIn('status', [1, '1'])
             ->whereNotNull('title')
             ->where('title', '!=', '');
 

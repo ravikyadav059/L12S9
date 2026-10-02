@@ -113,6 +113,50 @@ class User extends Authenticatable // implements MustVerifyEmail
     }
 
     /**
+     * Always format and store email in lowercase.
+     */
+    public function setEmailAttribute(mixed $value): void
+    {
+        $this->attributes['email'] = ! empty($value) ? strtolower(trim((string) $value)) : $value;
+    }
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (empty($user->sequence_number)) {
+                $maxSeq = (int) static::max('sequence_number');
+                $user->sequence_number = $maxSeq + 1;
+            }
+
+            if (empty($user->unique_id)) {
+                $seqStr = str_pad((string) $user->sequence_number, 7, '0', STR_PAD_LEFT);
+                $user->unique_id = 'S9-'.date('mY').'-'.$seqStr;
+            }
+
+            if (empty($user->slug)) {
+                $nameForSlug = trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
+                if (empty($nameForSlug)) {
+                    $nameForSlug = trim((string) ($user->fullname ?? 'author'));
+                }
+                $baseSlug = Str::slug($nameForSlug);
+                if (empty($baseSlug)) {
+                    $baseSlug = 'author';
+                }
+                $user->slug = $baseSlug.'-'.$user->unique_id;
+            }
+        });
+
+        static::saving(function (User $user): void {
+            if (! empty($user->email)) {
+                $user->email = strtolower(trim((string) $user->email));
+            }
+        });
+    }
+
+    /**
      * Check if the user is an administrator (type=1, role=admin, admin_permission=1).
      */
     public function isAdmin(): bool

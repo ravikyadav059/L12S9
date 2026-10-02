@@ -50,12 +50,9 @@ class Publication extends Model
     {
         return [
             'status' => 'integer',
+            'serial_number' => 'integer',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
-            'registered_co_author' => 'array',
-            'authors' => 'array',
-            'publication_keywords' => 'array',
-            'unregistered_co_author' => 'array',
         ];
     }
 

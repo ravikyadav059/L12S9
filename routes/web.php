@@ -22,6 +22,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // For open pages :- for scholar normal user
+Volt::route('questions', 'question.index')->name('questions.index');
 Volt::route('articles', 'article.index')->name('articles.index');
 Volt::route('journals', 'journal.index')->name('journals.index');
 Volt::route('institutions', 'institution.index')->name('institutions.index');
