@@ -2,6 +2,7 @@
 
 use App\Models\Answer;
 use App\Models\Question;
+use App\Models\Skill;
 use App\Models\User;
 use App\Models\Vote;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +48,7 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public string $newTags = '';
 
+    #[Validate('nullable|image|max:5120')]
     public $newThumbnail;
 
     // Edit Question Form
@@ -72,15 +74,9 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public bool $showAnswerModal = false;
 
-    public bool $showShareModal = false;
-
     public bool $showFilterModal = false;
 
     public bool $showSkillsModal = false;
-
-    public string $shareUrl = '';
-
-    public string $shareTitle = '';
 
     // Track user local interactions for quick UI responsiveness
     public array $votedQuestions = [];
@@ -255,9 +251,28 @@ new #[Layout('components.layouts.app')] class extends Component {
         $this->showAskModal = true;
     }
 
+    public function checkTitleAvailable(string $title, ?string $excludeId = null): bool
+    {
+        return Question::isTitleUnique($title, $excludeId);
+    }
+
     public function submitQuestion(): void
     {
+        if (! Auth::check()) {
+            $this->showAskModal = false;
+            $this->dispatch('open-auth-modal', 'Ask a Question');
+
+            return;
+        }
+
         $this->validate();
+
+        $cleanTitle = trim($this->newTitle);
+        if (! Question::isTitleUnique($cleanTitle)) {
+            $this->addError('newTitle', 'A question with this title already exists. Please choose a unique title.');
+
+            return;
+        }
 
         $tagList = array_values(array_filter(array_map('trim', explode(',', $this->newTags))));
         if (empty($tagList)) {
@@ -269,11 +284,11 @@ new #[Layout('components.layouts.app')] class extends Component {
             $thumbnailPath = $this->newThumbnail->store('thumbnails', 'public');
         }
 
-        $user = Auth::user() ?? User::first();
+        $user = Auth::user();
 
         $question = Question::create([
-            'user_id' => $user?->_id ?? (string) ($user?->id ?? 'anonymous'),
-            'title' => $this->newTitle,
+            'user_id' => $user->_id ?? (string) ($user->id ?? 'anonymous'),
+            'title' => $cleanTitle,
             'description' => $this->newDescription,
             'tags' => $tagList,
             'category' => $tagList,
@@ -284,6 +299,7 @@ new #[Layout('components.layouts.app')] class extends Component {
             'answer_count' => 0,
             'likes_count' => 0,
             'is_closed' => false,
+            'status' => 1,
             'follow' => [],
             'save' => [],
             'is_reported' => false,
@@ -300,8 +316,22 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public function openEditModal(string $questionId): void
     {
+        if (! Auth::check()) {
+            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Edit a Question');
+
+            return;
+        }
+
         $q = Question::find($questionId);
         if (! $q) {
+            return;
+        }
+
+        $currentUserId = (string) (Auth::id() ?? '');
+        $questionAuthorId = (string) ($q->user_id ?? ($q->user->_id ?? $q->user->id ?? ''));
+        if ($currentUserId === '' || $currentUserId !== $questionAuthorId) {
+            $this->dispatch('toast', message: 'You are not authorized to edit this question.', type: 'error');
+
             return;
         }
 
@@ -315,15 +345,42 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public function saveEdit(): void
     {
+        if (! Auth::check()) {
+            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Edit a Question');
+
+            return;
+        }
+
         if (! $this->editingQuestionId) {
+            return;
+        }
+
+        $cleanTitle = trim($this->editTitle);
+        if (empty($cleanTitle)) {
+            $this->addError('editTitle', 'The question title is required.');
+
+            return;
+        }
+
+        if (! Question::isTitleUnique($cleanTitle, $this->editingQuestionId)) {
+            $this->addError('editTitle', 'A question with this title already exists. Please choose a unique title.');
+
             return;
         }
 
         $q = Question::find($this->editingQuestionId);
         if ($q) {
+            $currentUserId = (string) (Auth::id() ?? '');
+            $questionAuthorId = (string) ($q->user_id ?? ($q->user->_id ?? $q->user->id ?? ''));
+            if ($currentUserId === '' || $currentUserId !== $questionAuthorId) {
+                $this->dispatch('toast', message: 'You are not authorized to edit this question.', type: 'error');
+
+                return;
+            }
+
             $tagList = array_values(array_filter(array_map('trim', explode(',', $this->editTags))));
             $q->update([
-                'title' => $this->editTitle,
+                'title' => $cleanTitle,
                 'description' => $this->editDescription,
                 'tags' => $tagList,
                 'category' => $tagList,
@@ -337,6 +394,12 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public function openAnswerModal(string $questionId): void
     {
+        if (! Auth::check()) {
+            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Answer a Question');
+
+            return;
+        }
+
         $q = Question::find($questionId);
         if (! $q) {
             return;
@@ -350,17 +413,23 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public function submitAnswer(): void
     {
+        if (! Auth::check()) {
+            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Answer a Question');
+
+            return;
+        }
+
         if (empty(trim($this->answerContent))) {
             $this->addError('answerContent', 'Please enter your answer content.');
 
             return;
         }
 
-        $user = Auth::user() ?? User::first();
+        $user = Auth::user();
 
         Answer::create([
             'question_id' => $this->answeringQuestionId,
-            'user_id' => $user?->_id ?? (string) ($user?->id ?? 'anonymous'),
+            'user_id' => $user->_id ?? (string) ($user->id ?? 'anonymous'),
             'content' => $this->answerContent,
             'votes_count' => 0,
             'is_accepted' => false,
@@ -376,13 +445,6 @@ new #[Layout('components.layouts.app')] class extends Component {
         $this->answeringQuestionId = null;
         $this->answerContent = '';
         $this->dispatch('toast', message: 'Answer submitted! Thank you 🙌', type: 'success');
-    }
-
-    public function openShareModal(string $questionId, string $title, string $slug = ''): void
-    {
-        $this->shareTitle = $title;
-        $this->shareUrl = url('/questions#'.$questionId);
-        $this->showShareModal = true;
     }
 
     public function openSkillsModal(): void
@@ -434,15 +496,62 @@ new #[Layout('components.layouts.app')] class extends Component {
         $this->dispatch('toast', message: 'Filters reset', type: 'info');
     }
 
-    public function applyFilters(): void
+    public function searchSkills(string $query = ''): array
     {
-        $this->showFilterModal = false;
-        $this->dispatch('toast', message: 'Filters applied!', type: 'success');
+        $query = trim($query);
+        if ($query === '') {
+            return Skill::query()
+                ->select(['skills_title'])
+                ->whereIn('skills_status', [1, '1'])
+                ->limit(20)
+                ->pluck('skills_title')
+                ->map(fn ($t) => trim((string) $t))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $escaped = preg_quote($query, '/');
+
+        // 1. First search: Prefix matches using B-Tree index (fastest, hits skills_title index)
+        $prefixMatches = Skill::query()
+            ->select(['skills_title'])
+            ->whereIn('skills_status', [1, '1'])
+            ->where('skills_title', 'regex', new \MongoDB\BSON\Regex('^'.$escaped, 'i'))
+            ->limit(15)
+            ->pluck('skills_title')
+            ->map(fn ($t) => trim((string) $t))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        // 2. If fewer than 10 prefix matches, supplement with substring matches
+        if (count($prefixMatches) < 10) {
+            $containsMatches = Skill::query()
+                ->select(['skills_title'])
+                ->whereIn('skills_status', [1, '1'])
+                ->where('skills_title', 'regex', new \MongoDB\BSON\Regex($escaped, 'i'))
+                ->limit(15)
+                ->pluck('skills_title')
+                ->map(fn ($t) => trim((string) $t))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            return array_values(array_unique(array_merge($prefixMatches, $containsMatches)));
+        }
+
+        return $prefixMatches;
     }
 
     public function with(): array
     {
-        $query = Question::query()->with('user');
+        $query = Question::query()
+            ->with('user')
+            ->whereNotIn('status', [0, '0', false]);
 
         // Search Filter
         $search = trim($this->search);
@@ -503,14 +612,15 @@ new #[Layout('components.layouts.app')] class extends Component {
             default => $query->latest(),
         };
 
-        $totalQuestionsCount = Question::count();
-        $totalAnswersCount = Answer::count();
+        $totalQuestionsCount = Question::whereNotIn('status', [0, '0', false])->count();
+        $totalAnswersCount = Answer::whereNotIn('status', [0, '0', false])->count();
         $totalUsersCount = User::count();
 
         $questions = $query->paginate($this->perPage);
 
         // Sidebar widgets data
         $popularQuestions = Question::query()
+            ->whereNotIn('status', [0, '0', false])
             ->select(['_id', 'title', 'slug', 'answer_count', 'is_closed'])
             ->orderByDesc('views_count')
             ->limit(4)
@@ -532,6 +642,18 @@ new #[Layout('components.layouts.app')] class extends Component {
             ['name' => 'Node.js', 'count' => '620'],
         ];
 
+        $availableSkills = Skill::query()
+            ->whereIn('skills_status',[1,'1'])
+            ->limit(50)
+            ->pluck('skills_title')
+            ->filter()
+            ->values()
+            ->all();
+
+        if (empty($availableSkills)) {
+            $availableSkills = ['React', 'Laravel', 'MongoDB', 'Python', 'TypeScript', 'Docker', 'Data Analysis (STATA)', 'Visual Studio', 'PHP', 'JavaScript'];
+        }
+
         return [
             'questions' => $questions,
             'totalCount' => $questions->total(),
@@ -541,6 +663,7 @@ new #[Layout('components.layouts.app')] class extends Component {
             'popularQuestions' => $popularQuestions,
             'activeContributors' => $activeContributors,
             'commonTags' => $commonTags,
+            'availableSkills' => $availableSkills,
         ];
     }
 }; ?>
@@ -644,9 +767,9 @@ new #[Layout('components.layouts.app')] class extends Component {
                         @endif
                     </div>
 
-                    <!-- Ask Question Button -->
+                    <!-- Ask Question Button (Opens Ask Question Form Modal) -->
                     <button 
-                        wire:click="openAskModal"
+                        @click="$dispatch('open-ask-modal')"
                         type="button"
                         class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all shrink-0 cursor-pointer active:scale-98"
                     >
@@ -656,7 +779,7 @@ new #[Layout('components.layouts.app')] class extends Component {
 
                     <!-- Filter Button -->
                     <button 
-                        wire:click="$set('showFilterModal', true)"
+                        @click="$dispatch('open-filter-modal')"
                         type="button"
                         class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-[#198BEA] hover:bg-sky-50/50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium rounded-xl transition-all shrink-0 cursor-pointer"
                     >
@@ -776,74 +899,86 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         </span>
                                     @endif
 
-                                    @if($author)
-                                        <button 
-                                            wire:click="toggleFollowUser('{{ (string)$author->id }}', '{{ $authorName }}')"
-                                            type="button"
-                                            class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isFollowingAuthor ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40' }}"
-                                        >
-                                            @if($isFollowingAuthor)
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                <span>Following</span>
-                                            @else
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
-                                                <span>Follow</span>
-                                            @endif
-                                        </button>
-                                    @endif
+                                    @auth
+                                        @php
+                                            $currentUserId = (string) Auth::id();
+                                            $questionAuthorId = (string) ($question->user_id ?? ($author?->_id ?? $author?->id ?? ''));
+                                            $isOwner = $currentUserId !== '' && $currentUserId === $questionAuthorId;
+                                        @endphp
 
-                                    <!-- Edit Button (Image 1 Style: Rounded pill with pen/underline icon + Edit text) -->
-                                    <button 
-                                        wire:click="openEditModal('{{ $question->id }}')"
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-                                        title="Edit question"
-                                    >
-                                        <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 21h-7" />
-                                        </svg>
-                                        <span>Edit</span>
-                                    </button>
+                                        @if($author && !$isOwner)
+                                            <button 
+                                                wire:click="toggleFollowUser('{{ (string)$author->id }}', '{{ $authorName }}')"
+                                                type="button"
+                                                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isFollowingAuthor ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40' }}"
+                                            >
+                                                @if($isFollowingAuthor)
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                    <span>Following</span>
+                                                @else
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                                                    <span>Follow</span>
+                                                @endif
+                                            </button>
+                                        @endif
+
+                                        @if($isOwner)
+                                            <!-- Edit Button (Only shown to Question Owner) -->
+                                            <button 
+                                                @click="$dispatch('open-edit-modal')"
+                                                wire:click="openEditModal('{{ $question->id }}')"
+                                                type="button"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                                title="Edit question"
+                                            >
+                                                <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 21h-7" />
+                                                </svg>
+                                                <span>Edit</span>
+                                            </button>
+                                        @endif
+                                    @endauth
                                 </div>
                             </div>
 
-                            <!-- Title -->
-                            <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-white group-hover:text-[#198BEA] dark:group-hover:text-sky-400 transition-colors leading-snug mb-2 cursor-pointer">
-                                {{ $question->title }}
-                            </h2>
+                            <!-- Title (Opens Question Detail Page) -->
+                            <a 
+                                href="{{ route('questions.show', $question->slug ?: (string)$question->_id) }}" 
+                                wire:navigate
+                                class="block group/title"
+                            >
+                                <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-white group-hover/title:text-[#198BEA] dark:group-hover/title:text-sky-400 transition-colors leading-snug mb-2 cursor-pointer">
+                                    {{ $question->title }}
+                                </h2>
+                            </a>
 
-                            <!-- Body Preview (Preserves Rich HTML from Editor) -->
-                            <div class="prose prose-sm dark:prose-invert max-w-none text-sm text-zinc-600 dark:text-zinc-300 line-clamp-3 leading-relaxed mb-3.5 [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&>a]:text-[#198BEA] [&>a]:underline [&>code]:bg-zinc-100 dark:[&>code]:bg-zinc-800 [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-xs [&>blockquote]:border-l-2 [&>blockquote]:border-[#198BEA] [&>blockquote]:pl-3 [&>blockquote]:italic">
-                                {!! $question->description !!}
-                            </div>
+                            <!-- Body Preview (Plain text excerpt for listing feed: strictly 2 lines) -->
+                            <p class="text-sm text-text-secondary dark:text-zinc-300 line-clamp-2 leading-relaxed mb-3.5">
+                                {{ strip_tags($question->description) }}
+                            </p>
 
                             <!-- Optional Media / Thumbnail (Only shown when image loads successfully) -->
                             @if(!empty($question->thumbnail))
                                 @php
-                                    $thumbUrl = Str::startsWith($question->thumbnail, 'http') 
+                                    $thumbUrl = Str::startsWith($question->thumbnail, ['http://', 'https://']) 
                                         ? $question->thumbnail 
-                                        : asset($question->thumbnail);
+                                        : (Str::startsWith($question->thumbnail, ['storage/', '/storage/'])
+                                            ? asset($question->thumbnail)
+                                            : asset('storage/' . $question->thumbnail));
                                 @endphp
-                                <div 
-                                    x-data="{ loaded: false }" 
-                                    x-show="loaded" 
-                                    x-cloak
-                                    style="display: none;"
-                                    class="mb-4 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 max-w-lg bg-zinc-100 dark:bg-zinc-800"
-                                >
+                                <div class="mb-4 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 max-w-lg bg-zinc-100 dark:bg-zinc-800">
                                     <img 
                                         src="{{ $thumbUrl }}" 
                                         alt="{{ $question->title }}" 
                                         class="w-full max-h-56 object-cover hover:scale-102 transition-transform duration-500"
-                                        x-on:load="loaded = true"
-                                        x-on:error="loaded = false"
                                         loading="lazy"
+                                        onerror="this.parentElement.style.display='none'"
                                     />
                                 </div>
                             @endif
 
-                            <!-- Tags Pills -->
+                            <!-- Tags Pills (Static Display Badges) -->
                             @if(!empty($tags))
                                 <div class="flex flex-wrap gap-2 mb-3.5">
                                     @foreach($tags as $index => $tag)
@@ -851,113 +986,114 @@ new #[Layout('components.layouts.app')] class extends Component {
                                             $tagTrim = trim($tag);
                                         @endphp
                                         @if($tagTrim !== '')
-                                            <button 
-                                                wire:click="filterByTag('{{ $tagTrim }}')"
-                                                type="button"
-                                                class="px-2.5 py-1 rounded-md text-xs font-semibold bg-[#eaf5ff] text-[#198BEA] dark:bg-sky-950/60 dark:text-sky-300 hover:opacity-85 transition-all cursor-pointer"
+                                            <span 
+                                                class="px-2.5 py-1 rounded-md text-xs font-semibold bg-[#eaf5ff] text-[#198BEA] dark:bg-sky-950/60 dark:text-sky-300 select-none"
                                             >
                                                 {{ $tagTrim }}
-                                            </button>
+                                            </span>
                                         @endif
                                     @endforeach
                                 </div>
                             @endif
 
                             <!-- Stats Bar (Image 2 Style: 💬 0 Answers  👁 5 Views  ↑ 1 Votes  🕒 3 months ago) -->
-                            <div class="flex items-center gap-4 sm:gap-6 py-2.5 my-3.5 border-t border-zinc-100 dark:border-zinc-800/80 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
-                                <span class="inline-flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <div class="flex items-center gap-4 sm:gap-6 py-2.5 my-3.5 border-t border-zinc-100 dark:border-zinc-800/80 text-xs flex-wrap">
+                                <span class="inline-flex items-center gap-1.5 text-text-secondary dark:text-zinc-400 font-medium">
+                                    <svg class="w-3.5 h-3.5 text-text-secondary dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                                     </svg>
-                                    <span><strong class="font-semibold text-zinc-700 dark:text-zinc-200">{{ $question->answer_count ?? ($question->answers ? $question->answers->count() : 0) }}</strong> Answers</span>
+                                    <span><strong class="font-bold text-text-main dark:text-zinc-100">{{ $question->answer_count ?? ($question->answers ? $question->answers->count() : 0) }}</strong> Answers</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <span class="inline-flex items-center gap-1.5 text-text-secondary dark:text-zinc-400 font-medium">
+                                    <svg class="w-3.5 h-3.5 text-text-secondary dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                     </svg>
-                                    <span><strong class="font-semibold text-zinc-700 dark:text-zinc-200">{{ number_format($question->views_count ?? 0) }}</strong> Views</span>
+                                    <span><strong class="font-bold text-text-main dark:text-zinc-100">{{ number_format($question->views_count ?? 0) }}</strong> Views</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <span class="inline-flex items-center gap-1.5 text-text-secondary dark:text-zinc-400 font-medium">
+                                    <svg class="w-3.5 h-3.5 text-text-secondary dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
                                     </svg>
-                                    <span><strong class="font-semibold text-zinc-700 dark:text-zinc-200">{{ number_format($question->votes_count ?? 0) }}</strong> Votes</span>
+                                    <span><strong class="font-bold text-text-main dark:text-zinc-100">{{ number_format($question->votes_count ?? 0) }}</strong> Votes</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1.5 text-zinc-400">
-                                    <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <span class="inline-flex items-center gap-1.5 text-text-secondary dark:text-zinc-400 font-medium">
+                                    <svg class="w-3.5 h-3.5 text-text-secondary dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     <span>{{ $question->created_at ? $question->created_at->diffForHumans() : 'Recent' }}</span>
                                 </span>
                             </div>
 
-                            <!-- Bottom Actions: Upvote, Downvote, Follow, Save, Share, Answer (Image 2 Style) -->
+                            <!-- Bottom Actions: Upvote, Downvote, Follow, Save, Share, Answer -->
                             <div class="flex items-center justify-between flex-wrap gap-2 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
                                 <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                                    <!-- Upvote -->
-                                    <button 
-                                        wire:click="toggleVote('{{ $question->id }}', 'up')"
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedUp ? 'bg-[#198BEA] text-white border border-[#198BEA] shadow-xs' : 'border border-[#198BEA] text-[#198BEA] bg-[#f0f7ff] hover:bg-[#e0f0fe] dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-600' }}"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
-                                        </svg>
-                                        <span>Upvote</span>
-                                    </button>
+                                    @auth
+                                        <!-- Upvote -->
+                                        <button 
+                                            wire:click="toggleVote('{{ $question->id }}', 'up')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedUp ? 'bg-[#198BEA] text-white border border-[#198BEA] shadow-xs' : 'border border-[#198BEA] text-[#198BEA] bg-[#f0f7ff] hover:bg-[#e0f0fe] dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-600' }}"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
+                                            </svg>
+                                            <span>Upvote</span>
+                                        </button>
 
-                                    <!-- Downvote -->
-                                    <button 
-                                        wire:click="toggleVote('{{ $question->id }}', 'down')"
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isVotedDown ? 'bg-rose-50 text-rose-600 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800' }}"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76 1.04m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
-                                        </svg>
-                                        <span>Downvote</span>
-                                    </button>
+                                        <!-- Downvote -->
+                                        <button 
+                                            wire:click="toggleVote('{{ $question->id }}', 'down')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isVotedDown ? 'bg-rose-50 text-rose-600 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800' }}"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76 1.04m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
+                                            </svg>
+                                            <span>Downvote</span>
+                                        </button>
 
-                                    <!-- Follow Question -->
-                                    @php
-                                        $isFollowingQuestion = in_array($question->id, $followingQuestions, true);
-                                        $followCount = is_array($question->follow) ? count($question->follow) : (int)($question->follow ?? 0);
-                                        if ($isFollowingQuestion && $followCount === 0) {
-                                            $followCount = 1;
-                                        }
-                                    @endphp
-                                    <button 
-                                        wire:click="toggleFollowQuestion('{{ $question->id }}')"
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isFollowingQuestion ? 'bg-sky-50 text-[#198BEA] border border-sky-300 dark:bg-sky-950/50 dark:text-sky-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                                        </svg>
-                                        <span>{{ $followCount }} Follow</span>
-                                    </button>
+                                        <!-- Follow Question -->
+                                        @php
+                                            $isFollowingQuestion = in_array($question->id, $followingQuestions, true);
+                                            $followCount = is_array($question->follow) ? count($question->follow) : (int)($question->follow ?? 0);
+                                            if ($isFollowingQuestion && $followCount === 0) {
+                                                $followCount = 1;
+                                            }
+                                        @endphp
+                                        <button 
+                                            wire:click="toggleFollowQuestion('{{ $question->id }}')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isFollowingQuestion ? 'bg-sky-50 text-[#198BEA] border border-sky-300 dark:bg-sky-950/50 dark:text-sky-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                            </svg>
+                                            <span>{{ $followCount }} Follow</span>
+                                        </button>
 
-                                    <!-- Save -->
-                                    <button 
-                                        wire:click="toggleSave('{{ $question->id }}')"
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
-                                        title="Save question"
-                                    >
-                                        <svg class="w-4 h-4 {{ $isSaved ? 'fill-amber-500 text-amber-500' : '' }}" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
-                                        </svg>
-                                        <span>{{ $isSaved ? 'Saved' : 'Save' }}</span>
-                                    </button>
+                                        <!-- Save -->
+                                        <button 
+                                            wire:click="toggleSave('{{ $question->id }}')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
+                                            title="Save question"
+                                        >
+                                            <svg class="w-4 h-4 {{ $isSaved ? 'fill-amber-500 text-amber-500' : '' }}" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                                            </svg>
+                                            <span>{{ $isSaved ? 'Saved' : 'Save' }}</span>
+                                        </button>
+                                    @endauth
 
-                                    <!-- Share -->
+                                    <!-- Share (Dispatches Global Modal Component) -->
                                     @php
                                         $shareCount = (int)($question->shared_count ?? 0);
+                                        $questionShareUrl = route('questions.show', $question->slug ?: (string)$question->_id);
                                     @endphp
                                     <button 
-                                        wire:click="openShareModal('{{ $question->id }}', '{{ addslashes($question->title) }}', '{{ $question->slug }}')"
                                         type="button"
+                                        @click="$dispatch('open-share-modal', { url: '{{ $questionShareUrl }}', title: '{{ addslashes($question->title) }}', type: 'question', header: 'Share Question', subtitle: 'Share this question across academic and social networks' })"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
                                     >
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
@@ -968,44 +1104,72 @@ new #[Layout('components.layouts.app')] class extends Component {
                                 </div>
 
                                 <!-- Answer Action Button (Blue Pill Button with Pencil Icon) -->
-                                <button 
-                                    wire:click="openAnswerModal('{{ $question->id }}')"
-                                    type="button"
-                                    class="inline-flex items-center gap-2 px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0f67b0] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-98"
-                                >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                                    </svg>
-                                    <span>Answer</span>
-                                </button>
+                                @guest
+                                    <button 
+                                        @click="$dispatch('open-auth-modal', 'Answer a Question')"
+                                        type="button"
+                                        class="inline-flex items-center gap-2 px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0f67b0] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-98"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                        </svg>
+                                        <span>Answer</span>
+                                    </button>
+                                @else
+                                    <button 
+                                        @click="$dispatch('open-answer-modal')"
+                                        wire:click="openAnswerModal('{{ $question->id }}')"
+                                        type="button"
+                                        class="inline-flex items-center gap-2 px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0f67b0] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-98"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                        </svg>
+                                        <span>Answer</span>
+                                    </button>
+                                @endguest
                             </div>
                         </article>
                     @empty
-                        <!-- EMPTY STATE -->
-                        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 sm:p-12 text-center shadow-xs">
-                            <div class="relative w-40 h-36 mx-auto mb-6 flex items-center justify-center">
-                                <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-[#eaf5ff] to-purple-50 dark:from-sky-950/40 dark:to-purple-950/30 blur-sm animate-pulse"></div>
-                                <div class="w-20 h-20 rounded-full border-4 border-[#198BEA] flex items-center justify-center relative z-10 opacity-70">
-                                    <span class="text-3xl font-extrabold text-[#198BEA]">?</span>
+                        <!-- EMPTY STATE (Matching Design Template) -->
+                        <div id="qaEmpty" class="qa-empty visible bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 sm:p-14 text-center mb-4">
+                            <div class="qa-empty__illo">
+                                <div class="qa-empty__circle"></div>
+                                <div class="qa-empty__ring"></div>
+                                <div class="qa-empty__handle"></div>
+                                <div class="qa-empty__qmark">?</div>
+                                <div class="qa-empty__dot qa-empty__dot--1"></div>
+                                <div class="qa-empty__dot qa-empty__dot--2"></div>
+                                <div class="qa-empty__dot qa-empty__dot--3"></div>
+                                <div class="qa-empty__dot qa-empty__dot--4"></div>
+                                <div class="qa-empty__dot qa-empty__dot--5"></div>
+                                <div class="qa-empty__icons">
+                                    <div class="qa-empty__icon-box qa-empty__icon-box--1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"/></svg>
+                                    </div>
+                                    <div class="qa-empty__icon-box qa-empty__icon-box--2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/></svg>
+                                    </div>
+                                    <div class="qa-empty__icon-box qa-empty__icon-box--3">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0a8.949 8.949 0 004.951-1.488A3.987 3.987 0 0013 16h-2a3.987 3.987 0 00-3.951 3.512A8.949 8.949 0 0012 21z"/></svg>
+                                    </div>
                                 </div>
                             </div>
-
-                            <h3 class="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+                            <h2 class="qa-empty__title text-xl font-bold text-zinc-900 dark:text-white mb-2">
                                 @if($search !== '')
                                     No results for "<span class="text-[#198BEA]">{{ $search }}</span>"
                                 @else
                                     No questions found
                                 @endif
-                            </h3>
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-6 leading-relaxed">
-                                We couldn't find any questions matching your filters. Try different keywords or be the first to ask!
+                            </h2>
+                            <p class="qa-empty__desc text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-6 leading-relaxed">
+                                We couldn't find any questions matching your search. Try different keywords or be the first to ask!
                             </p>
-
-                            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-sm mx-auto mb-8">
+                            <div class="qa-empty__btns flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-sm mx-auto">
                                 <button 
-                                    wire:click="openAskModal"
+                                    @click="$dispatch('open-ask-modal')"
                                     type="button"
-                                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] text-white text-sm font-semibold rounded-xl shadow-md transition-all cursor-pointer"
+                                    class="qa-empty__ask w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] text-white text-sm font-semibold rounded-xl shadow-md transition-all cursor-pointer"
                                 >
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                     <span>Ask This Question</span>
@@ -1013,35 +1177,10 @@ new #[Layout('components.layouts.app')] class extends Component {
                                 <button 
                                     wire:click="clearSearch"
                                     type="button"
-                                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-sm font-medium rounded-xl transition-all cursor-pointer"
+                                    class="qa-empty__clear w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:border-[#198BEA] text-zinc-700 dark:text-zinc-300 text-sm font-medium rounded-xl transition-all cursor-pointer shadow-xs"
                                 >
                                     Clear Search
                                 </button>
-                            </div>
-
-                            <!-- Suggestions -->
-                            <div class="pt-6 border-t border-zinc-100 dark:border-zinc-800 max-w-md mx-auto">
-                                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-3">
-                                    Try searching for
-                                </p>
-                                <div class="grid grid-cols-2 gap-2 text-left">
-                                    <button wire:click="searchSuggestion('React')" class="flex items-center justify-between p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-[#198BEA] transition-colors">
-                                        <span>React</span>
-                                        <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                    </button>
-                                    <button wire:click="searchSuggestion('TypeScript')" class="flex items-center justify-between p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-[#198BEA] transition-colors">
-                                        <span>TypeScript</span>
-                                        <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                    </button>
-                                    <button wire:click="searchSuggestion('Laravel')" class="flex items-center justify-between p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-[#198BEA] transition-colors">
-                                        <span>Laravel</span>
-                                        <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                    </button>
-                                    <button wire:click="searchSuggestion('Docker')" class="flex items-center justify-between p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-[#198BEA] transition-colors">
-                                        <span>Docker</span>
-                                        <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     @endforelse
@@ -1054,13 +1193,11 @@ new #[Layout('components.layouts.app')] class extends Component {
                             wire:click="loadMore"
                             wire:loading.attr="disabled"
                             type="button"
-                            class="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-[#198BEA] text-zinc-800 dark:text-zinc-200 hover:text-[#198BEA] text-sm font-semibold rounded-xl shadow-xs transition-all cursor-pointer"
+                            class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-[#198BEA] text-zinc-800 dark:text-zinc-200 hover:text-[#198BEA] text-sm font-semibold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-60"
                         >
+                            <svg wire:loading wire:target="loadMore" class="animate-spin h-4 w-4 text-[#198BEA] shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                             <span wire:loading.remove wire:target="loadMore">Load More Questions</span>
-                            <span wire:loading wire:target="loadMore" class="inline-flex items-center gap-2">
-                                <svg class="animate-spin h-4 w-4 text-[#198BEA]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                Loading...
-                            </span>
+                            <span wire:loading wire:target="loadMore">Loading...</span>
                         </button>
                     </div>
                 @endif
@@ -1082,298 +1219,348 @@ new #[Layout('components.layouts.app')] class extends Component {
     </div>
 
     <!-- MODAL 1: ASK QUESTION (COMPONENT) -->
-    <x-question.ask-question />
+    <x-question.ask-question :available-skills="$availableSkills" />
 
-    <!-- MODAL 2: EDIT QUESTION -->
-    @if($showEditModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-2xl">
-                <div class="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
-                    <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                        <svg class="w-4 h-4 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        Edit Question
-                    </h3>
-                    <button wire:click="$set('showEditModal', false)" class="text-zinc-400 hover:text-zinc-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+    <!-- MODAL 2: EDIT QUESTION (ALPINE.JS DRIVEN) -->
+    <div 
+        x-data="{ show: @entangle('showEditModal') }" 
+        x-show="show" 
+        x-cloak 
+        @open-edit-modal.window="show = true"
+        @keydown.escape.window="show = false"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+        style="display: none;"
+    >
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-2xl" @click.stop>
+            <div class="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+                <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    Edit Question
+                </h3>
+                <button @click="show = false" type="button" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1">Title</label>
+                    <input type="text" wire:model="editTitle" class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:border-[#198BEA] outline-hidden" />
                 </div>
-
-                <div class="p-5 space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1">Title</label>
-                        <input type="text" wire:model="editTitle" class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:border-[#198BEA] outline-hidden" />
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300">Details (Rich Text / HTML)</label>
+                        <span class="text-[11px] text-zinc-400">WYSIWYG Editor</span>
                     </div>
-                    <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300">Details (Rich HTML)</label>
-                            <span class="text-[11px] text-zinc-400">Maintains HTML markup</span>
-                        </div>
-                        <div 
-                            x-data="{
-                                wrapSelection(openTag, closeTag) {
-                                    const textarea = this.$refs.editEditor;
-                                    if (!textarea) return;
-                                    const start = textarea.selectionStart;
-                                    const end = textarea.selectionEnd;
-                                    const text = textarea.value;
-                                    const selectedText = text.substring(start, end);
-                                    const replacement = openTag + (selectedText || 'text') + closeTag;
-                                    textarea.value = text.substring(0, start) + replacement + text.substring(end);
-                                    textarea.selectionStart = start + openTag.length;
-                                    textarea.selectionEnd = start + replacement.length - closeTag.length;
-                                    textarea.focus();
-                                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                                },
-                                insertList(type) {
-                                    const textarea = this.$refs.editEditor;
-                                    if (!textarea) return;
-                                    const start = textarea.selectionStart;
-                                    const end = textarea.selectionEnd;
-                                    const text = textarea.value;
-                                    const selected = text.substring(start, end) || 'Item';
-                                    const tag = type === 'ol' ? '<ol>\n  <li>' + selected + '</li>\n</ol>' : '<ul>\n  <li>' + selected + '</li>\n</ul>';
-                                    textarea.value = text.substring(0, start) + tag + text.substring(end);
-                                    textarea.focus();
-                                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                                }
-                            }"
-                            class="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:border-[#198BEA] focus-within:ring-2 focus-within:ring-[#198BEA]/15 bg-zinc-50 dark:bg-zinc-800 transition-all"
-                        >
-                            <div class="flex items-center flex-wrap gap-1 px-3 py-1.5 bg-zinc-100/90 dark:bg-zinc-800 border-b border-zinc-200/80 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs">
-                                <button type="button" @click="wrapSelection('<strong>', '</strong>')" class="px-2 py-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] font-bold cursor-pointer" title="Bold">B</button>
-                                <button type="button" @click="wrapSelection('<em>', '</em>')" class="px-2 py-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] italic font-serif cursor-pointer" title="Italic">I</button>
-                                <button type="button" @click="wrapSelection('<u>', '</u>')" class="px-2 py-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] underline cursor-pointer" title="Underline">U</button>
-                                <button type="button" @click="wrapSelection('<h3>', '</h3>')" class="px-2 py-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] font-semibold text-[11px] cursor-pointer" title="H3">H3</button>
-                                <div class="h-3.5 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
-                                <button type="button" @click="insertList('ul')" class="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] cursor-pointer" title="Bullet List">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-                                </button>
-                                <button type="button" @click="insertList('ol')" class="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] cursor-pointer" title="Numbered List">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 6h14M7 12h14M7 18h14M3 6h1v4M3 14h2v2H3v2h3"/></svg>
-                                </button>
-                                <button type="button" @click="wrapSelection('<a href=&quot;https://&quot; target=&quot;_blank&quot;>', '</a>')" class="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] cursor-pointer" title="Insert Link">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                                </button>
-                                <button type="button" @click="wrapSelection('<code>', '</code>')" class="px-1.5 py-0.5 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] font-mono text-[11px] cursor-pointer" title="Code">&lt;/&gt;</button>
-                            </div>
-                            <textarea 
-                                x-ref="editEditor"
-                                rows="5" 
-                                wire:model="editDescription" 
-                                class="w-full px-4 py-2.5 bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden resize-y"
-                            ></textarea>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1">Tags (comma separated)</label>
-                        <input type="text" wire:model="editTags" class="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:border-[#198BEA] outline-hidden" />
-                    </div>
+                    <x-quill-editor 
+                        wire:model="editDescription"
+                        placeholder="Edit question details, code, or context..."
+                        min-height="150px"
+                    />
+                    @error('editDescription') <p class="text-rose-500 text-xs mt-1 font-medium">{{ $message }}</p> @enderror
                 </div>
-
-                <div class="flex items-center justify-end gap-3 p-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <button wire:click="$set('showEditModal', false)" class="px-4 py-2 text-sm text-zinc-500">Cancel</button>
-                    <button wire:click="saveEdit" class="px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] text-white text-sm font-bold rounded-xl shadow">Save Changes</button>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1">Tags (comma separated)</label>
+                    <input type="text" wire:model="editTags" class="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:border-[#198BEA] outline-hidden" />
                 </div>
             </div>
-        </div>
-    @endif
 
-    <!-- MODAL 3: WRITE ANSWER -->
-    @if($showAnswerModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-2xl">
-                <div class="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
-                    <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                        <svg class="w-4 h-4 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        Write Your Answer
-                    </h3>
-                    <button wire:click="$set('showAnswerModal', false)" class="text-zinc-400 hover:text-zinc-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
-
-                <div class="p-5 space-y-3">
-                    <div class="p-3 rounded-xl bg-[#eaf5ff] dark:bg-sky-950/40 text-xs text-sky-800 dark:text-sky-200">
-                        <span class="font-bold">Answering:</span> {{ $answeringQuestionTitle }}
-                    </div>
-
-                    <div 
-                        x-data="{
-                            wrapSelection(openTag, closeTag) {
-                                const textarea = this.$refs.answerEditor;
-                                if (!textarea) return;
-                                const start = textarea.selectionStart;
-                                const end = textarea.selectionEnd;
-                                const text = textarea.value;
-                                const selectedText = text.substring(start, end);
-                                const replacement = openTag + (selectedText || 'text') + closeTag;
-                                textarea.value = text.substring(0, start) + replacement + text.substring(end);
-                                textarea.selectionStart = start + openTag.length;
-                                textarea.selectionEnd = start + replacement.length - closeTag.length;
-                                textarea.focus();
-                                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                            },
-                            insertList(type) {
-                                const textarea = this.$refs.answerEditor;
-                                if (!textarea) return;
-                                const start = textarea.selectionStart;
-                                const end = textarea.selectionEnd;
-                                const text = textarea.value;
-                                const selected = text.substring(start, end) || 'Item';
-                                const tag = type === 'ol' ? '<ol>\n  <li>' + selected + '</li>\n</ol>' : '<ul>\n  <li>' + selected + '</li>\n</ul>';
-                                textarea.value = text.substring(0, start) + tag + text.substring(end);
-                                textarea.focus();
-                                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                            }
-                        }"
-                        class="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:border-[#198BEA] focus-within:ring-2 focus-within:ring-[#198BEA]/15 bg-zinc-50 dark:bg-zinc-800 transition-all"
-                    >
-                        <div class="flex items-center flex-wrap gap-1 px-3 py-1.5 bg-zinc-100/90 dark:bg-zinc-800 border-b border-zinc-200/80 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs">
-                            <button type="button" @click="wrapSelection('<strong>', '</strong>')" class="px-2 py-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] font-bold cursor-pointer" title="Bold">B</button>
-                            <button type="button" @click="wrapSelection('<em>', '</em>')" class="px-2 py-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] italic font-serif cursor-pointer" title="Italic">I</button>
-                            <button type="button" @click="wrapSelection('<u>', '</u>')" class="px-2 py-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] underline cursor-pointer" title="Underline">U</button>
-                            <button type="button" @click="wrapSelection('<h3>', '</h3>')" class="px-2 py-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] font-semibold text-[11px] cursor-pointer" title="H3">H3</button>
-                            <div class="h-3.5 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
-                            <button type="button" @click="insertList('ul')" class="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] cursor-pointer" title="Bullet List">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-                            </button>
-                            <button type="button" @click="insertList('ol')" class="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] cursor-pointer" title="Numbered List">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 6h14M7 12h14M7 18h14M3 6h1v4M3 14h2v2H3v2h3"/></svg>
-                            </button>
-                            <button type="button" @click="wrapSelection('<a href=&quot;https://&quot; target=&quot;_blank&quot;>', '</a>')" class="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] cursor-pointer" title="Insert Link">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4.5 4.5 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                            </button>
-                            <button type="button" @click="wrapSelection('<pre><code>', '</code></pre>')" class="px-1.5 py-0.5 hover:bg-white dark:hover:bg-zinc-700 rounded hover:text-[#198BEA] font-mono text-[11px] cursor-pointer" title="Code Block">Code</button>
-                        </div>
-                        <textarea 
-                            x-ref="answerEditor"
-                            rows="6"
-                            wire:model="answerContent"
-                            placeholder="Provide your detailed answer, solutions, rich formatting, and code examples..."
-                            class="w-full px-4 py-3 bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden resize-y"
-                        ></textarea>
-                    </div>
-                    @error('answerContent') <p class="text-rose-500 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <div class="flex items-center justify-end gap-3 p-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <button wire:click="$set('showAnswerModal', false)" class="px-4 py-2 text-sm text-zinc-500">Cancel</button>
-                    <button wire:click="submitAnswer" class="px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] text-white text-sm font-bold rounded-xl shadow">Post Answer</button>
-                </div>
+            <div class="flex items-center justify-end gap-3 p-4 border-t border-zinc-100 dark:border-zinc-800">
+                <button @click="show = false" type="button" class="px-5 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-600 rounded-xl transition-all cursor-pointer shadow-xs">Cancel</button>
+                <button wire:click="saveEdit" type="button" class="px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-98">Save Changes</button>
             </div>
         </div>
-    @endif
+    </div>
 
-    <!-- MODAL 4: SHARE -->
-    @if($showShareModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl p-5 space-y-4">
-                <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-                    <h3 class="text-base font-bold text-zinc-900 dark:text-white">Share Question</h3>
-                    <button wire:click="$set('showShareModal', false)" class="text-zinc-400 hover:text-zinc-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+    <!-- MODAL 3: WRITE ANSWER (ALPINE.JS DRIVEN) -->
+    <div 
+        x-data="{ show: @entangle('showAnswerModal') }" 
+        x-show="show" 
+        x-cloak 
+        @open-answer-modal.window="show = true"
+        @keydown.escape.window="show = false"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+        style="display: none;"
+    >
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-2xl" @click.stop>
+            <div class="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+                <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    Write Your Answer
+                </h3>
+                <button @click="show = false" type="button" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-3">
+                <div class="p-3 rounded-xl bg-[#eaf5ff] dark:bg-sky-950/40 text-xs text-sky-800 dark:text-sky-200">
+                    <span class="font-bold">Answering:</span> {{ $answeringQuestionTitle }}
                 </div>
 
-                <div class="space-y-3" x-data="{ copied: false }">
-                    <div class="flex items-center gap-2">
-                        <input type="text" readonly value="{{ $shareUrl }}" class="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs" />
-                        <button 
-                            @click="navigator.clipboard.writeText('{{ $shareUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
-                            class="px-4 py-2 bg-[#198BEA] text-white text-xs font-bold rounded-xl shrink-0"
-                        >
-                            <span x-show="!copied">Copy</span>
-                            <span x-show="copied">Copied!</span>
-                        </button>
-                    </div>
+                <x-quill-editor 
+                    wire:model="answerContent"
+                    placeholder="Provide your detailed answer, solutions, and code examples..."
+                    min-height="160px"
+                />
+                @error('answerContent') <p class="text-rose-500 text-xs mt-1 font-medium">{{ $message }}</p> @enderror
+            </div>
 
-                    <div class="flex items-center justify-center gap-3 pt-2">
-                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode($shareUrl) }}" target="_blank" class="w-10 h-10 rounded-full bg-[#1877F2] text-white flex items-center justify-center hover:opacity-85 shadow">
-                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                        </a>
-                        <a href="https://twitter.com/intent/tweet?text={{ urlencode($shareTitle) }}&url={{ urlencode($shareUrl) }}" target="_blank" class="w-10 h-10 rounded-full bg-[#1DA1F2] text-white flex items-center justify-center hover:opacity-85 shadow">
-                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.936 9.936 0 0024 4.59z"/></svg>
-                        </a>
-                        <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ urlencode($shareUrl) }}" target="_blank" class="w-10 h-10 rounded-full bg-[#0A66C2] text-white flex items-center justify-center hover:opacity-85 shadow">
-                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-                        </a>
-                    </div>
-                </div>
+            <div class="flex items-center justify-end gap-3 p-4 border-t border-zinc-100 dark:border-zinc-800">
+                <button @click="show = false" type="button" class="px-5 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-600 rounded-xl transition-all cursor-pointer shadow-xs">Cancel</button>
+                <button 
+                    wire:click="submitAnswer" 
+                    wire:loading.attr="disabled"
+                    type="button" 
+                    class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-98 disabled:opacity-60"
+                >
+                    <svg wire:loading wire:target="submitAnswer" class="animate-spin h-4 w-4 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span wire:loading.remove wire:target="submitAnswer">Post Answer</span>
+                    <span wire:loading wire:target="submitAnswer">Posting...</span>
+                </button>
             </div>
         </div>
-    @endif
+    </div>
 
     <!-- MODAL 5: FILTER (COMPONENT) -->
     <x-question.question-filter />
 
-    <!-- MODAL 6: SKILLS & EXPERTISE -->
-    @if($showSkillsModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl p-5 space-y-4">
-                <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-                    <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                        <svg class="w-4 h-4 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        Edit Skills &amp; Expertise
-                    </h3>
-                    <button wire:click="$set('showSkillsModal', false)" class="text-zinc-400 hover:text-zinc-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+    <!-- MODAL 6: SKILLS & EXPERTISE (ALPINE.JS DRIVEN) -->
+    <div 
+        x-data="{ show: @entangle('showSkillsModal') }" 
+        x-show="show" 
+        x-cloak 
+        @open-skills-modal.window="show = true"
+        @keydown.escape.window="show = false"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+        style="display: none;"
+    >
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl p-5 space-y-4" @click.stop>
+            <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Edit Skills &amp; Expertise
+                </h3>
+                <button @click="show = false" type="button" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1">Add a Skill</label>
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            wire:model="newSkillInput" 
+                            wire:keydown.enter.prevent="addSkill()"
+                            placeholder="e.g., Python, Docker, AI" 
+                            class="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                        />
+                        <button wire:click="addSkill()" class="px-4 py-2 bg-[#198BEA] text-white text-xs font-bold rounded-xl shrink-0 cursor-pointer">Add</button>
+                    </div>
                 </div>
 
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1">Add a Skill</label>
-                        <div class="flex gap-2">
-                            <input 
-                                type="text" 
-                                wire:model="newSkillInput" 
-                                wire:keydown.enter.prevent="addSkill()"
-                                placeholder="e.g., Python, Docker, AI" 
-                                class="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
-                            />
-                            <button wire:click="addSkill()" class="px-4 py-2 bg-[#198BEA] text-white text-xs font-bold rounded-xl shrink-0">Add</button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1.5">Your Skills</label>
-                        <div class="flex flex-wrap gap-1.5 min-h-[44px] p-2.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                            @if(!empty($userSkills))
-                                @foreach($userSkills as $s)
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#eaf5ff] dark:bg-sky-950/60 text-[#198BEA] dark:text-sky-300 rounded-lg text-xs font-semibold">
-                                        {{ $s }}
-                                        <button wire:click="removeSkill('{{ $s }}')" class="hover:text-rose-500 cursor-pointer">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                        </button>
-                                    </span>
-                                @endforeach
-                            @else
-                                <span class="text-xs text-zinc-400">No skills added yet</span>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-zinc-400 mb-1.5">Popular Suggestions</label>
-                        <div class="flex flex-wrap gap-1.5">
-                            @foreach(['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'Docker', 'CSS', 'GraphQL', 'Laravel', 'MongoDB'] as $sug)
-                                <button 
-                                    wire:click="addSkill('{{ $sug }}')" 
-                                    class="px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-[#eaf5ff] hover:text-[#198BEA] rounded-lg text-xs font-medium transition"
-                                >
-                                    + {{ $sug }}
-                                </button>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1.5">Your Skills</label>
+                    <div class="flex flex-wrap gap-1.5 min-h-[44px] p-2.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                        @if(!empty($userSkills))
+                            @foreach($userSkills as $s)
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#eaf5ff] dark:bg-sky-950/60 text-[#198BEA] dark:text-sky-300 rounded-lg text-xs font-semibold">
+                                    {{ $s }}
+                                    <button wire:click="removeSkill('{{ $s }}')" class="hover:text-rose-500 cursor-pointer">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </span>
                             @endforeach
-                        </div>
+                        @else
+                            <span class="text-xs text-zinc-400">No skills added yet</span>
+                        @endif
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                    <button wire:click="$set('showSkillsModal', false)" class="px-4 py-2 text-xs text-zinc-500">Cancel</button>
-                    <button wire:click="saveSkills" class="px-5 py-2 bg-[#198BEA] text-white text-xs font-bold rounded-xl shadow">Save Skills</button>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-400 mb-1.5">Popular Suggestions</label>
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach(['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'Docker', 'CSS', 'GraphQL', 'Laravel', 'MongoDB'] as $sug)
+                            <button 
+                                wire:click="addSkill('{{ $sug }}')" 
+                                class="px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-[#eaf5ff] hover:text-[#198BEA] rounded-lg text-xs font-medium transition cursor-pointer"
+                            >
+                                + {{ $sug }}
+                            </button>
+                        @endforeach
+                    </div>
                 </div>
             </div>
-        </div>
-    @endif
 
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button @click="show = false" type="button" class="px-5 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-600 rounded-xl transition-all cursor-pointer shadow-xs">Cancel</button>
+                <button 
+                    wire:click="saveSkills" 
+                    wire:loading.attr="disabled"
+                    type="button" 
+                    class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-98 disabled:opacity-60"
+                >
+                    <svg wire:loading wire:target="saveSkills" class="animate-spin h-4 w-4 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span wire:loading.remove wire:target="saveSkills">Save Skills</span>
+                    <span wire:loading wire:target="saveSkills">Saving...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Prompt Modal -->
+    <x-modals.auth />
+
+    <style>
+        /* ===== NO RESULTS EMPTY STATE ANIMATIONS & STYLING ===== */
+        .qa-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            animation: emptyFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes emptyFadeIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .qa-empty__illo {
+            position: relative;
+            width: 200px;
+            height: 170px;
+            margin: 0 auto 24px;
+            flex-shrink: 0;
+        }
+        .qa-empty__circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #eaf5ff 0%, rgba(124, 58, 237, 0.06) 100%);
+            animation: emptyCircleFloat 4.5s ease-in-out infinite;
+        }
+        .dark .qa-empty__circle {
+            background: linear-gradient(135deg, rgba(25, 139, 234, 0.15) 0%, rgba(124, 58, 237, 0.1) 100%);
+        }
+        @keyframes emptyCircleFloat {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -53%) scale(1.05); }
+        }
+        .qa-empty__ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 72px;
+            height: 72px;
+            border: 4.5px solid #198BEA;
+            border-radius: 50%;
+            opacity: 0.65;
+            animation: emptyRingPulse 3.5s ease-in-out infinite;
+        }
+        @keyframes emptyRingPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            50% { transform: translate(-50%, -54%) scale(1.06) rotate(-10deg); }
+        }
+        .qa-empty__handle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 28px;
+            background: #198BEA;
+            border-radius: 3px;
+            opacity: 0.65;
+            transform: translate(22px, 14px) rotate(45deg);
+            transform-origin: top center;
+        }
+        .qa-empty__qmark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -62%);
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #198BEA;
+            opacity: 0.55;
+            animation: emptyQ 2.8s ease-in-out infinite;
+            user-select: none;
+        }
+        @keyframes emptyQ {
+            0%, 100% { transform: translate(-50%, -62%) scale(1); }
+            35% { transform: translate(-50%, -70%) scale(1.12); }
+            65% { transform: translate(-50%, -62%) scale(1); }
+        }
+        .qa-empty__dot {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.35;
+        }
+        .qa-empty__dot--1 {
+            width: 7px; height: 7px;
+            background: #198BEA;
+            top: 16%; left: 10%;
+            animation: emptyDot 3.2s ease-in-out infinite 0s;
+        }
+        .qa-empty__dot--2 {
+            width: 5px; height: 5px;
+            background: #7c3aed;
+            top: 10%; right: 16%;
+            animation: emptyDot 3.8s ease-in-out infinite .5s;
+        }
+        .qa-empty__dot--3 {
+            width: 9px; height: 9px;
+            background: #d97706;
+            bottom: 22%; left: 6%;
+            animation: emptyDot 4s ease-in-out infinite 1s;
+        }
+        .qa-empty__dot--4 {
+            width: 5px; height: 5px;
+            background: #10b981;
+            bottom: 14%; right: 10%;
+            animation: emptyDot 3.4s ease-in-out infinite .8s;
+        }
+        .qa-empty__dot--5 {
+            width: 6px; height: 6px;
+            background: #198BEA;
+            top: 38%; right: 4%;
+            animation: emptyDot 3.6s ease-in-out infinite 1.3s;
+        }
+        @keyframes emptyDot {
+            0%, 100% { transform: translateY(0) scale(1); opacity: .35; }
+            50% { transform: translateY(-7px) scale(1.35); opacity: .65; }
+        }
+        .qa-empty__icons {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        .qa-empty__icon-box {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: emptyIconBob 3s ease-in-out infinite;
+        }
+        .qa-empty__icon-box--1 { background: #eaf5ff; color: #198BEA; animation-delay: 0s; }
+        .dark .qa-empty__icon-box--1 { background: rgba(25, 139, 234, 0.2); }
+        .qa-empty__icon-box--2 { background: #f5f3ff; color: #7c3aed; animation-delay: .55s; }
+        .dark .qa-empty__icon-box--2 { background: rgba(124, 58, 237, 0.2); }
+        .qa-empty__icon-box--3 { background: #ecfdf5; color: #059669; animation-delay: 1.1s; }
+        .dark .qa-empty__icon-box--3 { background: rgba(5, 150, 105, 0.2); }
+        @keyframes emptyIconBob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
 </div>

@@ -123,3 +123,98 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+/* ==========================================================================
+   SweetAlert2 Custom Styles (Preserved for reference / future use)
+   ==========================================================================
+.swal2-container.swal2-backdrop-show {
+    background: rgba(0, 0, 0, 0.55) !important;
+    backdrop-filter: blur(4px) !important;
+}
+
+.swal2-popup {
+    border-radius: 1.75rem !important;
+    padding: 2.25rem 2.5rem 2rem 2.5rem !important;
+    max-width: 32rem !important;
+    width: 92% !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(229, 231, 235, 0.8) !important;
+    font-family: inherit !important;
+}
+
+.dark .swal2-popup {
+    background: #18181b !important;
+    border-color: #27272a !important;
+}
+
+.swal2-icon {
+    transform: scale(0.72) !important;
+    transform-origin: center center !important;
+    margin: -0.25rem auto 0.5rem auto !important;
+}
+
+.swal2-title {
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1.35 !important;
+    color: #595959 !important;
+}
+
+.dark .swal2-title {
+    color: #e4e4e7 !important;
+}
+
+.swal2-html-container {
+    font-size: 0.875rem !important;
+    margin: 0.875rem auto 0 auto !important;
+    line-height: 1.6 !important;
+    color: #353535 !important;
+    max-width: 25rem !important;
+}
+
+.dark .swal2-html-container {
+    color: #e1e1e1 !important;
+}
+
+.swal2-actions {
+    margin-top: 1.75rem !important;
+    gap: 0.875rem !important;
+    width: 100% !important;
+    justify-content: center !important;
+}
+
+.swal2-styled.swal2-confirm,
+.swal2-styled.swal2-cancel {
+    border-radius: 9999px !important;
+    padding: 0.625rem 2.25rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    min-width: 7.25rem !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+
+.swal2-styled.swal2-confirm {
+    background-color: #198BEA !important;
+    color: #ffffff !important;
+}
+
+.swal2-styled.swal2-confirm:hover {
+    background-color: #1476c9 !important;
+}
+
+.swal2-styled.swal2-cancel {
+    background-color: #52525b !important;
+    color: #ffffff !important;
+}
+
+.swal2-styled.swal2-cancel:hover {
+    background-color: #3f3f46 !important;
+}
+========================================================================== */
+
+
+

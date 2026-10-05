@@ -20,6 +20,8 @@ This directory serves as the centralized catalog and knowledge base for all Mong
 | **`organization`** | [organization.md](./organization.md) | 7 Indexes | Primary `_id_`, slug routing (`/institution/{slug}`), serial number calculation/sorting, name search, and type & country filtering. |
 | **`experience`** | [experience.md](./experience.md) | 2 Indexes | Primary `_id_`, compound organization ID & current organization filter for scholar/alumni calculations. |
 | **`reviewer_profile`** | [reviewer_profile.md](./reviewer_profile.md) | 7 Indexes | Primary `_id_`, compound user ID & status lookup, active publication counts sorting, and multikey array indexes on publication, experience, seminar, and RoleInResearchJournal. |
+| **`skills`** | [skills.md](./skills.md) | 4 Indexes | Primary `_id_`, compound `skills_status` & `skills_title` for instant tag autocomplete/filtering, `skills_title` search, and sparse `slug` routing. |
+| **`question`** | [question.md](./question.md) | 8 Indexes | Primary `_id_`, compound active `status` & `created_at` newest sorting, active `status` & `votes_count` most voted sorting, active `status` & `views_count` popular sorting, compound `status` & `tags` multikey skill filtering, user author lookups, and sparse `slug` routing. |
 
 ---
 

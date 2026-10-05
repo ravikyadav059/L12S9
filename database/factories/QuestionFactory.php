@@ -34,6 +34,7 @@ class QuestionFactory extends Factory
             'answer_count' => 0,
             'likes_count' => 0,
             'is_closed' => false,
+            'status' => 1,
             'follow' => [],
             'save' => [],
             'is_reported' => false,

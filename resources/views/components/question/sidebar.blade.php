@@ -48,6 +48,7 @@
                 My Skills &amp; Expertise
             </h3>
             <button 
+                @click="$dispatch('open-skills-modal')"
                 wire:click="openSkillsModal"
                 type="button"
                 class="p-1 text-zinc-400 hover:text-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
@@ -76,6 +77,7 @@
         @endif
 
         <button 
+            @click="$dispatch('open-skills-modal')"
             wire:click="openSkillsModal"
             type="button"
             class="w-full flex items-center justify-center gap-1.5 py-2 border border-[#198BEA] text-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/50 rounded-xl text-xs font-bold transition-all cursor-pointer"
@@ -157,7 +159,8 @@
             @foreach($popularQuestions as $pop)
                 <div class="pt-3 first:pt-0">
                     <a 
-                        href="#{{ $pop->id }}"
+                        href="{{ route('questions.show', $pop->slug ?: (string)$pop->_id) }}"
+                        wire:navigate
                         class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-[#198BEA] dark:hover:text-sky-400 transition-colors line-clamp-2 leading-snug"
                     >
                         {{ $pop->title }}

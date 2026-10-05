@@ -16,6 +16,8 @@
     }"
     x-show="show"
     x-cloak
+    @open-filter-modal.window="show = true"
+    @close-filter-modal.window="show = false"
     class="fixed inset-0 z-50 overflow-y-auto"
     role="dialog"
     aria-modal="true"

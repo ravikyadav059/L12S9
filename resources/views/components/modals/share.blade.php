@@ -10,8 +10,10 @@
             this.shareUrl = url || window.location.href;
             this.shareTitle = title || document.title;
             const isJournal = type === 'journal' || (this.shareUrl && (this.shareUrl.includes('/journal/') || this.shareUrl.includes('/journals')));
-            this.modalHeader = header || (isJournal ? 'Share Journal' : 'Share Publication');
-            this.modalSubtitle = subtitle || (isJournal ? 'Share this academic journal across networks' : 'Share this research paper across networks');
+            const isQuestion = type === 'question' || (this.shareUrl && (this.shareUrl.includes('/question/') || this.shareUrl.includes('/questions')));
+            const isInstitution = type === 'institution' || (this.shareUrl && (this.shareUrl.includes('/institution/') || this.shareUrl.includes('/institutions')));
+            this.modalHeader = header || (isQuestion ? 'Share Question' : (isJournal ? 'Share Journal' : (isInstitution ? 'Share Institution' : 'Share Publication')));
+            this.modalSubtitle = subtitle || (isQuestion ? 'Share this question across academic and developer networks' : (isJournal ? 'Share this academic journal across networks' : (isInstitution ? 'Share this institution across networks' : 'Share this research paper across networks')));
             this.copied = false;
             this.isOpen = true;
         },
