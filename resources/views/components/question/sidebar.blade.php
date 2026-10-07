@@ -116,8 +116,8 @@
         <div class="space-y-3">
             @foreach($activeContributors as $idx => $user)
                 @php
-                    $uName = $user->fullname ?? trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: 'Scholar '.($idx+1);
-                    $uAvatar = $user->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode($uName).'&background=198BEA&color=fff';
+                    $uName = $user->name ?? 'Scholar '.($idx+1);
+                    $uAvatar = $user->avatar;
                     $isFollow = in_array((string)$user->id, $followingUsers, true);
                 @endphp
                 <div class="flex items-center justify-between gap-2.5">
@@ -140,9 +140,24 @@
                     <button 
                         wire:click="toggleFollowUser('{{ (string)$user->id }}', '{{ $uName }}')"
                         type="button"
-                        class="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer {{ $isFollow ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/50' }}"
+                        class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer {{ $isFollow ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-600' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/50' }}"
                     >
-                        {{ $isFollow ? 'Following' : 'Follow' }}
+                        @if($isFollow)
+                            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <polyline points="16 11 18 13 22 9"/>
+                            </svg>
+                            <span>Following</span>
+                        @else
+                            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <line x1="19" x2="19" y1="8" y2="14"/>
+                                <line x1="22" x2="16" y1="11" y2="11"/>
+                            </svg>
+                            <span>Follow</span>
+                        @endif
                     </button>
                 </div>
             @endforeach

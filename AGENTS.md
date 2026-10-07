@@ -40,25 +40,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - You must only create documentation files if explicitly requested by the user.
 
-## Database & Migrations
-
-- DO NOT run `php artisan migrate`. MongoDB collections, fields, and indexes are documented in `IndexCreated/` and executed directly via MongoDB Compass or mongosh scripts.
-
-## Modals & UI Interactions (Alpine.js Direct Display & Minimal Network Load)
-
-- All modals, popups, dialogs, and interactive UI widgets (tags, dropdowns, pickers) MUST operate instantly (0ms latency) using Alpine.js client-side direct display (`x-data`, `x-show`, `$dispatch('open-modal-name')`, `@click`, `@input` events).
-- NEVER block modal rendering or intermediate input actions on Livewire backend network roundtrips.
-- Keep intermediate interactive state (e.g. adding/removing tag pills, typing filters) in client-side Alpine memory. Use deferred non-blocking sync (`$wire.set(property, value, false)`) to avoid sending unnecessary network requests on every user keystroke/click.
-- Add `wire:ignore` to Alpine-driven input/dropdown widgets so Livewire DOM morphing never interrupts user typing or dropdown states.
-- Prefer self-contained, inline Alpine.js expressions (`x-data="{ ... }"`) without separate `<script>` blocks wherever possible.
-
-## Client-Side Pre-Validation & Server Load Reduction
-
-- ALWAYS validate form inputs, required fields, and file constraints (e.g. max file size, allowed file types) on the client side with Alpine.js/JS BEFORE triggering Livewire actions or uploads.
-- If client validation fails, display the error message immediately in the UI and PREVENT sending the network request to Livewire (`$wire.submit()`, `$wire.upload()`, etc.).
-- Client-side pre-validation drastically reduces server load, eliminates latency, and prevents duplicate error responses (e.g. client error + server rejection error).
-- Backend validation (Livewire `#[Validate]` / Form Requests) must remain in place as the authoritative source of truth and security, but frontend validation should catch mistakes first before hitting the wire.
-
 ## Replies
 
 - Be concise in your explanations - focus on what's important rather than explaining obvious details.

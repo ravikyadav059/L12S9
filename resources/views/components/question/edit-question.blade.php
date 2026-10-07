@@ -1,19 +1,23 @@
 @props([
-    'show' => 'showAskModal',
-    'title' => 'newTitle',
-    'description' => 'newDescription',
-    'tags' => 'newTags',
-    'thumbnail' => 'newThumbnail',
-    'submitAction' => 'submitQuestion',
-    'closeAction' => '$set(\'showAskModal\', false)',
+    'show' => 'showEditModal',
+    'editingQuestionId' => 'editingQuestionId',
+    'title' => 'editTitle',
+    'description' => 'editDescription',
+    'tags' => 'editTags',
+    'thumbnail' => 'editThumbnail',
+    'existingThumbnail' => 'existingThumbnail',
+    'submitAction' => 'saveEdit',
+    'closeAction' => '$set(\'showEditModal\', false)',
     'availableSkills' => [],
 ])
 
-<!-- ================= ASK QUESTION POPUP MODAL (ALPINE.JS DRIVEN & CLIENT PRE-VALIDATED) ================= -->
+<!-- ================= EDIT QUESTION POPUP MODAL (ALPINE.JS DRIVEN & CLIENT PRE-VALIDATED) ================= -->
 <div 
     x-data="{
         show: @entangle($show),
+        editingId: '',
         formTitle: '',
+        existingImage: null,
         clientErrors: {
             title: '',
             description: '',
@@ -32,7 +36,7 @@
         lastQuery: '',
 
         // Attachments state
-        hasFile: false,
+        hasNewFile: false,
         fileName: '',
         fileSize: '',
         previewUrl: null,
@@ -139,7 +143,7 @@
                 const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
                 this.clientError = 'File size (' + sizeMB + 'MB) exceeds the 5MB limit. Please choose a smaller image.';
                 this.clientErrors.thumbnail = this.clientError;
-                this.removeFile();
+                this.removeNewFile();
                 return;
             }
 
@@ -150,7 +154,7 @@
             if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
                 this.clientError = 'Unsupported format. Please upload JPG, PNG, WebP, or JFIF.';
                 this.clientErrors.thumbnail = this.clientError;
-                this.removeFile();
+                this.removeNewFile();
                 return;
             }
 
@@ -160,11 +164,11 @@
                 ? Math.round(file.size / 1024) + ' KB' 
                 : (file.size / (1024 * 1024)).toFixed(2) + ' MB';
             this.previewUrl = URL.createObjectURL(file);
-            this.hasFile = true;
+            this.hasNewFile = true;
             this.isUploading = true;
             this.progress = 0;
 
-            // 4. Upload only valid file to Livewire
+            // 4. Upload to Livewire
             if (this.$wire && typeof this.$wire.upload === 'function') {
                 this.$wire.upload('{{ $thumbnail }}', file,
                     () => {
@@ -185,8 +189,8 @@
             }
         },
 
-        removeFile() {
-            this.hasFile = false;
+        removeNewFile() {
+            this.hasNewFile = false;
             this.fileName = '';
             this.fileSize = '';
             this.isUploading = false;
@@ -203,13 +207,20 @@
             }
         },
 
+        removeExistingImage() {
+            this.existingImage = null;
+            if (this.$wire) {
+                this.$wire.set('{{ $existingThumbnail }}', null, false);
+            }
+        },
+
         async checkTitleUniqueness() {
             const cleanTitle = (this.formTitle || '').trim();
             if (!cleanTitle || cleanTitle.length < 5) return true;
 
             try {
                 if (this.$wire && typeof this.$wire.checkTitleAvailable === 'function') {
-                    const isUnique = await this.$wire.checkTitleAvailable(cleanTitle);
+                    const isUnique = await this.$wire.checkTitleAvailable(cleanTitle, this.editingId || null);
                     if (!isUnique) {
                         this.clientErrors.title = 'A question with this title already exists. Please make your title unique.';
                         return false;
@@ -237,9 +248,9 @@
                 hasError = true;
             }
 
-            // Client-side Title Uniqueness Pre-Check
+            // Client-side Title Uniqueness Pre-Check (excluding current editing question ID)
             if (!hasError && this.$wire && typeof this.$wire.checkTitleAvailable === 'function') {
-                const isUnique = await this.$wire.checkTitleAvailable(cleanTitle);
+                const isUnique = await this.$wire.checkTitleAvailable(cleanTitle, this.editingId || null);
                 if (!isUnique) {
                     this.clientErrors.title = 'A question with this title already exists. Please make your title unique.';
                     hasError = true;
@@ -278,15 +289,15 @@
                 return;
             }
 
-            // If validation passed, check if user is logged in
+            // Check authentication
             const isAuthenticated = @js(Auth::check());
             if (!isAuthenticated) {
                 this.show = false;
-                window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'Ask a Question' }));
+                window.dispatchEvent(new CustomEvent('open-auth-alert', { detail: { title: 'Connect to Scholar9 to Edit a Question' } }));
                 return;
             }
 
-            // Pre-validation PASSED and user is authenticated! Sync data non-blockingly and trigger submit action
+            // Pre-validation PASSED! Sync data non-blockingly and trigger submit action
             if (this.$wire) {
                 this.$wire.set('{{ $title }}', cleanTitle, false);
                 this.$wire.set('{{ $tags }}', this.selectedTags.join(', '), false);
@@ -294,34 +305,71 @@
             }
         },
 
-        init() {
-            const syncFromWire = () => {
-                this.formTitle = (this.$wire && this.$wire.get('{{ $title }}')) || '';
-                const initialTags = (this.$wire && this.$wire.get('{{ $tags }}')) || '';
-                if (initialTags && typeof initialTags === 'string') {
-                    this.selectedTags = initialTags.split(',').map(t => t.trim()).filter(Boolean);
-                } else if (Array.isArray(initialTags)) {
-                    this.selectedTags = initialTags.map(t => typeof t === 'object' && t !== null ? (t.name || t.label || t.title || JSON.stringify(t)) : String(t).trim()).filter(Boolean);
-                } else {
-                    this.selectedTags = [];
-                }
-                this.clientErrors = { title: '', description: '', tags: '', thumbnail: '' };
-            };
+        populateFromData(data) {
+            if (!data) return;
+            const payload = Array.isArray(data) ? data[0] : data;
+            if (!payload) return;
 
-            syncFromWire();
+            this.editingId = payload.id || '';
+            this.formTitle = payload.title || '';
+            
+            const rawTags = payload.tags || '';
+            if (typeof rawTags === 'string') {
+                this.selectedTags = rawTags.split(',').map(t => t.trim()).filter(Boolean);
+            } else if (Array.isArray(rawTags)) {
+                this.selectedTags = rawTags.map(t => typeof t === 'object' && t !== null ? (t.name || t.label || t.title || JSON.stringify(t)) : String(t).trim()).filter(Boolean);
+            } else {
+                this.selectedTags = [];
+            }
+
+            if (payload.description !== undefined && this.$wire) {
+                this.$wire.set('{{ $description }}', payload.description, false);
+            }
+
+            this.existingImage = payload.thumbnail || null;
+            this.hasNewFile = false;
+            this.fileName = '';
+            this.fileSize = '';
+            this.clientError = '';
+            this.clientErrors = { title: '', description: '', tags: '', thumbnail: '' };
+            if (this.previewUrl) {
+                URL.revokeObjectURL(this.previewUrl);
+                this.previewUrl = null;
+            }
+        },
+
+        syncFromWire() {
+            this.formTitle = (this.$wire && this.$wire.get('{{ $title }}')) || '';
+            const initialTags = (this.$wire && this.$wire.get('{{ $tags }}')) || '';
+            if (initialTags && typeof initialTags === 'string') {
+                this.selectedTags = initialTags.split(',').map(t => t.trim()).filter(Boolean);
+            } else if (Array.isArray(initialTags)) {
+                this.selectedTags = initialTags.map(t => typeof t === 'object' && t !== null ? (t.name || t.label || t.title || JSON.stringify(t)) : String(t).trim()).filter(Boolean);
+            } else {
+                this.selectedTags = [];
+            }
+            this.editingId = (this.$wire && this.$wire.get('{{ $editingQuestionId }}')) || '';
+            this.existingImage = (this.$wire && this.$wire.get('{{ $existingThumbnail }}')) || null;
+            this.clientErrors = { title: '', description: '', tags: '', thumbnail: '' };
+        },
+
+        init() {
+            this.syncFromWire();
+
             this.$watch('show', (val) => {
                 if (val) {
-                    syncFromWire();
+                    this.syncFromWire();
                 } else {
-                    this.removeFile();
+                    this.removeNewFile();
                 }
             });
         }
     }"
     x-show="show"
     x-cloak
-    @open-ask-modal.window="show = true"
-    @close-ask-modal.window="show = false"
+    @populate-edit-modal.window="populateFromData($event.detail)"
+    @open-edit-modal.window="show = true"
+    @close-edit-modal.window="show = false"
     class="fixed inset-0 z-50 overflow-y-auto"
     role="dialog"
     aria-modal="true"
@@ -358,15 +406,15 @@
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800/60 flex items-center justify-center text-[#198BEA] shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                         </svg>
                     </div>
                     <div>
                         <h3 class="text-base font-bold text-zinc-900 dark:text-white">
-                            {{ $submitAction === 'updateQuestion' ? 'Edit Question' : 'Ask a Question' }}
+                            Edit Question
                         </h3>
                         <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                            Share with the Scholar9 academic &amp; research community
+                            Update your question details and keep information accurate
                         </p>
                     </div>
                 </div>
@@ -555,15 +603,15 @@
                         <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
                             Attachments
                         </label>
-                        <span x-show="hasFile" x-cloak style="display: none;" class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                        <span x-show="hasNewFile || existingImage" x-cloak style="display: none;" class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                            Image Selected
+                            <span x-text="hasNewFile ? 'New Image Selected' : 'Existing Image Attached'"></span>
                         </span>
                     </div>
 
-                    <!-- Empty Upload Dropzone -->
+                    <!-- Empty / Change Upload Dropzone (shown when no new file or existing image) -->
                     <div 
-                        x-show="!hasFile"
+                        x-show="!hasNewFile && !existingImage"
                         class="relative border-2 border-dashed border-zinc-200 dark:border-zinc-700 hover:border-[#198BEA]/60 dark:hover:border-[#198BEA]/60 rounded-2xl p-4 text-center transition-all bg-zinc-50/50 dark:bg-zinc-800/30 cursor-pointer group"
                     >
                         <input 
@@ -586,9 +634,46 @@
                         </div>
                     </div>
 
-                    <!-- Uploaded File Preview Card -->
+                    <!-- Existing Image Card (when loaded from database and not replaced yet) -->
                     <div 
-                        x-show="hasFile" 
+                        x-show="!hasNewFile && existingImage" 
+                        x-cloak 
+                        style="display: none;"
+                        class="p-3 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl flex items-center justify-between gap-3 shadow-xs"
+                    >
+                        <div class="flex items-center gap-3 min-w-0">
+                            <img :src="existingImage ? (existingImage.startsWith('http') ? existingImage : '/storage/' + existingImage) : ''" alt="Existing Attachment" class="w-12 h-12 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0 shadow-xs" />
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-zinc-900 dark:text-white truncate">Current Attachment</p>
+                                <label class="text-[11px] text-[#198BEA] hover:underline cursor-pointer font-medium relative">
+                                    Change image
+                                    <input 
+                                        type="file" 
+                                        accept=".jpg,.jpeg,.png,.webp,.jfif,image/jpeg,image/png,image/webp"
+                                        @change="handleFile($event)"
+                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button 
+                                type="button" 
+                                @click="removeExistingImage()" 
+                                class="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors cursor-pointer"
+                                title="Remove existing image"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Newly Uploaded File Preview Card -->
+                    <div 
+                        x-show="hasNewFile" 
                         x-cloak 
                         style="display: none;"
                         class="p-3 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl flex items-center justify-between gap-3 shadow-xs"
@@ -596,7 +681,7 @@
                         <div class="flex items-center gap-3 min-w-0">
                             <!-- Image Thumbnail Preview -->
                             <template x-if="previewUrl">
-                                <img :src="previewUrl" alt="Preview" class="w-12 h-12 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0 shadow-xs" />
+                                <img :src="previewUrl" alt="New Preview" class="w-12 h-12 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0 shadow-xs" />
                             </template>
                             <div class="min-w-0">
                                 <p class="text-xs font-semibold text-zinc-900 dark:text-white truncate" x-text="fileName"></p>
@@ -614,9 +699,9 @@
 
                             <button 
                                 type="button" 
-                                @click="removeFile()" 
+                                @click="removeNewFile()" 
                                 class="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors cursor-pointer"
-                                title="Remove image"
+                                title="Remove new image"
                             >
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -654,8 +739,8 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span wire:loading.remove wire:target="{{ $submitAction }}">{{ $submitAction === 'updateQuestion' ? 'Update Question' : 'Post Question' }}</span>
-                        <span wire:loading wire:target="{{ $submitAction }}">{{ $submitAction === 'updateQuestion' ? 'Updating...' : 'Posting...' }}</span>
+                        <span wire:loading.remove wire:target="{{ $submitAction }}">Update Question</span>
+                        <span wire:loading wire:target="{{ $submitAction }}">Updating...</span>
                     </button>
                 </div>
             </form>

@@ -16,8 +16,9 @@
     <!-- 3. Footer (Common across all pages) -->
     <x-layouts.app.footer />
 
-    <!-- 4. Global Modals -->
+    <!-- 4. Global Modals & Notifications -->
     <x-modals.share />
+    <x-toast />
 
     @fluxScripts
 </body>

@@ -265,4 +265,137 @@ class User extends Authenticatable // implements MustVerifyEmail
     {
         return $this->hasMany(Experience::class, 'user_id', '_id');
     }
+
+    /**
+     * Check if this user is following another user.
+     */
+    public function isFollowing(string|User|null $user): bool
+    {
+        if (empty($user)) {
+            return false;
+        }
+
+        $targetId = $user instanceof self ? (string) ($user->_id ?? $user->id) : (string) $user;
+        if ($targetId === '') {
+            return false;
+        }
+
+        $following = is_array($this->following) ? array_map('strval', $this->following) : [];
+
+        return in_array($targetId, $following, true);
+    }
+
+    /**
+     * Check if this user is followed by another user.
+     */
+    public function isFollowedBy(string|User|null $user): bool
+    {
+        if (empty($user)) {
+            return false;
+        }
+
+        $sourceId = $user instanceof self ? (string) ($user->_id ?? $user->id) : (string) $user;
+        if ($sourceId === '') {
+            return false;
+        }
+
+        $followers = is_array($this->followers) ? array_map('strval', $this->followers) : [];
+
+        return in_array($sourceId, $followers, true);
+    }
+
+    /**
+     * Follow another user (stores target ID in this user's following array, and this ID in target user's followers array).
+     */
+    public function follow(string|User $user): bool
+    {
+        $targetUser = $user instanceof self ? $user : static::find($user);
+        if (! $targetUser) {
+            return false;
+        }
+
+        $authId = (string) ($this->_id ?? $this->id);
+        $targetId = (string) ($targetUser->_id ?? $targetUser->id);
+
+        if ($authId === '' || $targetId === '' || $authId === $targetId) {
+            return false;
+        }
+
+        $myFollowing = is_array($this->following) ? array_map('strval', $this->following) : [];
+        if (! in_array($targetId, $myFollowing, true)) {
+            $myFollowing[] = $targetId;
+            $this->following = array_values($myFollowing);
+            $this->save();
+        }
+
+        $theirFollowers = is_array($targetUser->followers) ? array_map('strval', $targetUser->followers) : [];
+        if (! in_array($authId, $theirFollowers, true)) {
+            $theirFollowers[] = $authId;
+            $targetUser->followers = array_values($theirFollowers);
+            $targetUser->save();
+        }
+
+        return true;
+    }
+
+    /**
+     * Unfollow another user (removes target ID from this user's following array, and this ID from target user's followers array).
+     */
+    public function unfollow(string|User $user): bool
+    {
+        $targetUser = $user instanceof self ? $user : static::find($user);
+        if (! $targetUser) {
+            return false;
+        }
+
+        $authId = (string) ($this->_id ?? $this->id);
+        $targetId = (string) ($targetUser->_id ?? $targetUser->id);
+
+        if ($authId === '' || $targetId === '') {
+            return false;
+        }
+
+        $myFollowing = is_array($this->following) ? array_map('strval', $this->following) : [];
+        $this->following = array_values(array_diff($myFollowing, [$targetId]));
+        $this->save();
+
+        $theirFollowers = is_array($targetUser->followers) ? array_map('strval', $targetUser->followers) : [];
+        $targetUser->followers = array_values(array_diff($theirFollowers, [$authId]));
+        $targetUser->save();
+
+        return true;
+    }
+
+    /**
+     * Toggle follow status for another user.
+     * Returns true if now following, false if unfollowed.
+     */
+    public function toggleFollow(string|User $user): bool
+    {
+        if ($this->isFollowing($user)) {
+            $this->unfollow($user);
+
+            return false;
+        }
+
+        $this->follow($user);
+
+        return true;
+    }
+
+    /**
+     * Total following count.
+     */
+    public function followingCount(): int
+    {
+        return is_array($this->following) ? count($this->following) : 0;
+    }
+
+    /**
+     * Total followers count.
+     */
+    public function followersCount(): int
+    {
+        return is_array($this->followers) ? count($this->followers) : 0;
+    }
 }

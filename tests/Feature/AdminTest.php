@@ -2,6 +2,7 @@
 
 use App\Models\Experience;
 use App\Models\Publication;
+use App\Models\Question;
 use App\Models\ReviewerJournal;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -11,6 +12,8 @@ test('admin routes are registered', function () {
     expect(Route::has('admin.dashboard'))->toBeTrue();
     expect(Route::has('admin.publications.index'))->toBeTrue();
     expect(Route::has('admin.users.index'))->toBeTrue();
+    expect(Route::has('admin.questions.index'))->toBeTrue();
+    expect(Route::has('admin.questions.edit'))->toBeTrue();
     expect(Route::has('admin.database-fixing.index'))->toBeTrue();
     expect(Route::has('admin.database-fixing.publication.registered-co-author'))->toBeTrue();
     expect(Route::has('admin.database-fixing.publication.unregistered-co-author'))->toBeTrue();
@@ -232,5 +235,74 @@ test('publication missing journal_title inspector component renders correctly', 
             ->assertSee('Publication Document Inspection')
             ->call('closeInspectModal')
             ->assertDontSee('Publication Document Inspection');
+    }
+});
+
+test('admin questions index component renders correctly and toggles status', function () {
+    $admin = new User([
+        'name' => 'Super Admin',
+        'email' => 'admin@test.com',
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $this->actingAs($admin);
+
+    $test = Volt::test('admin.questions.index')
+        ->assertSee('Manage Questions')
+        ->assertSee('Thumbnail')
+        ->assertSee('Question Title')
+        ->assertSee('Status')
+        ->assertSee('Action');
+
+    $question = Question::first() ?? Question::create([
+        'title' => 'Test Question Title for Admin',
+        'slug' => 'test-question-title-for-admin',
+        'description' => 'This is a detailed description of the test question for admin panel verification.',
+        'status' => 1,
+        'tags' => ['PHP', 'Laravel'],
+    ]);
+
+    if ($question) {
+        $initialStatus = (int) $question->status;
+        $test->call('toggleStatus', (string) $question->_id);
+
+        $question->refresh();
+        expect((int) $question->status)->not->toBe($initialStatus);
+
+        // Toggle back
+        $test->call('toggleStatus', (string) $question->_id);
+        $question->refresh();
+        expect((int) $question->status)->toBe($initialStatus);
+    }
+});
+
+test('admin questions edit component renders and updates question', function () {
+    $admin = new User([
+        'name' => 'Super Admin',
+        'email' => 'admin@test.com',
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $this->actingAs($admin);
+
+    $question = Question::first() ?? Question::create([
+        'title' => 'Test Question Title for Admin',
+        'slug' => 'test-question-title-for-admin',
+        'description' => 'This is a detailed description of the test question for admin panel verification.',
+        'status' => 1,
+        'tags' => ['PHP', 'Laravel'],
+    ]);
+
+    if ($question) {
+        $test = Volt::test('admin.questions.edit', ['question' => (string) $question->_id])
+            ->assertSee('Edit Question Details')
+            ->assertSee('Question Title')
+            ->assertSee('URL Slug')
+            ->assertSee('Save Changes');
+
+        $skills = $test->call('searchSkills', 'PHP');
+        expect($skills)->not->toBeNull();
     }
 });

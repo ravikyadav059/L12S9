@@ -136,12 +136,32 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'description' => 'Scans all Seminar records and standardizes arbitrary legacy date strings in the month_year field (e.g. "2015-08-01", "08/2015", "Aug 2015") into strict "Month Year" format (e.g. "January 2026", "August 2015") for consistent event timeline rendering.',
                 'route' => route('admin.database-fixing.seminar.index'),
             ],
+            [
+                'id' => 'question_counts',
+                'table' => 'Question',
+                'title' => 'answer_count & votes_count (Count Sync & Recalculator)',
+                'description' => 'Scans all Question records in MongoDB, checks for out-of-sync or legacy null/string answer_count, votes_count, upvotes_count, and downvotes_count against actual records in the answers and votes collections, and synchronizes them with precise native integer counts.',
+                'route' => route('admin.database-fixing.question.counts'),
+            ],
+            [
+                'id' => 'question_slug',
+                'table' => 'Question',
+                'title' => 'slug & title (Duplicate Slug & Title Resolver)',
+                'description' => 'Scans Question records in MongoDB for identical slugs or duplicate titles across documents, groups collisions into 3 categories (Same Title & Same Slug, Same Title Only, Same Slug Only), and resolves conflicts by assigning clean unique suffixes (e.g. "slug-1", "slug-2").',
+                'route' => route('admin.database-fixing.question.slug'),
+            ],
         ];
     }
 
     public function getTableStyle(string $table): array
     {
         return match ($table) {
+            'Question' => [
+                'badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800/70',
+                'dot' => 'bg-cyan-500',
+                'title' => 'text-cyan-950 dark:text-cyan-100',
+                'btn' => 'text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800 hover:bg-cyan-600 hover:text-white dark:hover:bg-cyan-600 hover:border-cyan-600',
+            ],
             'Publication' => [
                 'badge' => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/70',
                 'dot' => 'bg-blue-500',
@@ -202,6 +222,10 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
 
         <!-- TABLE CATEGORIES COLOR LEGEND -->
         <div class="flex items-center gap-2 flex-wrap">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800">
+                <span class="size-2 rounded-full bg-cyan-500"></span>
+                Question
+            </span>
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
                 <span class="size-2 rounded-full bg-blue-500"></span>
                 Publication

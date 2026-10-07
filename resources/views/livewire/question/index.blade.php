@@ -1,11 +1,13 @@
 <?php
 
+use App\Livewire\Concerns\HandlesQuestionInteractions;
 use App\Models\Answer;
 use App\Models\Question;
 use App\Models\Skill;
 use App\Models\User;
 use App\Models\Vote;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -14,7 +16,7 @@ use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 
 new #[Layout('components.layouts.app')] class extends Component {
-    use WithFileUploads;
+    use HandlesQuestionInteractions, WithFileUploads;
 
     public int $perPage = 10;
 
@@ -60,32 +62,19 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public string $editTags = '';
 
-    // Answer Form
-    public ?string $answeringQuestionId = null;
+    #[Validate('nullable|image|max:5120')]
+    public $editThumbnail;
 
-    public string $answeringQuestionTitle = '';
-
-    public string $answerContent = '';
+    public ?string $existingThumbnail = null;
 
     // Modals state
     public bool $showAskModal = false;
 
     public bool $showEditModal = false;
 
-    public bool $showAnswerModal = false;
-
     public bool $showFilterModal = false;
 
     public bool $showSkillsModal = false;
-
-    // Track user local interactions for quick UI responsiveness
-    public array $votedQuestions = [];
-
-    public array $savedQuestions = [];
-
-    public array $followingUsers = [];
-
-    public array $followingQuestions = [];
 
     public function mount(): void
     {
@@ -94,10 +83,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         }
 
         $this->userSkills = session('qa_user_skills', ['React', 'Laravel', 'MongoDB']);
-        $this->votedQuestions = session('qa_voted_questions', []);
-        $this->savedQuestions = session('qa_saved_questions', []);
-        $this->followingUsers = session('qa_following_users', []);
-        $this->followingQuestions = session('qa_following_questions', []);
+        $this->initializeQuestionInteractions();
     }
 
     public function updatingSearch(): void
@@ -149,96 +135,6 @@ new #[Layout('components.layouts.app')] class extends Component {
     {
         $this->perPage += 10;
         session(['questions_per_page' => $this->perPage]);
-    }
-
-    public function toggleVote(string $questionId, string $type = 'up'): void
-    {
-        $current = $this->votedQuestions[$questionId] ?? null;
-
-        if ($current === $type) {
-            unset($this->votedQuestions[$questionId]);
-            $delta = ($type === 'up') ? -1 : 1;
-            $msg = ($type === 'up') ? 'Upvote removed' : 'Downvote removed';
-            $toastType = 'info';
-        } else {
-            $delta = 0;
-            if ($current === 'up') {
-                $delta -= 1;
-            } elseif ($current === 'down') {
-                $delta += 1;
-            }
-            $delta += ($type === 'up') ? 1 : -1;
-            $this->votedQuestions[$questionId] = $type;
-            $msg = ($type === 'up') ? 'Question upvoted! 👍' : 'Question downvoted';
-            $toastType = ($type === 'up') ? 'success' : 'warning';
-        }
-
-        session(['qa_voted_questions' => $this->votedQuestions]);
-
-        $question = Question::find($questionId);
-        if ($question) {
-            $question->increment('votes_count', $delta);
-        }
-
-        $this->dispatch('toast', message: $msg, type: $toastType);
-    }
-
-    public function toggleSave(string $questionId): void
-    {
-        if (in_array($questionId, $this->savedQuestions, true)) {
-            $this->savedQuestions = array_values(array_diff($this->savedQuestions, [$questionId]));
-            $msg = 'Removed from bookmarks';
-            $toastType = 'info';
-        } else {
-            $this->savedQuestions[] = $questionId;
-            $msg = 'Question saved to bookmarks! 🔖';
-            $toastType = 'success';
-        }
-
-        session(['qa_saved_questions' => $this->savedQuestions]);
-        $this->dispatch('toast', message: $msg, type: $toastType);
-    }
-
-    public function toggleFollowUser(string $userId, string $userName = 'user'): void
-    {
-        if (in_array($userId, $this->followingUsers, true)) {
-            $this->followingUsers = array_values(array_diff($this->followingUsers, [$userId]));
-            $msg = "Unfollowed {$userName}";
-            $toastType = 'info';
-        } else {
-            $this->followingUsers[] = $userId;
-            $msg = "Now following {$userName}! ⭐";
-            $toastType = 'success';
-        }
-
-        session(['qa_following_users' => $this->followingUsers]);
-        $this->dispatch('toast', message: $msg, type: $toastType);
-    }
-
-    public function toggleFollowQuestion(string $questionId): void
-    {
-        if (in_array($questionId, $this->followingQuestions, true)) {
-            $this->followingQuestions = array_values(array_diff($this->followingQuestions, [$questionId]));
-            $msg = 'Unfollowed question';
-            $toastType = 'info';
-            $delta = -1;
-        } else {
-            $this->followingQuestions[] = $questionId;
-            $msg = 'Following question updates! 🔔';
-            $toastType = 'success';
-            $delta = 1;
-        }
-
-        session(['qa_following_questions' => $this->followingQuestions]);
-
-        $question = Question::find($questionId);
-        if ($question) {
-            $currentFollow = is_array($question->follow) ? count($question->follow) : (int) ($question->follow ?? 0);
-            $newFollow = max(0, $currentFollow + $delta);
-            $question->update(['follow' => $newFollow]);
-        }
-
-        $this->dispatch('toast', message: $msg, type: $toastType);
     }
 
     public function openAskModal(): void
@@ -340,6 +236,18 @@ new #[Layout('components.layouts.app')] class extends Component {
         $this->editDescription = $q->description ?? '';
         $tags = $q->tags ?? $q->category ?? [];
         $this->editTags = is_array($tags) ? implode(', ', $tags) : (string) $tags;
+        $this->existingThumbnail = $q->thumbnail ?? null;
+        $this->editThumbnail = null;
+
+        // Dispatch fetched database data to edit modal
+        $this->dispatch('populate-edit-modal', [
+            'id' => (string) $q->_id,
+            'title' => $this->editTitle,
+            'description' => $this->editDescription,
+            'tags' => $this->editTags,
+            'thumbnail' => $this->existingThumbnail,
+        ]);
+
         $this->showEditModal = true;
     }
 
@@ -379,72 +287,32 @@ new #[Layout('components.layouts.app')] class extends Component {
             }
 
             $tagList = array_values(array_filter(array_map('trim', explode(',', $this->editTags))));
+            if (empty($tagList)) {
+                $tagList = ['General'];
+            }
+
+            $thumbnailPath = $this->existingThumbnail;
+            if ($this->editThumbnail) {
+                $thumbnailPath = $this->editThumbnail->store('thumbnails', 'public');
+            }
+
             $q->update([
                 'title' => $cleanTitle,
                 'description' => $this->editDescription,
                 'tags' => $tagList,
                 'category' => $tagList,
+                'thumbnail' => $thumbnailPath,
             ]);
         }
 
         $this->showEditModal = false;
         $this->editingQuestionId = null;
+        $this->editTitle = '';
+        $this->editDescription = '';
+        $this->editTags = '';
+        $this->editThumbnail = null;
+        $this->existingThumbnail = null;
         $this->dispatch('toast', message: 'Question updated successfully! ✨', type: 'success');
-    }
-
-    public function openAnswerModal(string $questionId): void
-    {
-        if (! Auth::check()) {
-            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Answer a Question');
-
-            return;
-        }
-
-        $q = Question::find($questionId);
-        if (! $q) {
-            return;
-        }
-
-        $this->answeringQuestionId = $questionId;
-        $this->answeringQuestionTitle = $q->title ?? 'Question';
-        $this->answerContent = '';
-        $this->showAnswerModal = true;
-    }
-
-    public function submitAnswer(): void
-    {
-        if (! Auth::check()) {
-            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Answer a Question');
-
-            return;
-        }
-
-        if (empty(trim($this->answerContent))) {
-            $this->addError('answerContent', 'Please enter your answer content.');
-
-            return;
-        }
-
-        $user = Auth::user();
-
-        Answer::create([
-            'question_id' => $this->answeringQuestionId,
-            'user_id' => $user->_id ?? (string) ($user->id ?? 'anonymous'),
-            'content' => $this->answerContent,
-            'votes_count' => 0,
-            'is_accepted' => false,
-            'status' => 1,
-        ]);
-
-        $q = Question::find($this->answeringQuestionId);
-        if ($q) {
-            $q->increment('answer_count');
-        }
-
-        $this->showAnswerModal = false;
-        $this->answeringQuestionId = null;
-        $this->answerContent = '';
-        $this->dispatch('toast', message: 'Answer submitted! Thank you 🙌', type: 'success');
     }
 
     public function openSkillsModal(): void
@@ -593,13 +461,36 @@ new #[Layout('components.layouts.app')] class extends Component {
         }
 
         // Saved Filter
-        if ($this->filterSaved && ! empty($this->savedQuestions)) {
-            $query->whereIn('_id', $this->savedQuestions);
+        if ($this->filterSaved) {
+            $savedIds = array_values(array_filter(array_map('strval', $this->savedQuestions)));
+            if (! empty($savedIds)) {
+                $query->where(function ($q) use ($savedIds) {
+                    $q->whereIn('_id', $savedIds);
+                    if (Auth::check()) {
+                        $q->orWhere('save', (string) (Auth::user()->_id ?? Auth::id()));
+                    }
+                });
+            } else {
+                $query->where('_id', '000000000000000000000000');
+            }
         }
 
         // Following Filter
-        if ($this->filterFollowing && ! empty($this->followingUsers)) {
-            $query->whereIn('user_id', $this->followingUsers);
+        if ($this->filterFollowing) {
+            $followingUserIds = array_values(array_filter(array_map('strval', $this->followingUsers)));
+            $followingQuestionIds = array_values(array_filter(array_map('strval', $this->followingQuestions)));
+
+            $query->where(function ($q) use ($followingUserIds, $followingQuestionIds) {
+                if (! empty($followingUserIds)) {
+                    $q->whereIn('user_id', $followingUserIds);
+                }
+                if (! empty($followingQuestionIds)) {
+                    $q->orWhereIn('_id', $followingQuestionIds);
+                }
+                if (empty($followingUserIds) && empty($followingQuestionIds)) {
+                    $q->where('_id', '000000000000000000000000');
+                }
+            });
         }
 
         // Sort handling
@@ -612,24 +503,32 @@ new #[Layout('components.layouts.app')] class extends Component {
             default => $query->latest(),
         };
 
-        $totalQuestionsCount = Question::whereNotIn('status', [0, '0', false])->count();
-        $totalAnswersCount = Answer::whereNotIn('status', [0, '0', false])->count();
-        $totalUsersCount = User::count();
+        $stats = Cache::remember('qa_community_stats', 900, function () {
+            return [
+                'questions' => Question::whereNotIn('status', [0, '0', false])->count(),
+                'answers' => Answer::whereNotIn('status', [0, '0', false])->count(),
+                'users' => User::count(),
+            ];
+        });
 
         $questions = $query->paginate($this->perPage);
 
-        // Sidebar widgets data
-        $popularQuestions = Question::query()
-            ->whereNotIn('status', [0, '0', false])
-            ->select(['_id', 'title', 'slug', 'answer_count', 'is_closed'])
-            ->orderByDesc('views_count')
-            ->limit(4)
-            ->get();
+        // Sidebar widgets cached with 15-min TTL for rapid responsiveness
+        $popularQuestions = Cache::remember('qa_popular_questions', 900, function () {
+            return Question::query()
+                ->whereNotIn('status', [0, '0', false])
+                ->select(['_id', 'title', 'slug', 'answer_count', 'is_closed'])
+                ->orderByDesc('views_count')
+                ->limit(4)
+                ->get();
+        });
 
-        $activeContributors = User::query()
-            ->select(['_id', 'fullname', 'first_name', 'last_name', 'photo', 'slug', 'user_role'])
-            ->limit(4)
-            ->get();
+        $activeContributors = Cache::remember('qa_active_contributors', 900, function () {
+            return User::query()
+                ->select(['_id', 'fullname', 'first_name', 'last_name', 'photo', 'slug', 'user_role'])
+                ->limit(4)
+                ->get();
+        });
 
         $commonTags = [
             ['name' => 'React', 'count' => '2.1k'],
@@ -642,24 +541,27 @@ new #[Layout('components.layouts.app')] class extends Component {
             ['name' => 'Node.js', 'count' => '620'],
         ];
 
-        $availableSkills = Skill::query()
-            ->whereIn('skills_status',[1,'1'])
-            ->limit(50)
-            ->pluck('skills_title')
-            ->filter()
-            ->values()
-            ->all();
+        $availableSkills = Cache::remember('qa_available_skills', 1800, function () {
+            $skills = Skill::query()
+                ->whereIn('skills_status', [1, '1'])
+                ->limit(50)
+                ->pluck('skills_title')
+                ->filter()
+                ->values()
+                ->all();
 
-        if (empty($availableSkills)) {
-            $availableSkills = ['React', 'Laravel', 'MongoDB', 'Python', 'TypeScript', 'Docker', 'Data Analysis (STATA)', 'Visual Studio', 'PHP', 'JavaScript'];
-        }
+            return ! empty($skills) ? $skills : [
+                'React', 'Laravel', 'MongoDB', 'Python', 'TypeScript', 'Docker',
+                'Data Analysis (STATA)', 'Visual Studio', 'PHP', 'JavaScript',
+            ];
+        });
 
         return [
             'questions' => $questions,
             'totalCount' => $questions->total(),
-            'totalQuestionsCount' => $totalQuestionsCount,
-            'totalAnswersCount' => $totalAnswersCount,
-            'totalUsersCount' => $totalUsersCount,
+            'totalQuestionsCount' => $stats['questions'] ?? 0,
+            'totalAnswersCount' => $stats['answers'] ?? 0,
+            'totalUsersCount' => $stats['users'] ?? 0,
             'popularQuestions' => $popularQuestions,
             'activeContributors' => $activeContributors,
             'commonTags' => $commonTags,
@@ -670,47 +572,6 @@ new #[Layout('components.layouts.app')] class extends Component {
 
 <div class="min-h-screen bg-[#f9fafb] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-['DM_Sans',sans-serif]">
     
-    <!-- TOAST NOTIFICATION CONTAINER -->
-    <div 
-        x-data="{ toasts: [] }" 
-        @toast.window="
-            let id = Date.now();
-            toasts.push({ id: id, message: $event.detail.message, type: $event.detail.type || 'success' });
-            setTimeout(() => { toasts = toasts.filter(t => t.id !== id); }, 3500);
-        "
-        class="fixed top-20 right-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none"
-    >
-        <template x-for="t in toasts" :key="t.id">
-            <div 
-                x-show="true"
-                x-transition:enter="transition ease-out duration-300 transform"
-                x-transition:enter-start="opacity-0 translate-y-3 scale-95"
-                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                x-transition:leave="transition ease-in duration-200 transform"
-                x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                x-transition:leave-end="opacity-0 -translate-y-2 scale-95"
-                :class="{
-                    'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800': t.type === 'success',
-                    'bg-sky-50 text-[#198BEA] border-sky-200 dark:bg-sky-950/80 dark:text-sky-300 dark:border-sky-800': t.type === 'info',
-                    'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800': t.type === 'warning',
-                    'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800': t.type === 'error'
-                }"
-                class="pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium backdrop-blur-md"
-            >
-                <template x-if="t.type === 'success'">
-                    <svg class="w-5 h-5 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </template>
-                <template x-if="t.type === 'info'">
-                    <svg class="w-5 h-5 shrink-0 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </template>
-                <template x-if="t.type === 'warning'">
-                    <svg class="w-5 h-5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                </template>
-                <span x-text="t.message"></span>
-            </div>
-        </template>
-    </div>
-
     <!-- ================= TOP HEADER HERO BANNER ================= -->
     <div class="w-full bg-white dark:bg-zinc-900 border-b border-zinc-200/90 dark:border-zinc-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center gap-4">
@@ -842,16 +703,17 @@ new #[Layout('components.layouts.app')] class extends Component {
                     @forelse($questions as $question)
                         @php
                             $author = $question->user;
-                            $authorName = $author ? ($author->fullname ?? trim(($author->first_name ?? '').' '.($author->last_name ?? '')) ?: 'Anonymous Scholar') : 'Anonymous Scholar';
-                            $authorAvatar = $author?->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode($authorName).'&background=198BEA&color=fff';
+                            $authorId = (string) ($question->user_id ?? ($author?->_id ?? $author?->id ?? ''));
+                            $authorName = $author?->name ?? 'User';
+                            $authorAvatar = $author?->avatar;
                             $tags = $question->tags ?? $question->category ?? [];
                             if (!is_array($tags)) {
                                 $tags = is_string($tags) ? explode(',', $tags) : [];
                             }
-                            $isVotedUp = ($votedQuestions[$question->id] ?? '') === 'up';
-                            $isVotedDown = ($votedQuestions[$question->id] ?? '') === 'down';
-                            $isSaved = in_array($question->id, $savedQuestions, true);
-                            $isFollowingAuthor = $author ? in_array((string)$author->id, $followingUsers, true) : false;
+                            $isVotedUp = in_array($votedQuestions[$question->id] ?? ($votedQuestions[(string)$question->_id] ?? ''), ['up', 'upvote'], true);
+                            $isVotedDown = in_array($votedQuestions[$question->id] ?? ($votedQuestions[(string)$question->_id] ?? ''), ['down', 'downvote'], true);
+                            $isSaved = in_array((string)$question->id, array_map('strval', $savedQuestions), true) || in_array((string)$question->_id, array_map('strval', $savedQuestions), true);
+                            $isFollowingAuthor = $authorId !== '' && in_array($authorId, $followingUsers, true);
                             $hasAccepted = (bool)($question->is_closed ?? false);
                         @endphp
 
@@ -875,12 +737,12 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         <!-- Badge -->
                                         @if(($question->votes_count ?? 0) > 10)
                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
                                                 Expert
                                             </span>
                                         @elseif($author?->user_role === 'reviewer')
                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                                                 Mentor
                                             </span>
                                         @endif
@@ -901,41 +763,70 @@ new #[Layout('components.layouts.app')] class extends Component {
 
                                     @auth
                                         @php
-                                            $currentUserId = (string) Auth::id();
-                                            $questionAuthorId = (string) ($question->user_id ?? ($author?->_id ?? $author?->id ?? ''));
-                                            $isOwner = $currentUserId !== '' && $currentUserId === $questionAuthorId;
+                                            $currentUserId = (string) (Auth::user()->_id ?? Auth::id());
+                                            $isOwner = $currentUserId !== '' && $currentUserId === $authorId;
                                         @endphp
 
-                                        @if($author && !$isOwner)
+                                        @if($authorId !== '' && !$isOwner)
                                             <button 
-                                                wire:click="toggleFollowUser('{{ (string)$author->id }}', '{{ $authorName }}')"
+                                                wire:click="toggleFollowUser('{{ $authorId }}', '{{ addslashes($authorName) }}')"
                                                 type="button"
-                                                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isFollowingAuthor ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40' }}"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isFollowingAuthor ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-600' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40' }}"
                                             >
                                                 @if($isFollowingAuthor)
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                                        <circle cx="9" cy="7" r="4"/>
+                                                        <polyline points="16 11 18 13 22 9"/>
+                                                    </svg>
                                                     <span>Following</span>
                                                 @else
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                                        <circle cx="9" cy="7" r="4"/>
+                                                        <line x1="19" x2="19" y1="8" y2="14"/>
+                                                        <line x1="22" x2="16" y1="11" y2="11"/>
+                                                    </svg>
                                                     <span>Follow</span>
                                                 @endif
                                             </button>
                                         @endif
 
                                         @if($isOwner)
-                                            <!-- Edit Button (Only shown to Question Owner) -->
+                                            <!-- Edit Button (Fetches latest data from backend on click) -->
                                             <button 
-                                                @click="$dispatch('open-edit-modal')"
                                                 wire:click="openEditModal('{{ $question->id }}')"
+                                                wire:loading.attr="disabled"
+                                                wire:target="openEditModal('{{ $question->id }}')"
                                                 type="button"
-                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer disabled:opacity-60"
                                                 title="Edit question"
                                             >
-                                                <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <svg wire:loading wire:target="openEditModal('{{ $question->id }}')" class="animate-spin w-3.5 h-3.5 text-[#198BEA]" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <svg wire:loading.remove wire:target="openEditModal('{{ $question->id }}')" class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 21h-7" />
                                                 </svg>
                                                 <span>Edit</span>
+                                            </button>
+                                        @endif
+                                    @else
+                                        @if($authorId !== '')
+                                            <button 
+                                                wire:click="toggleFollowUser('{{ $authorId }}', '{{ addslashes($authorName) }}')"
+                                                type="button"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40"
+                                            >
+                                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                                    <circle cx="9" cy="7" r="4"/>
+                                                    <line x1="19" x2="19" y1="8" y2="14"/>
+                                                    <line x1="22" x2="16" y1="11" y2="11"/>
+                                                </svg>
+                                                <span>Follow</span>
                                             </button>
                                         @endif
                                     @endauth
@@ -996,29 +887,38 @@ new #[Layout('components.layouts.app')] class extends Component {
                                 </div>
                             @endif
 
-                            <!-- Stats Bar (Image 2 Style: 💬 0 Answers  👁 5 Views  ↑ 1 Votes  🕒 3 months ago) -->
-                            <div class="flex items-center gap-4 sm:gap-6 py-2.5 my-3.5 border-t border-zinc-100 dark:border-zinc-800/80 text-xs flex-wrap">
-                                <span class="inline-flex items-center gap-1.5 text-text-secondary dark:text-zinc-400 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-text-secondary dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <!-- Stats Bar (Matching Design Template: 💬 18 Answers  👁 2.4k Views  ↑ 247 Votes  🕒 2h ago) -->
+                            <div class="flex items-center gap-4 sm:gap-6 py-2.5 my-3.5 border-t border-b border-zinc-200/80 dark:border-zinc-800 text-[13px] text-zinc-600 dark:text-zinc-300 font-medium flex-wrap">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                                     </svg>
-                                    <span><strong class="font-bold text-text-main dark:text-zinc-100">{{ $question->answer_count ?? ($question->answers ? $question->answers->count() : 0) }}</strong> Answers</span>
+                                    <span><strong class="font-bold text-zinc-900 dark:text-white">{{ $question->answer_count ?? ($question->answers ? $question->answers->count() : 0) }}</strong> Answers</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1.5 text-text-secondary dark:text-zinc-400 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-text-secondary dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                     </svg>
-                                    <span><strong class="font-bold text-text-main dark:text-zinc-100">{{ number_format($question->views_count ?? 0) }}</strong> Views</span>
+                                    <span><strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($question->views_count ?? 0) }}</strong> Views</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1.5 text-text-secondary dark:text-zinc-400 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-text-secondary dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
-                                    </svg>
-                                    <span><strong class="font-bold text-text-main dark:text-zinc-100">{{ number_format($question->votes_count ?? 0) }}</strong> Votes</span>
+                                <span class="inline-flex items-center gap-1.5">
+                                    <span class="inline-flex items-center gap-0.5">
+                                        <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                                        </svg>
+                                        <strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($question->upvotes_count ?? $question->votes_count ?? 0) }}</strong>
+                                    </span>
+                                    <span class="inline-flex items-center gap-0.5">
+                                        <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                                        </svg>
+                                        <strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($question->downvotes_count ?? 0) }}</strong>
+                                    </span>
+                                    <span>Votes</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1.5 text-text-secondary dark:text-zinc-400 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-text-secondary dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     <span>{{ $question->created_at ? $question->created_at->diffForHumans() : 'Recent' }}</span>
@@ -1026,16 +926,16 @@ new #[Layout('components.layouts.app')] class extends Component {
                             </div>
 
                             <!-- Bottom Actions: Upvote, Downvote, Follow, Save, Share, Answer -->
-                            <div class="flex items-center justify-between flex-wrap gap-2 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
+                            <div class="flex items-center justify-between flex-wrap gap-2 pt-1">
                                 <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                                     @auth
                                         <!-- Upvote -->
                                         <button 
-                                            wire:click="toggleVote('{{ $question->id }}', 'up')"
+                                            wire:click="toggleVote('{{ $question->id }}', 'upvote')"
                                             type="button"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedUp ? 'bg-[#198BEA] text-white border border-[#198BEA] shadow-xs' : 'border border-[#198BEA] text-[#198BEA] bg-[#f0f7ff] hover:bg-[#e0f0fe] dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-600' }}"
+                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedUp ? 'border border-[#198BEA] text-[#198BEA] bg-[#f0f7ff] hover:bg-[#e0f0fe] dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-600' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
                                         >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
                                             </svg>
                                             <span>Upvote</span>
@@ -1043,11 +943,11 @@ new #[Layout('components.layouts.app')] class extends Component {
 
                                         <!-- Downvote -->
                                         <button 
-                                            wire:click="toggleVote('{{ $question->id }}', 'down')"
+                                            wire:click="toggleVote('{{ $question->id }}', 'downvote')"
                                             type="button"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isVotedDown ? 'bg-rose-50 text-rose-600 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800' }}"
+                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedDown ? 'border border-rose-400 text-rose-600 bg-rose-50 hover:bg-rose-100/70 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-500' : 'text-zinc-700 dark:text-zinc-200 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800' }}"
                                         >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76 1.04m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
                                             </svg>
                                             <span>Downvote</span>
@@ -1064,25 +964,77 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         <button 
                                             wire:click="toggleFollowQuestion('{{ $question->id }}')"
                                             type="button"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isFollowingQuestion ? 'bg-sky-50 text-[#198BEA] border border-sky-300 dark:bg-sky-950/50 dark:text-sky-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isFollowingQuestion ? 'bg-sky-50 text-[#198BEA] border border-sky-300 dark:bg-sky-950/50 dark:text-sky-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
                                         >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                                             </svg>
-                                            <span>{{ $followCount }} Follow</span>
+                                            <span>{{ $followCount }} {{ $isFollowingQuestion ? 'Following' : 'Follow' }}</span>
                                         </button>
 
                                         <!-- Save -->
+                                        @php
+                                            $isSaved = in_array((string) $question->id, $savedQuestions, true) || in_array((string) ($question->_id ?? ''), $savedQuestions, true);
+                                        @endphp
                                         <button 
                                             wire:click="toggleSave('{{ $question->id }}')"
                                             type="button"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer {{ $isSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-600 dark:text-zinc-300 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
                                             title="Save question"
                                         >
-                                            <svg class="w-4 h-4 {{ $isSaved ? 'fill-amber-500 text-amber-500' : '' }}" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 {{ $isSaved ? 'fill-amber-500 text-amber-500' : '' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                                             </svg>
                                             <span>{{ $isSaved ? 'Saved' : 'Save' }}</span>
+                                        </button>
+                                    @else
+                                        <!-- Guest Upvote -->
+                                        <button 
+                                            @click="$dispatch('open-auth-modal', 'Vote on Questions')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
+                                            </svg>
+                                            <span>Upvote</span>
+                                        </button>
+
+                                        <!-- Guest Downvote -->
+                                        <button 
+                                            @click="$dispatch('open-auth-modal', 'Vote on Questions')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76 1.04m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
+                                            </svg>
+                                            <span>Downvote</span>
+                                        </button>
+
+                                        <!-- Guest Follow Question -->
+                                        <button 
+                                            @click="$dispatch('open-auth-modal', 'Follow Questions')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                            </svg>
+                                            <span>{{ is_array($question->follow) ? count($question->follow) : (int)($question->follow ?? 0) }} Follow</span>
+                                        </button>
+
+                                        <!-- Guest Save -->
+                                        <button 
+                                            @click="$dispatch('open-auth-modal', 'Save Questions')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                            title="Save question"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                                            </svg>
+                                            <span>Save</span>
                                         </button>
                                     @endauth
 
@@ -1094,40 +1046,25 @@ new #[Layout('components.layouts.app')] class extends Component {
                                     <button 
                                         type="button"
                                         @click="$dispatch('open-share-modal', { url: '{{ $questionShareUrl }}', title: '{{ addslashes($question->title) }}', type: 'question', header: 'Share Question', subtitle: 'Share this question across academic and social networks' })"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
                                     >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
                                         </svg>
                                         <span>{{ $shareCount }} Share</span>
                                     </button>
                                 </div>
 
-                                <!-- Answer Action Button (Blue Pill Button with Pencil Icon) -->
-                                @guest
-                                    <button 
-                                        @click="$dispatch('open-auth-modal', 'Answer a Question')"
-                                        type="button"
-                                        class="inline-flex items-center gap-2 px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0f67b0] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-98"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                                        </svg>
-                                        <span>Answer</span>
-                                    </button>
-                                @else
-                                    <button 
-                                        @click="$dispatch('open-answer-modal')"
-                                        wire:click="openAnswerModal('{{ $question->id }}')"
-                                        type="button"
-                                        class="inline-flex items-center gap-2 px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0f67b0] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-98"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                                        </svg>
-                                        <span>Answer</span>
-                                    </button>
-                                @endguest
+                                <!-- Answer Action Button (Direct Link to Question Detail Page with write-answer anchor) -->
+                                <a 
+                                    href="{{ route('questions.show', $question->slug ?: (string) $question->_id) }}#write-answer"
+                                    class="inline-flex items-center gap-2 px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0f67b0] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-98"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                    </svg>
+                                    <span>Answer</span>
+                                </a>
                             </div>
                         </article>
                     @empty
@@ -1218,109 +1155,11 @@ new #[Layout('components.layouts.app')] class extends Component {
         </div>
     </div>
 
-    <!-- MODAL 1: ASK QUESTION (COMPONENT) -->
+    <!-- MODAL 1: ASK QUESTION (DEDICATED COMPONENT) -->
     <x-question.ask-question :available-skills="$availableSkills" />
 
-    <!-- MODAL 2: EDIT QUESTION (ALPINE.JS DRIVEN) -->
-    <div 
-        x-data="{ show: @entangle('showEditModal') }" 
-        x-show="show" 
-        x-cloak 
-        @open-edit-modal.window="show = true"
-        @keydown.escape.window="show = false"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
-        style="display: none;"
-    >
-        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-2xl" @click.stop>
-            <div class="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
-                <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                    <svg class="w-4 h-4 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                    Edit Question
-                </h3>
-                <button @click="show = false" type="button" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
-            <div class="p-5 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1">Title</label>
-                    <input type="text" wire:model="editTitle" class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:border-[#198BEA] outline-hidden" />
-                </div>
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300">Details (Rich Text / HTML)</label>
-                        <span class="text-[11px] text-zinc-400">WYSIWYG Editor</span>
-                    </div>
-                    <x-quill-editor 
-                        wire:model="editDescription"
-                        placeholder="Edit question details, code, or context..."
-                        min-height="150px"
-                    />
-                    @error('editDescription') <p class="text-rose-500 text-xs mt-1 font-medium">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 mb-1">Tags (comma separated)</label>
-                    <input type="text" wire:model="editTags" class="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:border-[#198BEA] outline-hidden" />
-                </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 p-4 border-t border-zinc-100 dark:border-zinc-800">
-                <button @click="show = false" type="button" class="px-5 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-600 rounded-xl transition-all cursor-pointer shadow-xs">Cancel</button>
-                <button wire:click="saveEdit" type="button" class="px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-98">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL 3: WRITE ANSWER (ALPINE.JS DRIVEN) -->
-    <div 
-        x-data="{ show: @entangle('showAnswerModal') }" 
-        x-show="show" 
-        x-cloak 
-        @open-answer-modal.window="show = true"
-        @keydown.escape.window="show = false"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
-        style="display: none;"
-    >
-        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-2xl" @click.stop>
-            <div class="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
-                <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                    <svg class="w-4 h-4 text-[#198BEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                    Write Your Answer
-                </h3>
-                <button @click="show = false" type="button" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
-            <div class="p-5 space-y-3">
-                <div class="p-3 rounded-xl bg-[#eaf5ff] dark:bg-sky-950/40 text-xs text-sky-800 dark:text-sky-200">
-                    <span class="font-bold">Answering:</span> {{ $answeringQuestionTitle }}
-                </div>
-
-                <x-quill-editor 
-                    wire:model="answerContent"
-                    placeholder="Provide your detailed answer, solutions, and code examples..."
-                    min-height="160px"
-                />
-                @error('answerContent') <p class="text-rose-500 text-xs mt-1 font-medium">{{ $message }}</p> @enderror
-            </div>
-
-            <div class="flex items-center justify-end gap-3 p-4 border-t border-zinc-100 dark:border-zinc-800">
-                <button @click="show = false" type="button" class="px-5 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-600 rounded-xl transition-all cursor-pointer shadow-xs">Cancel</button>
-                <button 
-                    wire:click="submitAnswer" 
-                    wire:loading.attr="disabled"
-                    type="button" 
-                    class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-98 disabled:opacity-60"
-                >
-                    <svg wire:loading wire:target="submitAnswer" class="animate-spin h-4 w-4 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    <span wire:loading.remove wire:target="submitAnswer">Post Answer</span>
-                    <span wire:loading wire:target="submitAnswer">Posting...</span>
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- MODAL 2: EDIT QUESTION (DEDICATED COMPONENT) -->
+    <x-question.edit-question :available-skills="$availableSkills" />
 
     <!-- MODAL 5: FILTER (COMPONENT) -->
     <x-question.question-filter />
@@ -1415,142 +1254,46 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     <style>
         /* ===== NO RESULTS EMPTY STATE ANIMATIONS & STYLING ===== */
-        .qa-empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            animation: emptyFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        .qa-empty {display: flex;flex-direction: column;align-items: center;text-align: center;animation: emptyFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        } @keyframes emptyFadeIn { from { opacity: 0; transform: translateY(14px); }
+         to { opacity: 1; transform: translateY(0); }
+         }
+        .qa-empty__illo { position: relative;width: 200px;height: 170px;margin: 0 auto 24px;flex-shrink: 0;
         }
-        @keyframes emptyFadeIn {
-            from { opacity: 0; transform: translateY(14px); }
-            to { opacity: 1; transform: translateY(0); }
+        .qa-empty__circle {position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);width: 140px;height: 140px;border-radius: 50%;background: linear-gradient(135deg, #eaf5ff 0%, rgba(124, 58, 237, 0.06) 100%);animation: emptyCircleFloat 4.5s ease-in-out infinite;
         }
-        .qa-empty__illo {
-            position: relative;
-            width: 200px;
-            height: 170px;
-            margin: 0 auto 24px;
-            flex-shrink: 0;
+        .dark .qa-empty__circle {background: linear-gradient(135deg, rgba(25, 139, 234, 0.15) 0%, rgba(124, 58, 237, 0.1) 100%);
         }
-        .qa-empty__circle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #eaf5ff 0%, rgba(124, 58, 237, 0.06) 100%);
-            animation: emptyCircleFloat 4.5s ease-in-out infinite;
-        }
-        .dark .qa-empty__circle {
-            background: linear-gradient(135deg, rgba(25, 139, 234, 0.15) 0%, rgba(124, 58, 237, 0.1) 100%);
-        }
-        @keyframes emptyCircleFloat {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+        @keyframes emptyCircleFloat {0%, 100% { transform: translate(-50%, -50%) scale(1); }
             50% { transform: translate(-50%, -53%) scale(1.05); }
         }
-        .qa-empty__ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 72px;
-            height: 72px;
-            border: 4.5px solid #198BEA;
-            border-radius: 50%;
-            opacity: 0.65;
-            animation: emptyRingPulse 3.5s ease-in-out infinite;
+        .qa-empty__ring { position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);width: 72px;height: 72px;border: 4.5px solid #198BEA;border-radius: 50%;opacity: 0.65;animation: emptyRingPulse 3.5s ease-in-out infinite;
         }
-        @keyframes emptyRingPulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+        @keyframes emptyRingPulse {0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
             50% { transform: translate(-50%, -54%) scale(1.06) rotate(-10deg); }
         }
-        .qa-empty__handle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 5px;
-            height: 28px;
-            background: #198BEA;
-            border-radius: 3px;
-            opacity: 0.65;
-            transform: translate(22px, 14px) rotate(45deg);
-            transform-origin: top center;
+        .qa-empty__handle { position: absolute;top: 50%;left: 50%;width: 5px;height: 28px;background: #198BEA;border-radius: 3px;opacity: 0.65;transform: translate(22px, 14px) rotate(45deg);transform-origin: top center;
         }
-        .qa-empty__qmark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -62%);
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #198BEA;
-            opacity: 0.55;
-            animation: emptyQ 2.8s ease-in-out infinite;
-            user-select: none;
+        .qa-empty__qmark { position: absolute;top: 50%;left: 50%;transform: translate(-50%, -62%);font-size: 1.75rem;font-weight: 800;color: #198BEA;opacity: 0.55;animation: emptyQ 2.8s ease-in-out infinite;user-select: none;
         }
-        @keyframes emptyQ {
-            0%, 100% { transform: translate(-50%, -62%) scale(1); }
-            35% { transform: translate(-50%, -70%) scale(1.12); }
-            65% { transform: translate(-50%, -62%) scale(1); }
+        @keyframes emptyQ {0%, 100% { transform: translate(-50%, -62%) scale(1); }35% { transform: translate(-50%, -70%) scale(1.12); }65% { transform: translate(-50%, -62%) scale(1); }
         }
-        .qa-empty__dot {
-            position: absolute;
-            border-radius: 50%;
-            opacity: 0.35;
+        .qa-empty__dot { position: absolute;border-radius: 50%;opacity: 0.35;
         }
-        .qa-empty__dot--1 {
-            width: 7px; height: 7px;
-            background: #198BEA;
-            top: 16%; left: 10%;
-            animation: emptyDot 3.2s ease-in-out infinite 0s;
+        .qa-empty__dot--1 { width: 7px; height: 7px;background: #198BEA;top: 16%; left: 10%;animation: emptyDot 3.2s ease-in-out infinite 0s;
         }
-        .qa-empty__dot--2 {
-            width: 5px; height: 5px;
-            background: #7c3aed;
-            top: 10%; right: 16%;
-            animation: emptyDot 3.8s ease-in-out infinite .5s;
+        .qa-empty__dot--2 { width: 5px; height: 5px;background: #7c3aed;top: 10%; right: 16%;animation: emptyDot 3.8s ease-in-out infinite .5s;
         }
-        .qa-empty__dot--3 {
-            width: 9px; height: 9px;
-            background: #d97706;
-            bottom: 22%; left: 6%;
-            animation: emptyDot 4s ease-in-out infinite 1s;
+        .qa-empty__dot--3 { width: 9px; height: 9px;background: #d97706;bottom: 22%; left: 6%;animation: emptyDot 4s ease-in-out infinite 1s;
         }
-        .qa-empty__dot--4 {
-            width: 5px; height: 5px;
-            background: #10b981;
-            bottom: 14%; right: 10%;
-            animation: emptyDot 3.4s ease-in-out infinite .8s;
+        .qa-empty__dot--4 {width: 5px; height: 5px;background: #10b981;bottom: 14%; right: 10%;animation: emptyDot 3.4s ease-in-out infinite .8s;
         }
-        .qa-empty__dot--5 {
-            width: 6px; height: 6px;
-            background: #198BEA;
-            top: 38%; right: 4%;
-            animation: emptyDot 3.6s ease-in-out infinite 1.3s;
+        .qa-empty__dot--5 {width: 6px; height: 6px;background: #198BEA;top: 38%; right: 4%;animation: emptyDot 3.6s ease-in-out infinite 1.3s;
         }
-        @keyframes emptyDot {
-            0%, 100% { transform: translateY(0) scale(1); opacity: .35; }
-            50% { transform: translateY(-7px) scale(1.35); opacity: .65; }
+        @keyframes emptyDot {0%, 100% { transform: translateY(0) scale(1); opacity: .35; }50% { transform: translateY(-7px) scale(1.35); opacity: .65; }}
+        .qa-empty__icons {position: absolute;bottom: 6px;left: 50%;transform: translateX(-50%);display: flex;gap: 10px;
         }
-        .qa-empty__icons {
-            position: absolute;
-            bottom: 6px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-        }
-        .qa-empty__icon-box {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: emptyIconBob 3s ease-in-out infinite;
+        .qa-empty__icon-box {width: 32px;height: 32px;border-radius: 8px;display: flex;align-items: center;justify-content: center;animation: emptyIconBob 3s ease-in-out infinite;
         }
         .qa-empty__icon-box--1 { background: #eaf5ff; color: #198BEA; animation-delay: 0s; }
         .dark .qa-empty__icon-box--1 { background: rgba(25, 139, 234, 0.2); }
@@ -1558,9 +1301,6 @@ new #[Layout('components.layouts.app')] class extends Component {
         .dark .qa-empty__icon-box--2 { background: rgba(124, 58, 237, 0.2); }
         .qa-empty__icon-box--3 { background: #ecfdf5; color: #059669; animation-delay: 1.1s; }
         .dark .qa-empty__icon-box--3 { background: rgba(5, 150, 105, 0.2); }
-        @keyframes emptyIconBob {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
+        @keyframes emptyIconBob {0%, 100% { transform: translateY(0); }50% { transform: translateY(-5px); }}
     </style>
 </div>

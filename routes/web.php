@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LinkPreviewController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -10,6 +11,9 @@ Route::get('/', function () {
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+// Link Preview API Route
+Route::post('api/link-preview', [LinkPreviewController::class, 'preview'])->name('api.link-preview');
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
@@ -40,6 +44,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('publications', 'admin.publications.index')->name('publications.index');
     Volt::route('publications/{publication}/edit', 'admin.publications.edit')->name('publications.edit');
     Volt::route('users', 'admin.users.index')->name('users.index');
+    Volt::route('questions', 'admin.questions.index')->name('questions.index');
+    Volt::route('questions/{question}/edit', 'admin.questions.edit')->name('questions.edit');
 
     // For below the database fixing
     Volt::route('database-fixing', 'admin.database-fixing.index')->name('database-fixing.index');
@@ -72,6 +78,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     // Seminar Database Fixers
     Volt::route('database-fixing/seminar', 'admin.database-fixing.seminar.index')->name('database-fixing.seminar.index');
+
+    // Question Database Fixers
+    Volt::route('database-fixing/question', 'admin.database-fixing.question.counts')->name('database-fixing.question.index');
+    Volt::route('database-fixing/question/counts', 'admin.database-fixing.question.counts')->name('database-fixing.question.counts');
+    Volt::route('database-fixing/question/slug', 'admin.database-fixing.question.slug')->name('database-fixing.question.slug');
 });
 
 require __DIR__.'/auth.php';

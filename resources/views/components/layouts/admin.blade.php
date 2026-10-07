@@ -91,6 +91,8 @@
                         </a>
                     </div>
                 </div>
+
+                <flux:navlist.item icon="question-mark-circle" href="{{ route('admin.questions.index') }}" :current="request()->routeIs('admin.questions.*')">Manage Questions</flux:navlist.item>
             </flux:navlist.group>
 
             <flux:navlist.group heading="Database Tools" class="grid">

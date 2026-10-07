@@ -2,22 +2,19 @@
 
 namespace App\Models;
 
-use Database\Factories\AnswerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Eloquent\Model;
 use MongoDB\Laravel\Relations\BelongsTo;
-use MongoDB\Laravel\Relations\HasMany;
 
-class Answer extends Model
+class Replies extends Model
 {
-    /** @use HasFactory<AnswerFactory> */
     use HasFactory;
 
     protected $connection = 'mongodb';
 
-    protected $collection = 'answers';
+    protected $collection = 'replies';
 
-    protected $table = 'answers';
+    protected $table = 'replies';
 
     /**
      * The attributes that are mass assignable.
@@ -25,15 +22,12 @@ class Answer extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'question_id',
+        'answer_id',
         'user_id',
-        'files',
         'content',
-        'votes_count',
-        'is_accepted',
         'status',
-        'follow',
-        'save',
+        'likes',
+        'likes_count',
     ];
 
     /**
@@ -44,9 +38,8 @@ class Answer extends Model
     protected function casts(): array
     {
         return [
-            'votes_count' => 'integer',
-            'is_accepted' => 'boolean',
             'status' => 'integer',
+            'likes_count' => 'integer',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -61,26 +54,10 @@ class Answer extends Model
     }
 
     /**
-     * Question relationship.
+     * Answer relationship.
      */
-    public function question(): BelongsTo
+    public function answer(): BelongsTo
     {
-        return $this->belongsTo(Question::class, 'question_id');
-    }
-
-    /**
-     * Votes relationship.
-     */
-    public function votes(): HasMany
-    {
-        return $this->hasMany(Vote::class, 'answer_id');
-    }
-
-    /**
-     * Replies (Comments) relationship.
-     */
-    public function replies(): HasMany
-    {
-        return $this->hasMany(Replies::class, 'answer_id');
+        return $this->belongsTo(Answer::class, 'answer_id');
     }
 }

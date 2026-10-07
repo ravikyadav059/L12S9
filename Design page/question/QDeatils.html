@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Detail - Q&A Community</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+    <style>
+        :root {
+            --brand: #198BEA; --brand-600: #1476c9; --brand-dark: #0a5f9e; --brand-050: #eaf5ff;
+            --text: #111827; --text-sec: #64748b; --muted: #6b7280; --border: #e5e7eb; --bg: #f9fafb; --white: #ffffff;
+            --success: #10b981; --success-lt: #ecfdf5; --purple: #7c3aed; --purple-lt: #f5f3ff;
+            --emerald: #059669; --emerald-lt: #ecfdf5; --warn: #f59e0b; --danger: #ef4444; --danger-lt: #fef2f2;
+            --amber: #d97706; --amber-lt: #fffbeb; --highlight: #f5b944; --dark: #0f172a;
+            --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1); --shadow-brand: 0 10px 30px -10px rgba(25,139,234,0.3);
+            --r-sm: 4px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-2xl: 24px;
+            --ease: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); --font-dm: 'DM Sans', sans-serif;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-dm); background: var(--bg); color: var(--text); line-height: 1.5; }
+        a { text-decoration: none; color: inherit; }
+        button { font-family: inherit; cursor: pointer; border: none; background: none; }
+        input, textarea { font-family: inherit; }
+        img { display: block; max-width: 100%; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #f1f5f9; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        .qa-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 64px; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .qa-nav__inner { max-width: 1220px; margin: 0 auto; height: 100%; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
+        .qa-nav__logo { display: flex; align-items: center; gap: 10px; }
+        .qa-nav__logo-icon { width: 36px; height: 36px; border-radius: var(--r-md); background: linear-gradient(135deg, var(--brand), var(--brand-dark)); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-brand); }
+        .qa-nav__logo-icon svg { color: #fff; }
+        .qa-nav__logo-text { font-size: 1.25rem; font-weight: 700; } .qa-nav__logo-text span { color: var(--brand); }
+        .qa-nav__search { flex: 1; max-width: 420px; margin: 0 24px; position: relative; }
+        .qa-nav__search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+        .qa-nav__search-input { width: 100%; padding: 10px 14px 10px 38px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-xl); font-size: 0.875rem; outline: none; transition: var(--ease); }
+        .qa-nav__search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(25,139,234,0.1); }
+        .qa-nav__actions { display: flex; align-items: center; gap: 8px; }
+        .qa-nav__notif { position: relative; padding: 8px; border-radius: var(--r-xl); transition: var(--ease); }
+        .qa-nav__notif:hover { background: var(--bg); }
+        .qa-nav__notif-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; animation: qa-pulse 2s ease-in-out infinite; }
+        .qa-nav__avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(25,139,234,0.2); margin-left: 4px; }
+        @keyframes qa-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        .qa-detail-main { max-width: 1220px; margin: 95px auto; padding: 0 24px; display: flex; gap: 24px; }
+        .qa-detail-content { flex: 1; min-width: 0; }
+        .qa-detail-sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; }
+        @media (max-width: 1023px) { .qa-detail-sidebar { display: none; } }
+
+        .qa-breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; font-size: 0.8125rem; color: var(--muted); }
+        .qa-breadcrumb a { color: var(--muted); transition: var(--ease); } .qa-breadcrumb a:hover { color: var(--brand); }
+        .qa-breadcrumb__current { color: var(--text-sec); font-weight: 500; }
+
+        .qa-approval-banner { display: flex; align-items: center; gap: 16px; background: var(--amber-lt); border: 1px solid rgba(217,119,6,0.3); border-left: 5px solid var(--amber); border-radius: var(--r-xl); padding: 16px 20px; margin-bottom: 20px; animation: qaBannerSlide 0.5s cubic-bezier(0.16,1,0.3,1); }
+        .qa-approval-banner__icon { width: 40px; height: 40px; border-radius: 50%; background: rgba(217,119,6,0.15); display: flex; align-items: center; justify-content: center; color: var(--amber); flex-shrink: 0; }
+        .qa-approval-banner__content { flex: 1; min-width: 0; }
+        .qa-approval-banner__title { display: block; font-size: 0.9375rem; font-weight: 700; color: var(--amber); margin-bottom: 2px; }
+        .qa-approval-banner__desc { font-size: 0.8125rem; color: var(--text-sec); line-height: 1.5; }
+        .qa-approval-banner__close { padding: 8px; border-radius: var(--r-md); color: var(--amber); transition: var(--ease); flex-shrink: 0; }
+        .qa-approval-banner__close:hover { background: rgba(217,119,6,0.1); }
+        @keyframes qaBannerSlide { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        @media (max-width: 639px) { .qa-approval-banner { gap: 12px; padding: 14px 16px; } }
+
+        .qa-qdetail { background: var(--white); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 28px; }
+        @media (max-width: 639px) { .qa-qdetail { padding: 20px; } }
+        .qa-qdetail__header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+        .qa-qdetail__avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(25,139,234,0.15); }
+        .qa-qdetail__user-info { flex: 1; min-width: 0; }
+        .qa-qdetail__user-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+        .qa-qdetail__username { font-size: 1rem; font-weight: 600; color: var(--text); }
+        .qa-qdetail__badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: var(--r-sm); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+        .qa-qdetail__badge--expert { background: var(--purple-lt); color: var(--purple); }
+        .qa-qdetail__follow-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 14px; border-radius: var(--r-xl); font-size: 0.75rem; font-weight: 600; border: 1px solid var(--brand); color: var(--brand); transition: var(--ease); }
+        .qa-qdetail__follow-btn:hover { background: var(--brand-050); }
+        .qa-qdetail__follow-btn--following { color: var(--success); border-color: var(--success); background: var(--success-lt); }
+        .qa-qdetail__profession { font-size: 0.8125rem; color: var(--muted); }
+        .qa-qdetail__time-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; background: var(--brand-050); color: var(--brand); border-radius: var(--r-xl); font-size: 0.75rem; font-weight: 600; white-space: nowrap; margin-left: auto; flex-shrink: 0; }
+        @media (max-width: 639px) { .qa-qdetail__header { flex-wrap: wrap; } .qa-qdetail__time-badge { margin-left: 0; margin-top: 4px; } }
+        .qa-qdetail__status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .qa-qdetail__status { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--r-md); font-size: 0.75rem; font-weight: 700; }
+        .qa-qdetail__status--open { background: var(--brand-050); color: var(--brand); }
+        .qa-qdetail__status--bounty { background: rgba(245,185,68,0.2); color: var(--amber); }
+        .qa-qdetail__status--pending { background: var(--amber-lt); color: var(--amber); }
+        .qa-qdetail__title { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.35; margin-bottom: 16px; }
+        @media (max-width: 639px) { .qa-qdetail__title { font-size: 1.25rem; } }
+        .qa-qdetail__body { font-size: 0.9375rem; color: var(--text-sec); line-height: 1.7; margin-bottom: 20px; }
+        .qa-qdetail__body p { margin-bottom: 12px; } .qa-qdetail__body p:last-child { margin-bottom: 0; }
+        .qa-qdetail__body code { background: var(--bg); padding: 2px 6px; border-radius: var(--r-sm); font-size: 0.875rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--danger); }
+        .qa-qdetail__body pre { background: var(--dark); border-radius: var(--r-lg); padding: 20px; margin-bottom: 16px; overflow-x: auto; }
+        .qa-qdetail__body pre code { background: none; color: #e2e8f0; padding: 0; font-size: 0.875rem; line-height: 1.6; }
+        .qa-qdetail__media { margin-bottom: 20px; overflow: hidden; border-radius: var(--r-lg); max-width: 600px; }
+        .qa-qdetail__media img { width: 100%; object-fit: cover; transition: transform 0.5s ease; } .qa-qdetail__media:hover img { transform: scale(1.02); }
+        .qa-qdetail__tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .qa-tag { padding: 4px 10px; border-radius: var(--r-md); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--ease); }
+        .qa-tag:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(25,139,234,0.15); }
+        .qa-tag--brand { background: var(--brand-050); color: var(--brand); } .qa-tag--purple { background: var(--purple-lt); color: var(--purple); }
+        .qa-tag--emerald { background: var(--emerald-lt); color: var(--emerald); } .qa-tag--amber { background: var(--amber-lt); color: var(--amber); }
+        .qa-qdetail__stats { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 14px 0; margin-bottom: 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .qa-qdetail__stat { display: flex; align-items: center; gap: 5px; font-size: 0.8125rem; color: var(--muted); } .qa-qdetail__stat svg { flex-shrink: 0; } .qa-qdetail__stat-val { font-weight: 600; color: var(--text-sec); }
+        .qa-qdetail__actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+        .qa-qdetail__actions-left { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .qa-qdetail__actions-right { display: flex; align-items: center; gap: 8px; }
+
+        .qa-vote-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: var(--r-xl); font-size: 0.8125rem; font-weight: 600; color: var(--muted); transition: var(--ease); border: 1px solid transparent; }
+        .qa-vote-btn svg { width: 16px; height: 16px; }
+        .qa-vote-btn--up:hover { color: var(--brand); background: var(--brand-050); border-color: var(--brand); }
+        .qa-vote-btn--down:hover { color: var(--danger); background: var(--danger-lt); border-color: var(--danger); }
+        .qa-vote-btn--up.voted { color: var(--brand); background: var(--brand-050); border-color: var(--brand); }
+        .qa-vote-btn--down.voted { color: var(--danger); background: var(--danger-lt); border-color: var(--danger); }
+
+        .qa-act-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: var(--r-xl); font-size: 0.8125rem; color: var(--muted); transition: var(--ease); }
+        .qa-act-btn svg { width: 16px; height: 16px; }
+        .qa-act-btn--save:hover { color: var(--warn); background: var(--amber-lt); } .qa-act-btn--save.saved { color: var(--warn); background: var(--amber-lt); }
+        .qa-act-btn--share:hover { color: var(--brand); background: var(--brand-050); }
+        .qa-act-btn--follow:hover { color: var(--brand); background: var(--brand-050); } .qa-act-btn--follow.followed { color: var(--success); background: var(--success-lt); }
+        .qa-act-btn--delete:hover { color: var(--danger); background: var(--danger-lt); }
+        
+        .qa-qdetail__edit-btn, .qa-edit-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: var(--r-xl); font-size: 0.8125rem; font-weight: 600; color: var(--muted); border: 1px solid var(--border); transition: var(--ease); }
+        .qa-qdetail__edit-btn:hover, .qa-edit-btn:hover { color: var(--brand); border-color: var(--brand); background: var(--brand-050); }
+        .qa-qdetail__edit-btn svg, .qa-edit-btn svg { width: 14px; height: 14px; }
+
+        .qa-qdetail__delete-btn, .qa-delete-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: var(--r-xl); font-size: 0.8125rem; font-weight: 600; color: var(--danger); border: 1px solid var(--border); transition: var(--ease); }
+        .qa-qdetail__delete-btn:hover, .qa-delete-btn:hover { background: var(--danger-lt); border-color: var(--danger); }
+        .qa-qdetail__delete-btn svg, .qa-delete-btn svg { width: 14px; height: 14px; }
+
+        .qa-accept-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: var(--r-xl); font-size: 0.8125rem; font-weight: 600; color: var(--muted); transition: var(--ease); border: 1px solid var(--border); }
+        .qa-accept-btn svg { width: 16px; height: 16px; }
+        .qa-accept-btn:hover { color: var(--success); border-color: var(--success); background: var(--success-lt); }
+        .qa-accept-btn--active { color: var(--success); border-color: var(--success); background: var(--success-lt); }
+        .qa-accept-btn--active:hover { opacity: 0.85; }
+
+        .qa-add-answer { background: var(--white); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 24px; margin-top: 20px; }
+        .qa-add-answer__title { font-size: 1.125rem; font-weight: 700; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .qa-add-answer__title svg { color: var(--brand); }
+        .qa-add-answer__user { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .qa-add-answer__avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+        .qa-add-answer__username { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+        .qa-add-answer__footer { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; flex-wrap: wrap; gap: 8px; }
+        .qa-add-answer__hint { font-size: 0.75rem; color: var(--muted); }
+        .qa-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; border-radius: var(--r-xl); font-size: 0.875rem; font-weight: 600; transition: var(--ease); }
+        .qa-btn:active { transform: scale(0.98); }
+        .qa-btn--primary { background: var(--brand); color: #fff; box-shadow: var(--shadow-brand); } .qa-btn--primary:hover { background: var(--brand-600); box-shadow: var(--shadow-md); }
+        .qa-btn--ghost { color: var(--muted); } .qa-btn--ghost:hover { color: var(--text); background: var(--bg); }
+        .qa-btn--danger { background: var(--danger); color: #fff; box-shadow: 0 10px 30px -10px rgba(239,68,68,0.35); } .qa-btn--danger:hover { background: #dc2626; box-shadow: var(--shadow-md); }
+
+        .ql-toolbar.ql-snow { border: 1px solid var(--border) !important; border-radius: var(--r-xl) var(--r-xl) 0 0 !important; background: var(--bg) !important; padding: 8px 12px !important; }
+        .ql-container.ql-snow { border: 1px solid var(--border) !important; border-top: none !important; border-radius: 0 0 var(--r-xl) var(--r-xl) !important; font-family: var(--font-dm) !important; font-size: 0.9375rem !important; min-height: 160px !important; background: var(--white) !important; }
+        .ql-editor { min-height: 140px !important; padding: 16px !important; line-height: 1.7 !important; color: var(--text-sec) !important; }
+        .ql-editor.ql-blank::before { color: var(--muted) !important; font-style: normal !important; } .ql-editor:focus { outline: none !important; }
+        .ql-snow .ql-stroke { stroke: var(--muted) !important; } .ql-snow .ql-fill { fill: var(--muted) !important; } .ql-snow .ql-picker-label { color: var(--muted) !important; }
+        .ql-toolbar.ql-snow .ql-formats button:hover .ql-stroke { stroke: var(--brand) !important; } .ql-toolbar.ql-snow .ql-formats button:hover .ql-fill { fill: var(--brand) !important; } .ql-toolbar.ql-snow .ql-formats button:hover { color: var(--brand) !important; }
+        .ql-snow .ql-active .ql-stroke { stroke: var(--brand) !important; } .ql-snow .ql-active .ql-fill { fill: var(--brand) !important; } .ql-snow .ql-active { color: var(--brand) !important; }
+        .ql-snow a { color: var(--brand) !important; }
+        .ql-editor pre.ql-syntax { background: var(--dark) !important; color: #e2e8f0 !important; border-radius: var(--r-lg) !important; padding: 16px !important; }
+        .ql-editor code { background: var(--bg) !important; color: var(--danger) !important; padding: 2px 6px !important; border-radius: var(--r-sm) !important; }
+        .ql-editor blockquote { border-left: 4px solid var(--brand) !important; padding-left: 16px !important; color: var(--muted) !important; }
+
+        .qa-answers-section { margin-top: 32px; }
+        .qa-answers-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+        .qa-answers-count { font-size: 1.125rem; font-weight: 700; color: var(--text); } .qa-answers-count span { color: var(--brand); }
+        .qa-answers-sort { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .qa-answers-sort__label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-right: 4px; }
+        .qa-answers-sort__tab { padding: 6px 14px; border-radius: var(--r-md); font-size: 0.8125rem; color: var(--muted); transition: var(--ease); cursor: pointer; white-space: nowrap; }
+        .qa-answers-sort__tab:hover { color: var(--text); background: var(--bg); } .qa-answers-sort__tab--active { color: var(--brand); background: var(--brand-050); font-weight: 600; }
+
+        .qa-answer { background: var(--white); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 24px; margin-bottom: 16px; transition: var(--ease); }
+        .qa-answer:hover { box-shadow: var(--shadow-md); }
+        @media (max-width: 639px) { .qa-answer { padding: 18px; } }
+        .qa-answer--accepted { border-color: var(--success); border-left: 4px solid var(--success); }
+        .qa-answer__accepted-badge { display: none; align-items: center; gap: 5px; padding: 4px 12px; background: var(--success-lt); color: var(--success); border-radius: var(--r-md); font-size: 0.75rem; font-weight: 700; margin-bottom: 14px; }
+        .qa-answer__header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+        .qa-answer__avatar-wrap { flex-shrink: 0; position: relative; }
+        .qa-answer__avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(25,139,234,0.1); }
+        .qa-answer__verified-badge { position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: var(--brand); border-radius: 50%; border: 2px solid var(--white); display: flex; align-items: center; justify-content: center; }
+        .qa-answer__user-info { flex: 1; min-width: 0; }
+        .qa-answer__user-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+        .qa-answer__username { font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+        .qa-answer__badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: var(--r-sm); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+        .qa-answer__badge--mentor { background: var(--emerald-lt); color: var(--emerald); } .qa-answer__badge--expert { background: var(--purple-lt); color: var(--purple); }
+        .qa-answer__follow-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 14px; border-radius: var(--r-xl); font-size: 0.75rem; font-weight: 600; border: 1px solid var(--brand); color: var(--brand); transition: var(--ease); }
+        .qa-answer__follow-btn:hover { background: var(--brand-050); } .qa-answer__follow-btn--following { color: var(--success); border-color: var(--success); background: var(--success-lt); }
+        .qa-answer__profession { font-size: 0.8125rem; color: var(--muted); }
+        .qa-answer__time-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; background: var(--brand-050); color: var(--brand); border-radius: var(--r-xl); font-size: 0.75rem; font-weight: 600; white-space: nowrap; margin-left: auto; flex-shrink: 0; }
+        @media (max-width: 639px) { .qa-answer__header { flex-wrap: wrap; } .qa-answer__time-badge { margin-left: 0; margin-top: 4px; } }
+        .qa-answer__body { font-size: 0.9375rem; color: var(--text-sec); line-height: 1.7; margin-bottom: 16px; }
+        .qa-answer__body p { margin-bottom: 12px; } .qa-answer__body p:last-child { margin-bottom: 0; }
+        .qa-answer__body code { background: var(--bg); padding: 2px 6px; border-radius: var(--r-sm); font-size: 0.875rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--danger); }
+        .qa-answer__body pre { background: var(--dark); border-radius: var(--r-lg); padding: 20px; margin-bottom: 16px; overflow-x: auto; }
+        .qa-answer__body pre code { background: none; color: #e2e8f0; padding: 0; font-size: 0.875rem; line-height: 1.6; }
+        .qa-answer__actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+        .qa-answer__actions-left { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .qa-answer__actions-right { display: flex; align-items: center; gap: 4px; }
+        .qa-comment-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: var(--r-xl); font-size: 0.8125rem; font-weight: 600; color: var(--brand); border: 1px solid var(--border); transition: var(--ease); }
+        .qa-comment-btn:hover { border-color: var(--brand); background: var(--brand-050); } .qa-comment-btn svg { width: 15px; height: 15px; }
+
+        .qa-acmt { margin-top: 16px; padding-top: 0; }
+        .qa-acmt__toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--brand); cursor: pointer; transition: var(--ease); padding: 6px 0; background: none; border: none; }
+        .qa-acmt__toggle:hover { color: var(--brand-600); } .qa-acmt__toggle svg { transition: transform 0.2s ease; } .qa-acmt__toggle--open svg { transform: rotate(90deg); }
+        .qa-acmt__list { display: none; margin-top: 12px; } .qa-acmt__list--open { display: block; }
+        .qa-acmt__item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(229,231,235,0.6); } .qa-acmt__item:last-of-type { border-bottom: none; }
+        .qa-acmt__avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .qa-acmt__content { flex: 1; min-width: 0; }
+        .qa-acmt__header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 2px; }
+        .qa-acmt__name { font-size: 0.8125rem; font-weight: 600; color: var(--text); } .qa-acmt__time { font-size: 0.6875rem; color: var(--muted); }
+        .qa-acmt__text { font-size: 0.8125rem; color: var(--text-sec); line-height: 1.5; }
+        .qa-acmt__actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+        .qa-acmt__act { font-size: 0.6875rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: var(--ease); display: inline-flex; align-items: center; gap: 3px; background: none; border: none; padding: 0; }
+        .qa-acmt__act:hover { color: var(--brand); } .qa-acmt__act--like.liked { color: var(--brand); }
+        .qa-acmt__act--delete:hover { color: var(--danger); }
+        .qa-acmt__input-wrap { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(229,231,235,0.6); }
+        .qa-acmt__input-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .qa-acmt__input { flex: 1; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-xl); font-size: 0.8125rem; outline: none; transition: var(--ease); background: var(--bg); }
+        .qa-acmt__input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(25,139,234,0.1); background: var(--white); }
+        .qa-acmt__post { padding: 8px 16px; background: var(--brand); color: #fff; border-radius: var(--r-xl); font-size: 0.75rem; font-weight: 600; transition: var(--ease); white-space: nowrap; }
+        .qa-acmt__post:hover { background: var(--brand-600); }
+
+        .qa-widget { background: var(--white); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 20px; transition: var(--ease); }
+        .qa-widget:hover { box-shadow: var(--shadow-md); }
+        .qa-widget__title { font-size: 0.9375rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .qa-widget__title svg { color: var(--brand); }
+        .qa-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .qa-stat-card { text-align: center; padding: 12px; border-radius: var(--r-lg); transition: var(--ease); } .qa-stat-card:hover { transform: translateY(-2px); }
+        .qa-stat-card__val { font-size: 1.25rem; font-weight: 700; } .qa-stat-card__label { font-size: 11px; font-weight: 500; margin-top: 2px; }
+        .qa-stat-card--q { background: var(--brand-050); } .qa-stat-card--q .qa-stat-card__val { color: var(--brand); } .qa-stat-card--q .qa-stat-card__label { color: rgba(25,139,234,0.7); }
+        .qa-stat-card--a { background: var(--purple-lt); } .qa-stat-card--a .qa-stat-card__val { color: var(--purple); } .qa-stat-card--a .qa-stat-card__label { color: rgba(124,58,237,0.7); }
+        .qa-stat-card--u { background: var(--emerald-lt); } .qa-stat-card--u .qa-stat-card__val { color: var(--emerald); } .qa-stat-card--u .qa-stat-card__label { color: rgba(5,150,105,0.7); }
+        .qa-stat-card--r { background: var(--amber-lt); } .qa-stat-card--r .qa-stat-card__val { color: var(--amber); } .qa-stat-card--r .qa-stat-card__label { color: rgba(217,119,6,0.7); }
+        .qa-relq { display: block; margin-bottom: 12px; } .qa-relq:last-child { margin-bottom: 0; }
+        .qa-relq__title { font-size: 0.875rem; font-weight: 500; color: var(--text); line-height: 1.4; transition: var(--ease); } .qa-relq:hover .qa-relq__title { color: var(--brand); }
+        .qa-relq__meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 0.75rem; color: var(--muted); }
+        .qa-relq__status { font-weight: 600; } .qa-relq__status--resolved { color: var(--success); } .qa-relq__status--active { color: var(--warn); }
+        .qa-widget__divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+        .qa-tags-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+        .qa-sidebar-tag { padding: 6px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md); font-size: 0.75rem; font-weight: 500; color: var(--text-sec); cursor: pointer; transition: var(--ease); }
+        .qa-sidebar-tag:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-050); transform: translateY(-1px); }
+        .qa-qlink { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--r-md); font-size: 0.875rem; color: var(--text-sec); transition: var(--ease); }
+        .qa-qlink:hover { color: var(--brand); background: var(--brand-050); }
+
+        .qa-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; visibility: hidden; transition: var(--ease); }
+        .qa-modal.active { opacity: 1; visibility: visible; }
+        .qa-modal__box { background: var(--white); border-radius: var(--r-xl); width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); transform: scale(0.95) translateY(10px); transition: all 0.3s cubic-bezier(0,0,0.2,1); }
+        .qa-modal.active .qa-modal__box { transform: scale(1) translateY(0); }
+        .qa-modal__box--sm { max-width: 440px; }
+        .qa-modal__header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .qa-modal__title { font-size: 1.125rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .qa-modal__close { padding: 8px; border-radius: var(--r-md); transition: var(--ease); } .qa-modal__close:hover { background: var(--bg); }
+        .qa-modal__body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .qa-modal__footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+        .qa-field__label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+        .qa-field__input { width: 100%; padding: 10px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-xl); font-size: 0.875rem; outline: none; transition: var(--ease); }
+        .qa-field__input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(25,139,234,0.1); }
+        .qa-field__textarea { resize: none; }
+        .qa-share-input-row { display: flex; align-items: center; gap: 8px; }
+        .qa-share-input { flex: 1; padding: 10px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-xl); font-size: 0.875rem; color: var(--muted); outline: none; }
+        .qa-share-social { display: flex; align-items: center; justify-content: center; gap: 12px; }
+        .qa-share-social-btn { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; transition: var(--ease); }
+        .qa-share-social-btn:hover { opacity: 0.8; }
+        .qa-share-social-btn--fb { background: #1877F2; } .qa-share-social-btn--tw { background: #1DA1F2; }
+        .qa-share-social-btn--li { background: #0A66C2; } .qa-share-social-btn--em { background: var(--dark); }
+
+        .qa-delete-modal__icon { width: 56px; height: 56px; border-radius: 50%; background: var(--danger-lt); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .qa-delete-modal__icon svg { color: var(--danger); }
+        .qa-delete-modal__heading { font-size: 1.125rem; font-weight: 700; color: var(--text); text-align: center; margin-bottom: 6px; }
+        .qa-delete-modal__desc { font-size: 0.875rem; color: var(--text-sec); text-align: center; line-height: 1.6; }
+        .qa-delete-modal__desc strong { color: var(--text); }
+
+        .qa-toast-wrap { position: fixed; top: 16px; right: 16px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
+        .qa-toast { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: var(--r-xl); font-size: 0.875rem; font-weight: 500; box-shadow: var(--shadow-lg); animation: qaToastIn 0.4s cubic-bezier(0.16,1,0.3,1); }
+        .qa-toast svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .qa-toast--success { background: var(--success-lt); color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
+        .qa-toast--info { background: var(--brand-050); color: var(--brand); border: 1px solid rgba(25,139,234,0.2); }
+        .qa-toast--warning { background: var(--amber-lt); color: var(--amber); border: 1px solid rgba(217,119,6,0.2); }
+        .qa-toast--error { background: var(--danger-lt); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+        @keyframes qaToastIn { from{transform:translateY(20px) scale(0.95);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
+        @keyframes qaToastOut { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(-20px) scale(0.95);opacity:0} }
+
+        @keyframes qaDeleteSlide { from{opacity:1;transform:translateX(0);max-height:500px;margin-bottom:16px;} to{opacity:0;transform:translateX(-30px);max-height:0;margin-bottom:0;padding:0;border-width:0;overflow:hidden;} }
+        .qa-deleting { animation: qaDeleteSlide 0.45s cubic-bezier(0.4,0,0.2,1) forwards; pointer-events: none; }
+        @keyframes qaCommentDelete { from{opacity:1;transform:translateX(0);max-height:100px;} to{opacity:0;transform:translateX(-20px);max-height:0;padding:0;overflow:hidden;border-width:0;} }
+        .qa-acmt__item--deleting { animation: qaCommentDelete 0.35s cubic-bezier(0.4,0,0.2,1) forwards; pointer-events: none; }
+    </style>
+</head>
+<body>
+<div id="qaToastWrap" class="qa-toast-wrap"></div>
+
+<nav class="qa-nav">
+    <div class="qa-nav__inner">
+        <div class="qa-nav__logo"><a href="#" style="display:flex;align-items:center;gap:10px;"><div class="qa-nav__logo-icon"><i data-lucide="messages-square"></i></div><span class="qa-nav__logo-text">Q<span>&</span>A</span></a></div>
+        <div class="qa-nav__search"><i data-lucide="search" class="qa-nav__search-icon" style="width:16px;height:16px;"></i><input type="text" placeholder="Search questions, topics, users..." class="qa-nav__search-input" /></div>
+        <div class="qa-nav__actions"><button class="qa-nav__notif"><i data-lucide="bell" style="width:20px;height:20px;color:var(--text-sec);"></i><span class="qa-nav__notif-dot"></span></button><img src="https://picsum.photos/seed/myavatar/80/80.jpg" alt="User" class="qa-nav__avatar" /></div>
+    </div>
+</nav>
+
+<main class="qa-detail-main">
+    <div class="qa-detail-content">
+        <div class="qa-breadcrumb"><a href="#">Home</a><i data-lucide="chevron-right" style="width:14px;height:14px;"></i><a href="#">Questions</a><i data-lucide="chevron-right" style="width:14px;height:14px;"></i><span class="qa-breadcrumb__current">WebSocket Notifications in React</span></div>
+
+        <div class="qa-approval-banner" id="qaApprovalBanner">
+            <div class="qa-approval-banner__icon"><i data-lucide="shield-alert" style="width:20px;height:20px;"></i></div>
+            <div class="qa-approval-banner__content">
+                <span class="qa-approval-banner__title">Your Question is not Get Approved yet Sorry!!!</span>
+                <span class="qa-approval-banner__desc">Only You can view this question</span>
+            </div>
+            <button class="qa-approval-banner__close" onclick="dismissBanner()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+        </div>
+
+        <div class="qa-qdetail" id="questionBlock">
+            <div class="qa-qdetail__header">
+                <img src="https://picsum.photos/seed/user1/80/80.jpg" alt="Sarah Chen" class="qa-qdetail__avatar" />
+                <div class="qa-qdetail__user-info">
+                    <div class="qa-qdetail__user-row"><span class="qa-qdetail__username">Sarah Chen</span><span class="qa-qdetail__badge qa-qdetail__badge--expert"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Expert</span><button class="qa-qdetail__follow-btn" onclick="toggleQFollow(this)" data-user="Sarah Chen"><i data-lucide="user-plus" style="width:14px;height:14px;"></i>Follow</button></div>
+                    <div class="qa-qdetail__profession">Senior Frontend Engineer at TechCorp</div>
+                </div>
+                <div class="qa-qdetail__time-badge"><i data-lucide="clock" style="width:13px;height:13px;"></i>Asked 2h ago</div>
+            </div>
+            <div class="qa-qdetail__status-row">
+                <span class="qa-qdetail__status qa-qdetail__status--pending"><i data-lucide="clock" style="width:12px;height:12px;"></i>Pending Approval</span>
+                <span class="qa-qdetail__status qa-qdetail__status--bounty"><i data-lucide="trophy" style="width:12px;height:12px;"></i>+50 Bounty</span>
+            </div>
+            <h1 class="qa-qdetail__title">How to implement real-time notifications with WebSockets in React?</h1>
+            <div class="qa-qdetail__body"><p>I'm building a real-time notification system for my React app. I've set up a WebSocket server using Node.js and the <code>ws</code> library, but I'm struggling with the client-side implementation — specifically reconnection logic and state management.</p><p>Here's what I have so far on the server side:</p><pre><code>const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', (ws) => {
+  console.log('New client connected');
+  ws.on('message', (message) => {
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message.toString());
+      }
+    });
+  });
+});</code></pre><p>My main concerns are: 1. How to handle automatic reconnection when the connection drops? 2. What's the best way to manage WebSocket state in React? 3. How to sync missed messages after reconnection?</p></div>
+            <div class="qa-qdetail__media"><img src="https://picsum.photos/seed/codedemo/800/400.jpg" alt="Code Screenshot" /></div>
+            <div class="qa-qdetail__tags"><span class="qa-tag qa-tag--brand">React</span><span class="qa-tag qa-tag--purple">WebSocket</span><span class="qa-tag qa-tag--emerald">JavaScript</span><span class="qa-tag qa-tag--amber">Real-time</span></div>
+            <div class="qa-qdetail__stats"><span class="qa-qdetail__stat"><i data-lucide="message-square" style="width:14px;height:14px;"></i><span class="qa-qdetail__stat-val">18</span> Answers</span><span class="qa-qdetail__stat"><i data-lucide="eye" style="width:14px;height:14px;"></i><span class="qa-qdetail__stat-val">2.4k</span> Views</span><span class="qa-qdetail__stat"><i data-lucide="arrow-up" style="width:14px;height:14px;"></i><span class="qa-qdetail__stat-val">247</span> Votes</span><span class="qa-qdetail__stat"><i data-lucide="clock" style="width:14px;height:14px;"></i>2h ago</span></div>
+            <div class="qa-qdetail__actions">
+                <div class="qa-qdetail__actions-left">
+                    <button class="qa-vote-btn qa-vote-btn--up" onclick="toggleUpvote(this)"><i data-lucide="thumbs-up" style="width:16px;height:16px;"></i>Upvote <span class="qa-vote-count">247</span></button>
+                    <button class="qa-vote-btn qa-vote-btn--down" onclick="toggleDownvote(this)"><i data-lucide="thumbs-down" style="width:16px;height:16px;"></i>Downvote</button>
+                    <button class="qa-act-btn qa-act-btn--follow" onclick="toggleActFollow(this)"><i data-lucide="bell" style="width:16px;height:16px;"></i>Follow</button>
+                    <button class="qa-act-btn qa-act-btn--save" onclick="toggleSave(this)"><i data-lucide="bookmark" style="width:16px;height:16px;"></i>Save</button>
+                    <button class="qa-act-btn qa-act-btn--share" onclick="openModal('qaShareModal')"><i data-lucide="share-2" style="width:16px;height:16px;"></i>Share</button>
+                </div>
+                <div class="qa-qdetail__actions-right">
+                    <button class="qa-qdetail__edit-btn" onclick="openModal('qaEditModal')"><i data-lucide="edit-3"></i>Edit</button>
+                    <button class="qa-qdetail__delete-btn" onclick="confirmDeleteQuestion()"><i data-lucide="trash-2"></i>Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-add-answer" id="addAnswerBlock">
+            <h3 class="qa-add-answer__title"><i data-lucide="pen-line" style="width:20px;height:20px;"></i>Add your answer</h3>
+            <div class="qa-add-answer__user"><img src="https://picsum.photos/seed/myavatar/80/80.jpg" alt="You" class="qa-add-answer__avatar" /><span class="qa-add-answer__username">John Doe</span></div>
+            <div id="quill-editor"></div>
+            <div class="qa-add-answer__footer"><span class="qa-add-answer__hint">Be respectful and constructive. Support your answer with code or references.</span><button class="qa-btn qa-btn--primary" onclick="postAnswer()"><i data-lucide="send" style="width:14px;height:14px;"></i>Post Answer</button></div>
+        </div>
+
+        <div class="qa-answers-section" id="answersSection">
+            <div class="qa-answers-header">
+                <div class="qa-answers-count" id="answersCountLabel"><span>18</span> Total Answers</div>
+                <div class="qa-answers-sort"><span class="qa-answers-sort__label">Sort by</span>
+                    <button class="qa-answers-sort__tab qa-answers-sort__tab--active" onclick="setAnswerSort(this)">Default</button>
+                    <button class="qa-answers-sort__tab" onclick="setAnswerSort(this)">Most Vote</button>
+                    <button class="qa-answers-sort__tab" onclick="setAnswerSort(this)">Latest</button>
+                    <button class="qa-answers-sort__tab" onclick="setAnswerSort(this)">Accepted</button>
+                    <button class="qa-answers-sort__tab" onclick="setAnswerSort(this)">Saved</button>
+                    <button class="qa-answers-sort__tab" onclick="setAnswerSort(this)">Followed</button>
+                </div>
+            </div>
+
+            <!-- Answer 1 -->
+            <div class="qa-answer qa-answer--accepted" data-answer="1">
+                <div class="qa-answer__accepted-badge" style="display:inline-flex;"><i data-lucide="check-circle" style="width:14px;height:14px;"></i>Accepted Answer</div>
+                <div class="qa-answer__header">
+                    <div class="qa-answer__avatar-wrap"><img src="https://picsum.photos/seed/active1/80/80.jpg" alt="David Park" class="qa-answer__avatar" /><div class="qa-answer__verified-badge"><i data-lucide="check" style="width:10px;height:10px;color:#fff;"></i></div></div>
+                    <div class="qa-answer__user-info"><div class="qa-answer__user-row"><span class="qa-answer__username">David Park</span><span class="qa-answer__badge qa-answer__badge--mentor"><i data-lucide="star" style="width:12px;height:12px;"></i>Mentor</span><button class="qa-answer__follow-btn" onclick="toggleAnsFollow(this)" data-user="David Park"><i data-lucide="user-plus" style="width:14px;height:14px;"></i>Follow</button></div><div class="qa-answer__profession">Staff Engineer · 1,247 answers · 8.9k pts</div></div>
+                    <div class="qa-answer__time-badge"><i data-lucide="clock" style="width:13px;height:13px;"></i>Answers 1h ago</div>
+                </div>
+                <div class="qa-answer__body"><p>Great question! Here's a robust approach using a custom hook with automatic reconnection and message buffering:</p><pre><code>function useWebSocket(url) {
+  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const reconnectRef = useRef(null);
+  const connect = useCallback(() => {
+    const ws = new WebSocket(url);
+    ws.onopen = () => setIsConnected(true);
+    ws.onclose = () => { setIsConnected(false); reconnectRef.current = setTimeout(connect, 3000); };
+    ws.onerror = (error) => { console.error('WebSocket error:', error); ws.close(); };
+    setSocket(ws);
+    return () => { clearTimeout(reconnectRef.current); ws.close(); };
+  }, [url]);
+  useEffect(() => { const cleanup = connect(); return cleanup; }, [connect]);
+  return { socket, isConnected };
+}</code></pre><p>For state management, I'd recommend using <strong>Zustand</strong> — it's lightweight and works perfectly with WebSocket state.</p></div>
+                <div class="qa-answer__actions">
+                    <div class="qa-answer__actions-left">
+                        <button class="qa-vote-btn qa-vote-btn--up" onclick="toggleUpvote(this)"><i data-lucide="thumbs-up" style="width:16px;height:16px;"></i>Upvote <span class="qa-vote-count">89</span></button>
+                        <button class="qa-vote-btn qa-vote-btn--down" onclick="toggleDownvote(this)"><i data-lucide="thumbs-down" style="width:16px;height:16px;"></i>Downvote</button>
+                        <button class="qa-accept-btn qa-accept-btn--active" onclick="toggleAccept(this)"><i data-lucide="check-circle" style="width:16px;height:16px;"></i>Accepted</button>
+                        <button class="qa-act-btn qa-act-btn--follow" onclick="toggleActFollow(this)"><i data-lucide="bell" style="width:16px;height:16px;"></i><span class="qa-follow-count">12</span> Follow</button>
+                        <button class="qa-act-btn qa-act-btn--save" onclick="toggleSave(this)"><i data-lucide="bookmark" style="width:16px;height:16px;"></i>Save</button>
+                        <button class="qa-act-btn qa-act-btn--share" onclick="openModal('qaShareModal')"><i data-lucide="share-2" style="width:16px;height:16px;"></i><span class="qa-share-count">5</span> Share</button>
+                    </div>
+                    <div class="qa-answer__actions-right">
+                        <button class="qa-edit-btn" onclick="openEditAnswerModal(this)"><i data-lucide="edit-3"></i>Edit</button>
+                        <button class="qa-comment-btn" onclick="toggleComments(this)"><i data-lucide="message-circle" style="width:15px;height:15px;"></i>Comment</button>
+                        <button class="qa-delete-btn" onclick="confirmDeleteAnswer(this)"><i data-lucide="trash-2"></i>Delete</button>
+                    </div>
+                </div>
+                <div class="qa-acmt" style="display:none;">
+                    <button class="qa-acmt__toggle qa-acmt__toggle--open" onclick="toggleCommentList(this)"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i><span>2 Comments</span></button>
+                    <div class="qa-acmt__list qa-acmt__list--open">
+                        <div class="qa-acmt__item"><img src="https://picsum.photos/seed/user1/80/80.jpg" alt="Sarah" class="qa-acmt__avatar" /><div class="qa-acmt__content"><div class="qa-acmt__header"><span class="qa-acmt__name">Sarah Chen</span><span class="qa-acmt__time">45min ago</span></div><p class="qa-acmt__text">This is exactly what I needed! The reconnection logic with useRef is clever.</p><div class="qa-acmt__actions"><button class="qa-acmt__act qa-acmt__act--like" onclick="toggleCommentLike(this)"><i data-lucide="thumbs-up" style="width:11px;height:11px;"></i> 3</button><button class="qa-acmt__act" onclick="showToast('Reply feature coming soon','info')">Reply</button><button class="qa-acmt__act qa-acmt__act--delete" onclick="confirmDeleteComment(this)"><i data-lucide="trash-2" style="width:11px;height:11px;"></i> Delete</button></div></div></div>
+                        <div class="qa-acmt__item"><img src="https://picsum.photos/seed/active1/80/80.jpg" alt="David" class="qa-acmt__avatar" /><div class="qa-acmt__content"><div class="qa-acmt__header"><span class="qa-acmt__name">David Park</span><span class="qa-acmt__time">30min ago</span></div><p class="qa-acmt__text">@Sarah Chen — On connect, I emit a 'sync' event with the last received timestamp.</p><div class="qa-acmt__actions"><button class="qa-acmt__act qa-acmt__act--like" onclick="toggleCommentLike(this)"><i data-lucide="thumbs-up" style="width:11px;height:11px;"></i> 5</button><button class="qa-acmt__act" onclick="showToast('Reply feature coming soon','info')">Reply</button><button class="qa-acmt__act qa-acmt__act--delete" onclick="confirmDeleteComment(this)"><i data-lucide="trash-2" style="width:11px;height:11px;"></i> Delete</button></div></div></div>
+                        <div class="qa-acmt__input-wrap"><img src="https://picsum.photos/seed/myavatar/80/80.jpg" alt="You" class="qa-acmt__input-avatar" /><input type="text" placeholder="Add a comment..." class="qa-acmt__input" onkeydown="if(event.key==='Enter')postComment(this)" /><button class="qa-acmt__post" onclick="postComment(this.previousElementSibling)">Post</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Answer 2 -->
+            <div class="qa-answer" data-answer="2">
+                <div class="qa-answer__accepted-badge"><i data-lucide="check-circle" style="width:14px;height:14px;"></i>Accepted Answer</div>
+                <div class="qa-answer__header">
+                    <div class="qa-answer__avatar-wrap"><img src="https://picsum.photos/seed/active2/80/80.jpg" alt="Lisa Wang" class="qa-answer__avatar" /></div>
+                    <div class="qa-answer__user-info"><div class="qa-answer__user-row"><span class="qa-answer__username">Lisa Wang</span><span class="qa-answer__badge qa-answer__badge--expert"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Expert</span><button class="qa-answer__follow-btn" onclick="toggleAnsFollow(this)" data-user="Lisa Wang"><i data-lucide="user-plus" style="width:14px;height:14px;"></i>Follow</button></div><div class="qa-answer__profession">Full Stack Developer · 983 answers · 7.2k pts</div></div>
+                    <div class="qa-answer__time-badge"><i data-lucide="clock" style="width:13px;height:13px;"></i>Answers 45min ago</div>
+                </div>
+                <div class="qa-answer__body"><p>I'd suggest using <code>Socket.IO</code> instead of raw WebSockets. It handles reconnection automatically and provides rooms/namespaces:</p><pre><code>import { io } from 'socket.io-client';
+const socket = io('http://localhost:8080', {
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: 10,
+});
+socket.on('connect', () => {
+  socket.emit('sync', { lastTimestamp: getLastSeenTimestamp() });
+});</code></pre><p>For state management, I use React Context + useReducer pattern.</p></div>
+                <div class="qa-answer__actions">
+                    <div class="qa-answer__actions-left">
+                        <button class="qa-vote-btn qa-vote-btn--up" onclick="toggleUpvote(this)"><i data-lucide="thumbs-up" style="width:16px;height:16px;"></i>Upvote <span class="qa-vote-count">34</span></button>
+                        <button class="qa-vote-btn qa-vote-btn--down" onclick="toggleDownvote(this)"><i data-lucide="thumbs-down" style="width:16px;height:16px;"></i>Downvote</button>
+                        <button class="qa-accept-btn" onclick="toggleAccept(this)"><i data-lucide="check-circle" style="width:16px;height:16px;"></i>Accept</button>
+                        <button class="qa-act-btn qa-act-btn--follow" onclick="toggleActFollow(this)"><i data-lucide="bell" style="width:16px;height:16px;"></i><span class="qa-follow-count">5</span> Follow</button>
+                        <button class="qa-act-btn qa-act-btn--save" onclick="toggleSave(this)"><i data-lucide="bookmark" style="width:16px;height:16px;"></i>Save</button>
+                        <button class="qa-act-btn qa-act-btn--share" onclick="openModal('qaShareModal')"><i data-lucide="share-2" style="width:16px;height:16px;"></i><span class="qa-share-count">2</span> Share</button>
+                    </div>
+                    <div class="qa-answer__actions-right">
+                        <button class="qa-edit-btn" onclick="openEditAnswerModal(this)"><i data-lucide="edit-3"></i>Edit</button>
+                        <button class="qa-comment-btn" onclick="toggleComments(this)"><i data-lucide="message-circle" style="width:15px;height:15px;"></i>Comment</button>
+                        <button class="qa-delete-btn" onclick="confirmDeleteAnswer(this)"><i data-lucide="trash-2"></i>Delete</button>
+                    </div>
+                </div>
+                <div class="qa-acmt" style="display:none;">
+                    <button class="qa-acmt__toggle qa-acmt__toggle--open" onclick="toggleCommentList(this)"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i><span>1 Comment</span></button>
+                    <div class="qa-acmt__list qa-acmt__list--open">
+                        <div class="qa-acmt__item"><img src="https://picsum.photos/seed/user5/80/80.jpg" alt="Priya" class="qa-acmt__avatar" /><div class="qa-acmt__content"><div class="qa-acmt__header"><span class="qa-acmt__name">Priya Patel</span><span class="qa-acmt__time">20min ago</span></div><p class="qa-acmt__text">Socket.IO is a solid choice! Just keep in mind it adds ~30KB to your bundle.</p><div class="qa-acmt__actions"><button class="qa-acmt__act qa-acmt__act--like" onclick="toggleCommentLike(this)"><i data-lucide="thumbs-up" style="width:11px;height:11px;"></i> 1</button><button class="qa-acmt__act" onclick="showToast('Reply feature coming soon','info')">Reply</button><button class="qa-acmt__act qa-acmt__act--delete" onclick="confirmDeleteComment(this)"><i data-lucide="trash-2" style="width:11px;height:11px;"></i> Delete</button></div></div></div>
+                        <div class="qa-acmt__input-wrap"><img src="https://picsum.photos/seed/myavatar/80/80.jpg" alt="You" class="qa-acmt__input-avatar" /><input type="text" placeholder="Add a comment..." class="qa-acmt__input" onkeydown="if(event.key==='Enter')postComment(this)" /><button class="qa-acmt__post" onclick="postComment(this.previousElementSibling)">Post</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Answer 3 -->
+            <div class="qa-answer" data-answer="3">
+                <div class="qa-answer__accepted-badge"><i data-lucide="check-circle" style="width:14px;height:14px;"></i>Accepted Answer</div>
+                <div class="qa-answer__header">
+                    <div class="qa-answer__avatar-wrap"><img src="https://picsum.photos/seed/active3/80/80.jpg" alt="Omar" class="qa-answer__avatar" /></div>
+                    <div class="qa-answer__user-info"><div class="qa-answer__user-row"><span class="qa-answer__username">Omar Hassan</span><button class="qa-answer__follow-btn" onclick="toggleAnsFollow(this)" data-user="Omar Hassan"><i data-lucide="user-plus" style="width:14px;height:14px;"></i>Follow</button></div><div class="qa-answer__profession">DevOps Engineer · 876 answers · 6.5k pts</div></div>
+                    <div class="qa-answer__time-badge"><i data-lucide="clock" style="width:13px;height:13px;"></i>Answers 5 months ago</div>
+                </div>
+                <div class="qa-answer__body"><p>Don't forget about the infrastructure side! Make sure your WebSocket server is behind a load balancer that supports sticky sessions. For message syncing, I use Redis with timestamps.</p></div>
+                <div class="qa-answer__actions">
+                    <div class="qa-answer__actions-left">
+                        <button class="qa-vote-btn qa-vote-btn--up" onclick="toggleUpvote(this)"><i data-lucide="thumbs-up" style="width:16px;height:16px;"></i>Upvote <span class="qa-vote-count">0</span></button>
+                        <button class="qa-vote-btn qa-vote-btn--down" onclick="toggleDownvote(this)"><i data-lucide="thumbs-down" style="width:16px;height:16px;"></i>Downvote</button>
+                        <button class="qa-accept-btn" onclick="toggleAccept(this)"><i data-lucide="check-circle" style="width:16px;height:16px;"></i>Accept</button>
+                        <button class="qa-act-btn qa-act-btn--follow" onclick="toggleActFollow(this)"><i data-lucide="bell" style="width:16px;height:16px;"></i><span class="qa-follow-count">0</span> Follow</button>
+                        <button class="qa-act-btn qa-act-btn--save" onclick="toggleSave(this)"><i data-lucide="bookmark" style="width:16px;height:16px;"></i>Save</button>
+                        <button class="qa-act-btn qa-act-btn--share" onclick="openModal('qaShareModal')"><i data-lucide="share-2" style="width:16px;height:16px;"></i><span class="qa-share-count">0</span> Share</button>
+                    </div>
+                    <div class="qa-answer__actions-right">
+                        <button class="qa-edit-btn" onclick="openEditAnswerModal(this)"><i data-lucide="edit-3"></i>Edit</button>
+                        <button class="qa-comment-btn" onclick="toggleComments(this)"><i data-lucide="message-circle" style="width:15px;height:15px;"></i>Comment</button>
+                        <button class="qa-delete-btn" onclick="confirmDeleteAnswer(this)"><i data-lucide="trash-2"></i>Delete</button>
+                    </div>
+                </div>
+                <div class="qa-acmt" style="display:none;"><div class="qa-acmt__list qa-acmt__list--open"><div class="qa-acmt__input-wrap"><img src="https://picsum.photos/seed/myavatar/80/80.jpg" alt="You" class="qa-acmt__input-avatar" /><input type="text" placeholder="Add a comment..." class="qa-acmt__input" onkeydown="if(event.key==='Enter')postComment(this)" /><button class="qa-acmt__post" onclick="postComment(this.previousElementSibling)">Post</button></div></div></div>
+            </div>
+
+            <!-- Answer 4 -->
+            <div class="qa-answer" data-answer="4">
+                <div class="qa-answer__accepted-badge"><i data-lucide="check-circle" style="width:14px;height:14px;"></i>Accepted Answer</div>
+                <div class="qa-answer__header">
+                    <div class="qa-answer__avatar-wrap"><img src="https://picsum.photos/seed/user4/80/80.jpg" alt="Amy" class="qa-answer__avatar" /></div>
+                    <div class="qa-answer__user-info"><div class="qa-answer__user-row"><span class="qa-answer__username">Amy Torres</span><button class="qa-answer__follow-btn qa-answer__follow-btn--following" onclick="toggleAnsFollow(this)" data-user="Amy Torres"><i data-lucide="user-check" style="width:14px;height:14px;"></i>Following</button></div><div class="qa-answer__profession">React Developer · 654 answers · 5.1k pts</div></div>
+                    <div class="qa-answer__time-badge"><i data-lucide="clock" style="width:13px;height:13px;"></i>Answers 5 months ago</div>
+                </div>
+                <div class="qa-answer__body"><p>For those using Next.js, check out <code>next-ws</code> — it simplifies WebSocket setup dramatically. Combined with <strong>Zustand middleware</strong>, you can persist notifications across page navigations.</p></div>
+                <div class="qa-answer__actions">
+                    <div class="qa-answer__actions-left">
+                        <button class="qa-vote-btn qa-vote-btn--up" onclick="toggleUpvote(this)"><i data-lucide="thumbs-up" style="width:16px;height:16px;"></i>Upvote <span class="qa-vote-count">12</span></button>
+                        <button class="qa-vote-btn qa-vote-btn--down" onclick="toggleDownvote(this)"><i data-lucide="thumbs-down" style="width:16px;height:16px;"></i>Downvote</button>
+                        <button class="qa-accept-btn" onclick="toggleAccept(this)"><i data-lucide="check-circle" style="width:16px;height:16px;"></i>Accept</button>
+                        <button class="qa-act-btn qa-act-btn--follow" onclick="toggleActFollow(this)"><i data-lucide="bell" style="width:16px;height:16px;"></i><span class="qa-follow-count">3</span> Follow</button>
+                        <button class="qa-act-btn qa-act-btn--save" onclick="toggleSave(this)"><i data-lucide="bookmark" style="width:16px;height:16px;"></i>Save</button>
+                        <button class="qa-act-btn qa-act-btn--share" onclick="openModal('qaShareModal')"><i data-lucide="share-2" style="width:16px;height:16px;"></i><span class="qa-share-count">1</span> Share</button>
+                    </div>
+                    <div class="qa-answer__actions-right">
+                        <button class="qa-edit-btn" onclick="openEditAnswerModal(this)"><i data-lucide="edit-3"></i>Edit</button>
+                        <button class="qa-comment-btn" onclick="toggleComments(this)"><i data-lucide="message-circle" style="width:15px;height:15px;"></i>Comment</button>
+                        <button class="qa-delete-btn" onclick="confirmDeleteAnswer(this)"><i data-lucide="trash-2"></i>Delete</button>
+                    </div>
+                </div>
+                <div class="qa-acmt" style="display:none;"><div class="qa-acmt__list qa-acmt__list--open"><div class="qa-acmt__input-wrap"><img src="https://picsum.photos/seed/myavatar/80/80.jpg" alt="You" class="qa-acmt__input-avatar" /><input type="text" placeholder="Add a comment..." class="qa-acmt__input" onkeydown="if(event.key==='Enter')postComment(this)" /><button class="qa-acmt__post" onclick="postComment(this.previousElementSibling)">Post</button></div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <aside class="qa-detail-sidebar">
+        <div class="qa-widget"><h3 class="qa-widget__title"><i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i>Community Stats</h3><div class="qa-stats-grid"><div class="qa-stat-card qa-stat-card--q"><div class="qa-stat-card__val">14.2k</div><div class="qa-stat-card__label">Questions</div></div><div class="qa-stat-card qa-stat-card--a"><div class="qa-stat-card__val">28.5k</div><div class="qa-stat-card__label">Answers</div></div><div class="qa-stat-card qa-stat-card--u"><div class="qa-stat-card__val">8.7k</div><div class="qa-stat-card__label">Users</div></div><div class="qa-stat-card qa-stat-card--r"><div class="qa-stat-card__val">92%</div><div class="qa-stat-card__label">Resolved</div></div></div></div>
+        <div class="qa-widget"><h3 class="qa-widget__title"><i data-lucide="layers" style="width:18px;height:18px;"></i>Related Questions</h3><a href="#" class="qa-relq"><div class="qa-relq__title">How to set up authentication with JWT in Node.js?</div><div class="qa-relq__meta"><span>342 answers</span><span>·</span><span class="qa-relq__status qa-relq__status--resolved">Resolved</span></div></a><hr class="qa-widget__divider" /><a href="#" class="qa-relq"><div class="qa-relq__title">React useEffect cleanup function best practices?</div><div class="qa-relq__meta"><span>218 answers</span><span>·</span><span class="qa-relq__status qa-relq__status--resolved">Resolved</span></div></a><hr class="qa-widget__divider" /><a href="#" class="qa-relq"><div class="qa-relq__title">Best state management for React in 2024?</div><div class="qa-relq__meta"><span>156 answers</span><span>·</span><span class="qa-relq__status qa-relq__status--active">Active</span></div></a></div>
+        <div class="qa-widget"><h3 class="qa-widget__title"><i data-lucide="tags" style="width:18px;height:18px;"></i>Related Tags</h3><div class="qa-tags-wrap"><span class="qa-sidebar-tag">React <span>2.1k</span></span><span class="qa-sidebar-tag">WebSocket <span>890</span></span><span class="qa-sidebar-tag">TypeScript <span>1.8k</span></span><span class="qa-sidebar-tag">Node.js <span>620</span></span><span class="qa-sidebar-tag">Socket.IO <span>340</span></span><span class="qa-sidebar-tag">Zustand <span>210</span></span></div></div>
+        <div class="qa-widget"><h3 class="qa-widget__title"><i data-lucide="zap" style="width:18px;height:18px;"></i>Quick Links</h3><a href="#" class="qa-qlink"><i data-lucide="book-open" style="width:16px;height:16px;"></i>Documentation</a><a href="#" class="qa-qlink"><i data-lucide="graduation-cap" style="width:16px;height:16px;"></i>Learning Paths</a><a href="#" class="qa-qlink"><i data-lucide="code-2" style="width:16px;height:16px;"></i>Code Playground</a><a href="#" class="qa-qlink"><i data-lucide="user-check" style="width:16px;height:16px;"></i>Mentorship Program</a><a href="#" class="qa-qlink"><i data-lucide="flag" style="width:16px;height:16px;"></i>Report Issue</a></div>
+    </aside>
+</main>
+
+<!-- Share Modal -->
+<div id="qaShareModal" class="qa-modal"><div class="qa-modal__box qa-modal__box--sm"><div class="qa-modal__header"><h2 class="qa-modal__title">Share</h2><button class="qa-modal__close" onclick="closeModal('qaShareModal')"><i data-lucide="x" style="width:20px;height:20px;color:var(--muted);"></i></button></div><div class="qa-modal__body"><div class="qa-share-input-row"><input id="qaShareUrl" type="text" value="https://qa.community/q/websocket-react-notifications" class="qa-share-input" readonly /><button class="qa-btn qa-btn--primary" style="padding:10px 16px;" onclick="navigator.clipboard.writeText(document.getElementById('qaShareUrl').value);showToast('Link copied!','success');closeModal('qaShareModal')">Copy</button></div><div class="qa-share-social"><button class="qa-share-social-btn qa-share-social-btn--fb"><i data-lucide="facebook" style="width:20px;height:20px;"></i></button><button class="qa-share-social-btn qa-share-social-btn--tw"><i data-lucide="twitter" style="width:20px;height:20px;"></i></button><button class="qa-share-social-btn qa-share-social-btn--li"><i data-lucide="linkedin" style="width:20px;height:20px;"></i></button><button class="qa-share-social-btn qa-share-social-btn--em"><i data-lucide="mail" style="width:20px;height:20px;"></i></button></div></div></div></div>
+
+<!-- Edit Question Modal -->
+<div id="qaEditModal" class="qa-modal"><div class="qa-modal__box"><div class="qa-modal__header"><h2 class="qa-modal__title"><i data-lucide="edit-3" style="width:20px;height:20px;color:var(--brand);"></i>Edit Question</h2><button class="qa-modal__close" onclick="closeModal('qaEditModal')"><i data-lucide="x" style="width:20px;height:20px;color:var(--muted);"></i></button></div><div class="qa-modal__body"><div><label class="qa-field__label">Question Title</label><input type="text" value="How to implement real-time notifications with WebSockets in React?" class="qa-field__input" /></div><div><label class="qa-field__label">Details</label><textarea rows="5" class="qa-field__input qa-field__textarea">I'm building a real-time notification system for my React app...</textarea></div><div><label class="qa-field__label">Tags</label><input type="text" value="React, WebSocket, JavaScript, Real-time" class="qa-field__input" /></div></div><div class="qa-modal__footer"><button class="qa-btn qa-btn--ghost" onclick="closeModal('qaEditModal')">Cancel</button><button class="qa-btn qa-btn--primary" onclick="closeModal('qaEditModal');showToast('Question updated!','success')">Save Changes</button></div></div></div>
+
+<!-- Edit Answer Modal -->
+<div id="qaEditAnswerModal" class="qa-modal">
+    <div class="qa-modal__box">
+        <div class="qa-modal__header">
+            <h2 class="qa-modal__title"><i data-lucide="edit-3" style="width:20px;height:20px;color:var(--brand);"></i>Edit Answer</h2>
+            <button class="qa-modal__close" onclick="closeModal('qaEditAnswerModal')"><i data-lucide="x" style="width:20px;height:20px;color:var(--muted);"></i></button>
+        </div>
+        <div class="qa-modal__body">
+            <div id="quill-editor-answer"></div>
+        </div>
+        <div class="qa-modal__footer">
+            <button class="qa-btn qa-btn--ghost" onclick="closeModal('qaEditAnswerModal')">Cancel</button>
+            <button class="qa-btn qa-btn--primary" onclick="saveAnswerEdit()"><i data-lucide="check" style="width:14px;height:14px;"></i>Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="qaDeleteModal" class="qa-modal">
+    <div class="qa-modal__box qa-modal__box--sm">
+        <div class="qa-modal__header">
+            <h2 class="qa-modal__title" id="qaDeleteModalTitle">Confirm Delete</h2>
+            <button class="qa-modal__close" onclick="closeModal('qaDeleteModal')"><i data-lucide="x" style="width:20px;height:20px;color:var(--muted);"></i></button>
+        </div>
+        <div class="qa-modal__body" style="padding-top:20px;padding-bottom:20px;">
+            <div class="qa-delete-modal__icon"><i data-lucide="alert-triangle" style="width:28px;height:28px;"></i></div>
+            <div class="qa-delete-modal__heading" id="qaDeleteModalHeading">Delete this item?</div>
+            <div class="qa-delete-modal__desc" id="qaDeleteModalDesc">This action <strong>cannot be undone</strong>. Are you sure you want to proceed?</div>
+        </div>
+        <div class="qa-modal__footer">
+            <button class="qa-btn qa-btn--ghost" onclick="closeModal('qaDeleteModal')">Cancel</button>
+            <button class="qa-btn qa-btn--danger" id="qaDeleteConfirmBtn" onclick="executeDelete()"><i data-lucide="trash-2" style="width:14px;height:14px;"></i>Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Question Deleted State -->
+<div id="qaQuestionDeleted" style="display:none;text-align:center;padding:80px 24px;">
+    <div style="width:80px;height:80px;border-radius:50%;background:var(--danger-lt);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;"><i data-lucide="trash-2" style="width:36px;height:36px;color:var(--danger);"></i></div>
+    <h2 style="font-size:1.5rem;font-weight:700;color:var(--text);margin-bottom:8px;">Question Deleted</h2>
+    <p style="font-size:0.9375rem;color:var(--text-sec);margin-bottom:24px;">This question has been deleted and is no longer available.</p>
+    <a href="#" class="qa-btn qa-btn--primary" style="display:inline-flex;"><i data-lucide="arrow-left" style="width:14px;height:14px;"></i>Back to Questions</a>
+</div>
+
+<script>
+    lucide.createIcons();
+
+    // Initialize Quill for New Answer
+    var quill = new Quill('#quill-editor', {
+        theme: 'snow', placeholder: 'Write your answer here. Be detailed and include code examples when possible...',
+        modules: { toolbar: [[{ 'header': [1, 2, 3, false] }],['bold', 'italic', 'underline', 'strike'],[{ 'list': 'ordered' }, { 'list': 'bullet' }],['code-block', 'blockquote', 'link'],['image'],['clean']] }
+    });
+
+    // Initialize Quill for Edit Answer Modal
+    var quillAnswer = new Quill('#quill-editor-answer', {
+        theme: 'snow', placeholder: 'Edit your answer...',
+        modules: { toolbar: [[{ 'header': [1, 2, 3, false] }],['bold', 'italic', 'underline', 'strike'],[{ 'list': 'ordered' }, { 'list': 'bullet' }],['code-block', 'blockquote', 'link'],['image'],['clean']] }
+    });
+
+    function showToast(msg, type) {
+        type = type || 'success'; var icons = { success:'check-circle', info:'info', warning:'alert-circle', error:'x-circle' };
+        var wrap = document.getElementById('qaToastWrap'); var t = document.createElement('div');
+        t.className = 'qa-toast qa-toast--' + type; t.innerHTML = '<i data-lucide="' + icons[type] + '" style="width:18px;height:18px;flex-shrink:0;"></i><span>' + msg + '</span>';
+        wrap.appendChild(t); lucide.createIcons();
+        setTimeout(function() { t.style.animation = 'qaToastOut 0.3s ease forwards'; setTimeout(function() { t.remove(); }, 300); }, 2500);
+    }
+    function openModal(id) { document.getElementById(id).classList.add('active'); document.body.style.overflow = 'hidden'; }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); document.body.style.overflow = ''; }
+    document.querySelectorAll('.qa-modal').forEach(function(m) { m.addEventListener('click', function(e) { if (e.target === m) { m.classList.remove('active'); document.body.style.overflow = ''; } }); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { document.querySelectorAll('.qa-modal.active').forEach(function(m) { m.classList.remove('active'); }); document.body.style.overflow = ''; } });
+
+    function dismissBanner() {
+        var banner = document.getElementById('qaApprovalBanner');
+        banner.style.transition = 'all 0.3s ease';
+        banner.style.opacity = '0'; banner.style.transform = 'translateY(-10px)'; banner.style.maxHeight = '0';
+        banner.style.marginBottom = '0'; banner.style.padding = '0'; banner.style.border = '0'; banner.style.overflow = 'hidden';
+        setTimeout(function() { banner.style.display = 'none'; }, 300);
+    }
+
+    // ===== EDIT ANSWER =====
+    var _editAnswerTarget = null;
+
+    function openEditAnswerModal(btn) {
+        var answer = btn.closest('.qa-answer');
+        var body = answer.querySelector('.qa-answer__body');
+        _editAnswerTarget = body;
+        
+        // Pre-fill Quill with existing HTML
+        quillAnswer.setText(''); // Clear first
+        quillAnswer.clipboard.dangerouslyPasteHTML(body.innerHTML);
+        
+        openModal('qaEditAnswerModal');
+    }
+
+    function saveAnswerEdit() {
+        if (_editAnswerTarget) {
+            var newHTML = quillAnswer.root.innerHTML;
+            _editAnswerTarget.innerHTML = newHTML;
+            _editAnswerTarget = null;
+        }
+        closeModal('qaEditAnswerModal');
+        showToast('Answer updated successfully!', 'success');
+    }
+
+    // ===== DELETE SYSTEM =====
+    var pendingDelete = { type: null, target: null };
+
+    function confirmDeleteQuestion() {
+        pendingDelete = { type: 'question', target: document.getElementById('questionBlock') };
+        document.getElementById('qaDeleteModalHeading').textContent = 'Delete this question?';
+        document.getElementById('qaDeleteModalDesc').innerHTML = 'This will permanently remove your question, all <strong>answers</strong>, and <strong>comments</strong>. This action <strong>cannot be undone</strong>.';
+        openModal('qaDeleteModal'); lucide.createIcons();
+    }
+    function confirmDeleteAnswer(btn) {
+        var answer = btn.closest('.qa-answer'); var username = answer.querySelector('.qa-answer__username').textContent;
+        pendingDelete = { type: 'answer', target: answer };
+        document.getElementById('qaDeleteModalHeading').textContent = 'Delete this answer?';
+        document.getElementById('qaDeleteModalDesc').innerHTML = 'This will permanently remove <strong>' + username + '\'s answer</strong> and all its comments. This action <strong>cannot be undone</strong>.';
+        openModal('qaDeleteModal'); lucide.createIcons();
+    }
+    function confirmDeleteComment(btn) {
+        var comment = btn.closest('.qa-acmt__item'); var name = comment.querySelector('.qa-acmt__name').textContent;
+        pendingDelete = { type: 'comment', target: comment };
+        document.getElementById('qaDeleteModalHeading').textContent = 'Delete this comment?';
+        document.getElementById('qaDeleteModalDesc').innerHTML = 'This will permanently remove <strong>' + name + '\'s comment</strong>. This action <strong>cannot be undone</strong>.';
+        openModal('qaDeleteModal'); lucide.createIcons();
+    }
+    function executeDelete() {
+        closeModal('qaDeleteModal'); if (!pendingDelete.target) return;
+        if (pendingDelete.type === 'question') {
+            var questionBlock = pendingDelete.target; questionBlock.classList.add('qa-deleting');
+            setTimeout(function() { questionBlock.style.display = 'none'; document.getElementById('addAnswerBlock').style.display = 'none'; document.getElementById('answersSection').style.display = 'none'; document.getElementById('qaApprovalBanner').style.display = 'none'; document.getElementById('qaQuestionDeleted').style.display = 'block'; lucide.createIcons(); }, 450);
+            showToast('Question deleted successfully', 'error');
+        } else if (pendingDelete.type === 'answer') {
+            var answer = pendingDelete.target; answer.classList.add('qa-deleting');
+            setTimeout(function() { answer.remove(); updateAnswerCount(); }, 450);
+            showToast('Answer deleted successfully', 'error');
+        } else if (pendingDelete.type === 'comment') {
+            var comment = pendingDelete.target; comment.classList.add('qa-acmt__item--deleting');
+            setTimeout(function() { comment.remove(); updateCommentCount(comment); }, 350);
+            showToast('Comment deleted', 'error');
+        }
+        pendingDelete = { type: null, target: null };
+    }
+    function updateAnswerCount() {
+        var remaining = document.querySelectorAll('.qa-answer').length;
+        var label = document.getElementById('answersCountLabel'); if (label) label.innerHTML = '<span>' + remaining + '</span> Total Answers';
+        var statVal = document.querySelector('.qa-qdetail__stat .qa-qdetail__stat-val'); if (statVal) statVal.textContent = remaining;
+    }
+    function updateCommentCount(deletedComment) {
+        var list = deletedComment.closest('.qa-acmt__list'); if (!list) return;
+        var remaining = list.querySelectorAll('.qa-acmt__item').length;
+        var toggle = list.closest('.qa-acmt').querySelector('.qa-acmt__toggle span');
+        if (toggle) toggle.textContent = remaining + ' Comment' + (remaining !== 1 ? 's' : '');
+    }
+
+    // ===== INTERACTIONS =====
+    function toggleUpvote(btn) { var isVoted = btn.classList.contains('voted'); var container = btn.closest('.qa-answer') || btn.closest('.qa-qdetail'); var downBtn = container.querySelector('.qa-vote-btn--down'); if (downBtn) downBtn.classList.remove('voted'); btn.classList.toggle('voted'); var countEl = btn.querySelector('.qa-vote-count'); if (countEl) { var c = parseInt(countEl.textContent); countEl.textContent = isVoted ? c - 1 : c + 1; } showToast(isVoted ? 'Upvote removed' : 'Upvoted!', isVoted ? 'info' : 'success'); }
+    function toggleDownvote(btn) { var isVoted = btn.classList.contains('voted'); var container = btn.closest('.qa-answer') || btn.closest('.qa-qdetail'); var upBtn = container.querySelector('.qa-vote-btn--up'); if (upBtn) upBtn.classList.remove('voted'); btn.classList.toggle('voted'); showToast(isVoted ? 'Downvote removed' : 'Downvoted', isVoted ? 'info' : 'warning'); }
+    function toggleSave(btn) { var isSaved = btn.classList.contains('saved'); btn.classList.toggle('saved'); showToast(isSaved ? 'Removed from bookmarks' : 'Saved!', isSaved ? 'info' : 'success'); }
+    function toggleQFollow(btn) { var f = btn.classList.contains('qa-qdetail__follow-btn--following'); btn.classList.toggle('qa-qdetail__follow-btn--following'); var u = btn.getAttribute('data-user') || 'user'; btn.innerHTML = f ? '<i data-lucide="user-plus" style="width:14px;height:14px;"></i>Follow' : '<i data-lucide="user-check" style="width:14px;height:14px;"></i>Following'; lucide.createIcons(); showToast(f ? 'Unfollowed ' + u : 'Now following ' + u, f ? 'info' : 'success'); }
+    function toggleAnsFollow(btn) { var f = btn.classList.contains('qa-answer__follow-btn--following'); btn.classList.toggle('qa-answer__follow-btn--following'); var u = btn.getAttribute('data-user') || 'user'; btn.innerHTML = f ? '<i data-lucide="user-plus" style="width:14px;height:14px;"></i>Follow' : '<i data-lucide="user-check" style="width:14px;height:14px;"></i>Following'; lucide.createIcons(); showToast(f ? 'Unfollowed ' + u : 'Now following ' + u, f ? 'info' : 'success'); }
+    function toggleActFollow(btn) { var f = btn.classList.contains('followed'); btn.classList.toggle('followed'); var c = btn.querySelector('.qa-follow-count'); if (c) { var n = parseInt(c.textContent); c.textContent = f ? n - 1 : n + 1; } showToast(f ? 'Unfollowed question' : 'Following question', f ? 'info' : 'success'); }
+    function setAnswerSort(btn) { document.querySelectorAll('.qa-answers-sort__tab').forEach(function(t) { t.classList.remove('qa-answers-sort__tab--active'); }); btn.classList.add('qa-answers-sort__tab--active'); }
+
+    function toggleAccept(btn) {
+        var answer = btn.closest('.qa-answer'); var isCurrentlyAccepted = answer.classList.contains('qa-answer--accepted');
+        document.querySelectorAll('.qa-answer').forEach(function(a) { a.classList.remove('qa-answer--accepted'); var badge = a.querySelector('.qa-answer__accepted-badge'); if (badge) badge.style.display = 'none'; var aBtn = a.querySelector('.qa-accept-btn'); if (aBtn) { aBtn.classList.remove('qa-accept-btn--active'); aBtn.innerHTML = '<i data-lucide="check-circle" style="width:16px;height:16px;"></i>Accept'; } });
+        if (!isCurrentlyAccepted) { answer.classList.add('qa-answer--accepted'); var badge = answer.querySelector('.qa-answer__accepted-badge'); if (badge) badge.style.display = 'inline-flex'; btn.classList.add('qa-accept-btn--active'); btn.innerHTML = '<i data-lucide="check-circle" style="width:16px;height:16px;"></i>Accepted'; showToast('Answer accepted!', 'success'); } else { showToast('Answer unaccepted', 'info'); }
+        lucide.createIcons();
+    }
+
+    function toggleComments(btn) { var answer = btn.closest('.qa-answer'); var comments = answer.querySelector('.qa-acmt'); if (comments) { var isHidden = comments.style.display === 'none'; comments.style.display = isHidden ? 'block' : 'none'; if (isHidden) { var input = comments.querySelector('.qa-acmt__input'); if (input) input.focus(); } } }
+    function toggleCommentList(btn) { var isOpen = btn.classList.contains('qa-acmt__toggle--open'); btn.classList.toggle('qa-acmt__toggle--open'); var list = btn.nextElementSibling; if (list) list.classList.toggle('qa-acmt__list--open'); }
+    function toggleCommentLike(btn) { var isLiked = btn.classList.contains('liked'); btn.classList.toggle('liked'); var text = btn.textContent.trim(); var num = parseInt(text) || 0; btn.innerHTML = '<i data-lucide="thumbs-up" style="width:11px;height:11px;"></i> ' + (isLiked ? num - 1 : num + 1); lucide.createIcons(); }
+    function postComment(inputEl) { if (inputEl && inputEl.value.trim()) { showToast('Comment posted!', 'success'); inputEl.value = ''; } }
+    function postAnswer() { var content = quill.getText().trim(); if (!content) { showToast('Please write an answer before posting', 'warning'); return; } showToast('Answer submitted! Thank you 🙌', 'success'); quill.setContents([]); }
+</script>
+</body>
+</html>
