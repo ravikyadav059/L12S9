@@ -774,3 +774,147 @@ test('admin edit question removing thumbnail clears database and deletes file fr
 
     $question->delete();
 });
+
+test('authenticated user can submit answer using rich text content in question show page', function () {
+    $author = User::factory()->create();
+    $responder = User::factory()->create();
+
+    $question = Question::create([
+        'title' => 'Question for Answering Test '.uniqid(),
+        'description' => 'Test description for answering question testing.',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+        'answer_count' => 0,
+    ]);
+
+    actingAs($responder);
+
+    $richAnswer = '<p>Here is the solution to your issue:</p><pre class="ql-syntax"><code>composer require livewire/livewire</code></pre>';
+
+    Volt::test('question.show', ['slug' => $question->slug])
+        ->call('submitAnswer', $richAnswer)
+        ->assertDispatched('answer-submitted')
+        ->assertSet('newAnswer', '');
+
+    $question->refresh();
+    expect($question->answer_count)->toBe(1);
+
+    $answer = Answer::where('question_id', (string) $question->id)->first();
+    expect($answer)->not->toBeNull();
+    expect($answer->content)->toBe($richAnswer);
+    expect((string) $answer->user_id)->toBe((string) $responder->_id);
+
+    $answer->delete();
+    $question->delete();
+    $author->delete();
+    $responder->delete();
+});
+
+test('answer card displays accept button below user info without top badge, without avatar green tick, and without share button', function () {
+    $author = User::factory()->create();
+    $responder = User::factory()->create();
+
+    $question = Question::create([
+        'title' => 'Question For Accept Answer UI Test '.uniqid(),
+        'description' => 'Test description for accept answer layout testing.',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+        'answer_count' => 1,
+    ]);
+
+    $answer = Answer::create([
+        'question_id' => (string) $question->id,
+        'user_id' => (string) $responder->_id,
+        'content' => '<p>This is a great answer that can be accepted.</p>',
+        'is_accepted' => false,
+        'status' => 1,
+    ]);
+
+    $ansId = (string) $answer->_id;
+
+    // Acting as Question Author
+    actingAs($author);
+
+    $component = Volt::test('question.show', ['slug' => $question->slug]);
+
+    // 1. Should not see "Accepted Answer" badge banner
+    $component->assertDontSee('Accepted Answer');
+
+    // 2. Should not see Share button in answer card
+    $component->assertDontSeeHtml('type: \'answer\', header: \'Share Answer\'');
+
+    // 3. Question author sees "Accept" button
+    $component->assertSeeHtml('wire:click="toggleAcceptAnswer(\''.$ansId.'\')"');
+    $component->assertSee('Accept');
+
+    // 4. Toggle accept answer
+    $component->call('toggleAcceptAnswer', $ansId);
+
+    $answer->refresh();
+    expect((bool) $answer->is_accepted)->toBeTrue();
+
+    // 5. In accepted state:
+    // Should still NOT see "Accepted Answer" banner badge
+    $component->assertDontSee('Accepted Answer');
+
+    // Should NOT see avatar green tick badge
+    $component->assertDontSeeHtml('bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-white');
+
+    // Should see "Accepted" on the button
+    $component->assertSeeHtml('wire:click="toggleAcceptAnswer(\''.$ansId.'\')"');
+    $component->assertSee('Accepted');
+
+    // 6. Header actions contain Delete for Question Owner, and bottom actions contain Comment
+    $component->assertSeeHtml('wire:click="deleteAnswer(\''.$ansId.'\')"');
+    $component->assertSee('Comment');
+
+    // 7. Acting as answer author: Header actions contain Edit and Delete
+    actingAs($responder);
+    Volt::test('question.show', ['slug' => $question->slug])
+        ->assertSeeHtml('wire:click="startEditAnswer(\''.$ansId.'\')"')
+        ->assertSeeHtml('wire:click="deleteAnswer(\''.$ansId.'\')"')
+        ->assertSee('Comment');
+
+    $answer->delete();
+    $question->delete();
+    $author->delete();
+    $responder->delete();
+});
+
+test('rapid duplicate submissions of the same answer do not create duplicate answers', function () {
+    $author = User::factory()->create();
+    $responder = User::factory()->create();
+
+    $question = Question::create([
+        'title' => 'Question For Duplicate Answer Test '.uniqid(),
+        'description' => 'Test description for rapid duplicate answers.',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+        'answer_count' => 0,
+    ]);
+
+    actingAs($responder);
+
+    $answerHtml = '<p>This is my unique solution to this problem.</p>';
+
+    $component = Volt::test('question.show', ['slug' => $question->slug]);
+
+    // First submit
+    $component->call('submitAnswer', $answerHtml);
+
+    // Rapid second submit of the same answer
+    $component->call('submitAnswer', $answerHtml);
+
+    $question->refresh();
+    expect($question->answer_count)->toBe(1);
+
+    $answersCount = Answer::where('question_id', (string) $question->id)->count();
+    expect($answersCount)->toBe(1);
+
+    Answer::where('question_id', (string) $question->id)->delete();
+    $question->delete();
+    $author->delete();
+    $responder->delete();
+});
+
+

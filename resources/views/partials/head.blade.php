@@ -15,5 +15,33 @@
 <!-- Quill Editor v1.3.6 -->
 <link href="https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.min.js"></script>
+<style>
+    /* Quill Editor Auto-scroll & Min/Max Height */
+    .quill-editor-wrapper .ql-container {
+        font-family: inherit;
+        font-size: 0.875rem;
+    }
+    .quill-editor-wrapper .ql-editor {
+        min-height: 160px;
+        max-height: 280px;
+        overflow-y: auto;
+        font-family: inherit;
+        font-size: 0.875rem;
+        line-height: 1.6;
+    }
+    .quill-editor-wrapper .ql-editor::-webkit-scrollbar {
+        width: 6px;
+    }
+    .quill-editor-wrapper .ql-editor::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .quill-editor-wrapper .ql-editor::-webkit-scrollbar-thumb {
+        background-color: rgba(156, 163, 175, 0.5);
+        border-radius: 3px;
+    }
+    .dark .quill-editor-wrapper .ql-editor::-webkit-scrollbar-thumb {
+        background-color: rgba(113, 113, 122, 0.5);
+    }
+</style>
 
 

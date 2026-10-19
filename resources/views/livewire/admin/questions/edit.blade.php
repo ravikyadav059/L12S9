@@ -326,7 +326,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Question - Admin')] clas
                     wire:ignore
                     class="quill-editor-wrapper bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 transition"
                 >
-                    <div x-ref="quillEditor" class="min-h-[220px]"></div>
+                    <div x-ref="quillEditor" class="min-h-[200px] max-h-[350px] overflow-y-auto [&_.ql-editor]:min-h-[200px] [&_.ql-editor]:max-h-[350px] [&_.ql-editor]:overflow-y-auto"></div>
                 </div>
                 @error('description') <p class="text-rose-500 text-xs mt-1 font-medium">{{ $message }}</p> @enderror
             </div>

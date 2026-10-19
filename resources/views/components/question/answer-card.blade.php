@@ -29,26 +29,12 @@
     x-data="{ showComments: false }"
     class="bg-white dark:bg-zinc-900 border {{ $ans->is_accepted ? 'border-emerald-500 border-l-4 border-l-emerald-500 dark:border-emerald-500' : 'border-zinc-200 dark:border-zinc-800' }} rounded-2xl p-6 shadow-xs space-y-4 transition-all"
 >
-    <!-- Accepted Solution Badge -->
-    @if($ans->is_accepted)
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-md text-xs font-bold border border-emerald-200 dark:border-emerald-800/80">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-            </svg>
-            <span>Accepted Answer</span>
-        </div>
-    @endif
 
     <!-- Answer Header (Author Avatar, Name, Follow, Time) -->
     <div class="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800 flex-wrap gap-2">
         <div class="flex items-center gap-3 min-w-0">
             <div class="relative w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-[#198BEA]/20">
                 <img src="{{ $ansUserAvatar }}" alt="{{ $ansUserName }}" class="w-full h-full object-cover">
-                @if($ans->is_accepted)
-                    <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-white">
-                        <svg class="w-2 h-2" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                    </div>
-                @endif
             </div>
             <div>
                 <div class="flex items-center gap-2 flex-wrap">
@@ -92,20 +78,116 @@
                 </span>
             </div>
         </div>
+
+        <!-- Header Actions: Edit & Delete (Top Right) -->
+        @if($isAnsOwner || $isQOwner)
+            <div class="flex items-center gap-1.5 shrink-0">
+                @if($isAnsOwner)
+                    <button 
+                        wire:click="startEditAnswer('{{ $ans->id }}')"
+                        type="button"
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                    >
+                        <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"/></svg>
+                        <span>Edit</span>
+                    </button>
+                @endif
+
+                @if($isAnsOwner || $isQOwner)
+                    <button 
+                        wire:click="deleteAnswer('{{ $ans->id }}')"
+                        wire:confirm="Are you sure you want to delete this answer? This action cannot be undone."
+                        type="button"
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                        <span>Delete</span>
+                    </button>
+                @endif
+            </div>
+        @endif
     </div>
+
+    <!-- Accept / Accepted Button (Placed below User name and image part) -->
+    @if($isQOwner)
+        <div class="flex items-center">
+            <button 
+                wire:click="toggleAcceptAnswer('{{ $ans->id }}')"
+                type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $ans->is_accepted ? 'bg-emerald-50 text-emerald-700 border border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50/60' }}"
+                title="{{ $ans->is_accepted ? 'Click to unaccept' : 'Mark as accepted solution' }}"
+            >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>{{ $ans->is_accepted ? 'Accepted' : 'Accept' }}</span>
+            </button>
+        </div>
+    @elseif($ans->is_accepted)
+        <div class="flex items-center">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-300">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>Accepted</span>
+            </span>
+        </div>
+    @endif
 
     <!-- Answer Body or Edit Form -->
     @if($editingAnswerId === (string) $ans->id)
-        <div class="space-y-3">
-            <textarea 
-                wire:model="editingAnswerContent" 
-                rows="5"
-                placeholder="Edit your answer..."
-                class="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm placeholder-zinc-400 text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-[#198BEA] focus:ring-2 focus:ring-[#198BEA]/15 transition-all resize-y min-h-[120px]"
-            ></textarea>
+        <div 
+            x-data="{
+                editQuill: null,
+                init() {
+                    this.$nextTick(() => {
+                        if (typeof Quill === 'undefined' || !this.$refs.editQuillEditor) return;
+                        if (this.editQuill) return;
+
+                        this.editQuill = new Quill(this.$refs.editQuillEditor, {
+                            theme: 'snow',
+                            placeholder: 'Edit your answer...',
+                            modules: {
+                                toolbar: [
+                                    [{ 'header': [1, 2, 3, false] }],
+                                    ['bold', 'italic', 'underline', 'strike'],
+                                    ['blockquote', 'code-block'],
+                                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                    ['link', 'clean']
+                                ]
+                            }
+                        });
+
+                        const initialContent = @js($editingAnswerContent);
+                        if (initialContent) {
+                            this.editQuill.root.innerHTML = initialContent;
+                        }
+
+                        this.editQuill.on('text-change', () => {
+                            if (!this.editQuill) return;
+                            const text = this.editQuill.getText().trim();
+                            const html = text.length > 0 ? this.editQuill.root.innerHTML : '';
+                            if (this.$wire) {
+                                this.$wire.set('editingAnswerContent', html, false);
+                            }
+                        });
+                    });
+                },
+                save() {
+                    const html = (this.editQuill && this.editQuill.getText().trim().length > 0) ? this.editQuill.root.innerHTML : '';
+                    if (this.$wire) {
+                        this.$wire.set('editingAnswerContent', html, false);
+                        this.$wire.call('saveEditAnswer', html);
+                    }
+                }
+            }"
+            class="space-y-3"
+        >
+            <div 
+                wire:ignore
+                class="quill-editor-wrapper bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:border-[#198BEA] focus-within:ring-2 focus-within:ring-[#198BEA]/15 transition"
+            >
+                <div x-ref="editQuillEditor" class="min-h-[120px] max-h-[260px] overflow-y-auto [&_.ql-editor]:min-h-[120px] [&_.ql-editor]:max-h-[260px] [&_.ql-editor]:overflow-y-auto"></div>
+            </div>
             <div class="flex items-center justify-end gap-2">
                 <button wire:click="cancelEditAnswer" type="button" class="px-3.5 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors">Cancel</button>
-                <button wire:click="saveEditAnswer" type="button" class="px-4 py-1.5 text-xs font-semibold bg-[#198BEA] hover:bg-[#1476c9] text-white rounded-lg shadow-xs cursor-pointer transition-colors">Save Changes</button>
+                <button @click="save()" type="button" class="px-4 py-1.5 text-xs font-semibold bg-[#198BEA] hover:bg-[#1476c9] text-white rounded-lg shadow-xs cursor-pointer transition-colors">Save Changes</button>
             </div>
         </div>
     @else
@@ -144,19 +226,6 @@
                 <span>Downvote</span>
             </button>
 
-            <!-- Accept / Accepted Button (For Question Owner) -->
-            @if($isQOwner)
-                <button 
-                    wire:click="toggleAcceptAnswer('{{ $ans->id }}')"
-                    type="button"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $ans->is_accepted ? 'bg-emerald-50 text-emerald-700 border border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50/60' }}"
-                    title="{{ $ans->is_accepted ? 'Click to unaccept' : 'Mark as accepted solution' }}"
-                >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>{{ $ans->is_accepted ? 'Accepted' : 'Accept' }}</span>
-                </button>
-            @endif
-
             @auth
                 <!-- Follow Answer -->
                 @php
@@ -186,33 +255,10 @@
                 </svg>
                 <span>{{ $isAnsSaved ? 'Saved' : 'Save' }}</span>
             </button>
-
-            <!-- Share Answer -->
-            <button 
-                type="button"
-                @click="$dispatch('open-share-modal', { url: '{{ route('questions.show', $question->slug ?: (string)$question->_id) }}#ans-{{ $ans->id }}', title: 'Answer to {{ addslashes($question->title) }}', type: 'answer', header: 'Share Answer', subtitle: 'Share this answer across your network' })"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-            >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                </svg>
-                <span>Share</span>
-            </button>
         </div>
 
-        <!-- Right Actions: Edit, Comment & Delete for Answer Owner / Question Owner -->
+        <!-- Right Actions: Comment -->
         <div class="flex items-center gap-1.5">
-            @if($isAnsOwner)
-                <button 
-                    wire:click="startEditAnswer('{{ $ans->id }}')"
-                    type="button"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-                >
-                    <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"/></svg>
-                    <span>Edit</span>
-                </button>
-            @endif
-
             <!-- Comment Toggle Button (matching qa-comment-btn) -->
             <button 
                 type="button"
@@ -224,18 +270,6 @@
                 </svg>
                 <span>Comment</span>
             </button>
-
-            @if($isAnsOwner || $isQOwner)
-                <button 
-                    wire:click="deleteAnswer('{{ $ans->id }}')"
-                    wire:confirm="Are you sure you want to delete this answer? This action cannot be undone."
-                    type="button"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
-                >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-                    <span>Delete</span>
-                </button>
-            @endif
         </div>
     </div>
 

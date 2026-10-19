@@ -22,6 +22,8 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public string $newAnswer = '';
 
+    public bool $isSubmittingAnswer = false;
+
     public string $answerSort = 'default';
 
     public array $votedAnswers = [];
@@ -82,41 +84,73 @@ new #[Layout('components.layouts.app')] class extends Component {
         }
     }
 
-    public function submitAnswer(): void
+    public function submitAnswer(?string $content = null): void
     {
-        if (! Auth::check()) {
-            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Answer a Question');
-
+        if ($this->isSubmittingAnswer) {
             return;
         }
 
-        $plain = trim(strip_tags(str_replace('&nbsp;', ' ', (string) $this->newAnswer)));
-        if (empty($plain)) {
-            $this->addError('newAnswer', 'Please enter your answer.');
+        $this->isSubmittingAnswer = true;
 
-            return;
+        try {
+            if (! Auth::check()) {
+                $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Answer a Question');
+
+                return;
+            }
+
+            if ($content !== null) {
+                $this->newAnswer = $content;
+            }
+
+            $plain = trim(strip_tags(str_replace('&nbsp;', ' ', (string) $this->newAnswer)));
+            if (empty($plain)) {
+                $this->addError('newAnswer', 'Please enter your answer.');
+
+                return;
+            }
+
+            $question = Question::query()
+                ->where('slug', $this->slug)
+                ->orWhere('_id', $this->slug)
+                ->firstOrFail();
+
+            $user = Auth::user();
+            $userId = (string) ($user->_id ?? $user->id ?? 'anonymous');
+
+            // Duplicate submission guard (e.g. rapid double-clicks with identical content within 5 seconds)
+            $recentAnswer = Answer::where('question_id', (string) $question->id)
+                ->where('user_id', $userId)
+                ->latest()
+                ->first();
+
+            if ($recentAnswer && (string) $recentAnswer->content === (string) $this->newAnswer) {
+                $createdAt = $recentAnswer->created_at;
+                if ($createdAt && $createdAt->diffInSeconds(now()) < 5) {
+                    $this->newAnswer = '';
+                    $this->dispatch('answer-submitted');
+
+                    return;
+                }
+            }
+
+            Answer::create([
+                'question_id' => (string) $question->id,
+                'user_id' => $userId,
+                'content' => $this->newAnswer,
+                'votes_count' => 0,
+                'is_accepted' => false,
+                'status' => 1,
+            ]);
+
+            $question->increment('answer_count');
+
+            $this->newAnswer = '';
+            $this->dispatch('answer-submitted');
+            $this->dispatch('toast', message: 'Answer posted successfully! 🙌', type: 'success');
+        } finally {
+            $this->isSubmittingAnswer = false;
         }
-
-        $question = Question::query()
-            ->where('slug', $this->slug)
-            ->orWhere('_id', $this->slug)
-            ->firstOrFail();
-
-        $user = Auth::user();
-
-        Answer::create([
-            'question_id' => (string) $question->id,
-            'user_id' => $user->_id ?? (string) ($user->id ?? 'anonymous'),
-            'content' => $this->newAnswer,
-            'votes_count' => 0,
-            'is_accepted' => false,
-            'status' => 1,
-        ]);
-
-        $question->increment('answer_count');
-
-        $this->newAnswer = '';
-        $this->dispatch('toast', message: 'Answer posted successfully! 🙌', type: 'success');
     }
 
     public function toggleAcceptAnswer(string $answerId): void
@@ -398,10 +432,14 @@ new #[Layout('components.layouts.app')] class extends Component {
         $this->editingAnswerContent = '';
     }
 
-    public function saveEditAnswer(): void
+    public function saveEditAnswer(?string $content = null): void
     {
         if (! Auth::check() || ! $this->editingAnswerId) {
             return;
+        }
+
+        if ($content !== null) {
+            $this->editingAnswerContent = $content;
         }
 
         $plain = trim(strip_tags(str_replace('&nbsp;', ' ', (string) $this->editingAnswerContent)));
@@ -822,19 +860,130 @@ new #[Layout('components.layouts.app')] class extends Component {
                 <!-- Post Your Answer Card (qa-add-answer matching QDeatils.html) -->
                 <div 
                     id="write-answer" 
+                    wire:key="qa-write-answer-box"
                     x-data="{
+                        quillInstance: null,
+                        clientError: '',
+                        isSubmitting: false,
                         init() {
                             if (window.location.hash === '#write-answer') {
                                 this.$nextTick(() => {
-                                    const el = document.getElementById('answer-textarea');
+                                    const el = this.$refs.quillEditor;
                                     if (el) {
                                         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                        el.focus();
                                     }
                                 });
                             }
+
+                            if (typeof Quill === 'undefined') {
+                                let checkInterval = setInterval(() => {
+                                    if (typeof Quill !== 'undefined') {
+                                        clearInterval(checkInterval);
+                                        this.initQuill();
+                                    }
+                                }, 100);
+                                setTimeout(() => clearInterval(checkInterval), 3000);
+                            } else {
+                                this.$nextTick(() => {
+                                    this.initQuill();
+                                });
+                            }
+
+                            window.addEventListener('hashchange', () => {
+                                if (window.location.hash === '#write-answer' && this.quillInstance) {
+                                    this.quillInstance.focus();
+                                }
+                            });
+                        },
+                        initQuill() {
+                            if (typeof Quill === 'undefined' || !this.$refs.quillEditor) return;
+                            if (this.quillInstance) return;
+
+                            try {
+                                this.quillInstance = new Quill(this.$refs.quillEditor, {
+                                    theme: 'snow',
+                                    placeholder: 'Write your answer here. Be detailed and include explanations or code examples when possible...',
+                                    modules: {
+                                        toolbar: [
+                                            [{ 'header': [1, 2, 3, false] }],
+                                            ['bold', 'italic', 'underline', 'strike'],
+                                            ['blockquote', 'code-block'],
+                                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                            ['link', 'clean']
+                                        ]
+                                    }
+                                });
+
+                                const currentVal = (this.$wire && this.$wire.get('newAnswer')) || '';
+                                if (currentVal && currentVal.trim().length > 0) {
+                                    this.quillInstance.root.innerHTML = currentVal;
+                                }
+
+                                this.quillInstance.on('text-change', () => {
+                                    if (!this.quillInstance) return;
+                                    const text = this.quillInstance.getText().trim();
+                                    const html = text.length > 0 ? this.quillInstance.root.innerHTML : '';
+                                    this.clientError = '';
+                                    if (this.$wire) {
+                                        this.$wire.set('newAnswer', html, false);
+                                    }
+                                });
+
+                                if (window.location.hash === '#write-answer') {
+                                    setTimeout(() => {
+                                        this.quillInstance.focus();
+                                    }, 200);
+                                }
+                            } catch (e) {
+                                console.warn('Quill init warning:', e);
+                            }
+                        },
+                        clearEditor() {
+                            if (this.quillInstance) {
+                                try {
+                                    this.quillInstance.setContents([]);
+                                    this.quillInstance.enable(true);
+                                } catch (e) {
+                                    try {
+                                        this.quillInstance.setText('');
+                                    } catch (err) {}
+                                }
+                            }
+                            this.clientError = '';
+                            this.isSubmitting = false;
+                        },
+                        submit() {
+                            if (this.isSubmitting) return;
+
+                            this.clientError = '';
+                            const plainText = this.quillInstance ? this.quillInstance.getText().trim() : '';
+                            const htmlContent = (this.quillInstance && plainText.length > 0) ? this.quillInstance.root.innerHTML : '';
+
+                            if (!plainText) {
+                                this.clientError = 'Please enter your answer.';
+                                return;
+                            }
+
+                            const isAuthenticated = @js(Auth::check());
+                            if (!isAuthenticated) {
+                                window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'Answer a Question' }));
+                                return;
+                            }
+
+                            this.isSubmitting = true;
+
+                            if (this.$wire) {
+                                this.$wire.set('newAnswer', htmlContent, false);
+                                this.$wire.call('submitAnswer', htmlContent)
+                                    .finally(() => {
+                                        this.isSubmitting = false;
+                                    });
+                            } else {
+                                this.isSubmitting = false;
+                            }
                         }
                     }"
+                    @answer-submitted.window="clearEditor(); isSubmitting = false;"
                     class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4"
                 >
                     <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -850,18 +999,20 @@ new #[Layout('components.layouts.app')] class extends Component {
                             <span class="text-xs font-bold text-zinc-900 dark:text-white">{{ auth()->user()->name }}</span>
                         </div>
                     @endauth
-                    <div class="relative">
-                        <textarea 
-                            wire:model="newAnswer" 
-                            rows="6"
-                            placeholder="Write your answer here. Be detailed and include explanations or code examples when possible..."
-                            class="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm placeholder-zinc-400 text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-[#198BEA] focus:ring-2 focus:ring-[#198BEA]/15 transition-all resize-y min-h-[160px]"
-                        ></textarea>
+
+                    <div 
+                        wire:ignore
+                        class="quill-editor-wrapper bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:border-[#198BEA] focus-within:ring-2 focus-within:ring-[#198BEA]/15 transition"
+                    >
+                        <div x-ref="quillEditor" class="min-h-[160px] max-h-[300px] overflow-y-auto [&_.ql-editor]:min-h-[160px] [&_.ql-editor]:max-h-[300px] [&_.ql-editor]:overflow-y-auto"></div>
                     </div>
 
-                    @error('newAnswer')
-                        <p class="text-xs text-rose-500 font-medium">{{ $message }}</p>
-                    @enderror
+                    <p x-show="clientError" x-text="clientError" x-cloak style="display: none;" class="text-xs text-rose-500 font-medium"></p>
+                    <div x-show="!clientError">
+                        @error('newAnswer')
+                            <p class="text-xs text-rose-500 font-medium">{{ $message }}</p>
+                        @enderror
+                    </div>
 
                     <div class="flex items-center justify-between flex-wrap gap-3 pt-1">
                         <span class="text-xs text-zinc-400 dark:text-zinc-500">
@@ -881,14 +1032,21 @@ new #[Layout('components.layouts.app')] class extends Component {
                             </button>
                         @else
                             <button 
-                                wire:click="submitAnswer" 
+                                @click="submit()" 
                                 type="button"
-                                class="inline-flex items-center gap-2 px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-98"
+                                :disabled="isSubmitting"
+                                wire:loading.attr="disabled"
+                                wire:target="submitAnswer"
+                                class="inline-flex items-center gap-2 px-6 py-2.5 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-98 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none"
                             >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <svg wire:loading.remove wire:target="submitAnswer" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
                                 </svg>
-                                <span>Post Answer</span>
+                                <svg wire:loading wire:target="submitAnswer" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span x-text="isSubmitting ? 'Posting...' : 'Post Answer'">Post Answer</span>
                             </button>
                         @endguest
                     </div>
