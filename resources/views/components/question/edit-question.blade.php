@@ -18,6 +18,7 @@
         editingId: '',
         formTitle: '',
         existingImage: null,
+        quillInstance: null,
         clientErrors: {
             title: '',
             description: '',
@@ -45,18 +46,20 @@
         progress: 0,
 
         get filteredSkills() {
-            const pool = this.remoteSkills.length ? this.remoteSkills : this.initialSkills;
+            const pool = (this.remoteSkills && this.remoteSkills.length) ? this.remoteSkills : this.initialSkills;
+            const cleanPool = (pool || []).map(s => {
+                if (!s) return '';
+                if (typeof s === 'object') {
+                    return (s.skills_title || s.name || s.label || s.title || '').trim();
+                }
+                return String(s).trim();
+            }).filter(Boolean);
+
             if (!this.search || !this.search.trim()) {
-                return pool.filter(s => {
-                    const name = typeof s === 'object' && s !== null ? (s.name || s.label || '') : String(s);
-                    return name && !this.selectedTags.includes(name);
-                }).slice(0, 10);
+                return cleanPool.filter(name => !this.selectedTags.includes(name)).slice(0, 10);
             }
             const q = this.search.toLowerCase().trim();
-            return pool.filter(s => {
-                const name = typeof s === 'object' && s !== null ? (s.name || s.label || '') : String(s);
-                return name && name.toLowerCase().includes(q) && !this.selectedTags.includes(name);
-            }).slice(0, 10);
+            return cleanPool.filter(name => name.toLowerCase().includes(q) && !this.selectedTags.includes(name)).slice(0, 10);
         },
 
         fetchRemoteSkills() {
@@ -257,14 +260,14 @@
                 }
             }
 
-            // 2. Validate Details (Textarea content)
-            const desc = (this.$wire && this.$wire.get('{{ $description }}')) || '';
-            const plainDesc = (desc || '').trim();
-            if (!plainDesc) {
+            // 2. Validate Details (Quill editor content)
+            const plainText = this.quillInstance ? this.quillInstance.getText().trim() : '';
+            const htmlContent = (this.quillInstance && plainText.length > 0) ? this.quillInstance.root.innerHTML : '';
+            if (!plainText) {
                 this.clientErrors.description = 'The question details are required.';
                 hasError = true;
-            } else if (plainDesc.length < 20) {
-                this.clientErrors.description = 'Please provide more details (minimum 20 characters). Currently: ' + plainDesc.length + ' chars.';
+            } else if (plainText.length < 20) {
+                this.clientErrors.description = 'Please provide more details (minimum 20 characters). Currently: ' + plainText.length + ' chars.';
                 hasError = true;
             }
 
@@ -297,11 +300,45 @@
                 return;
             }
 
-            // Pre-validation PASSED! Sync data non-blockingly and trigger submit action
+            // Pre-validation PASSED! Call submit action with latest inputs
             if (this.$wire) {
+                this.$wire.set('{{ $description }}', htmlContent, false);
                 this.$wire.set('{{ $title }}', cleanTitle, false);
                 this.$wire.set('{{ $tags }}', this.selectedTags.join(', '), false);
-                this.$wire.call('{{ $submitAction }}');
+                this.$wire.call('{{ $submitAction }}', cleanTitle, htmlContent, this.selectedTags.join(', '));
+            }
+        },
+
+        initQuill() {
+            if (typeof Quill === 'undefined' || !this.$refs.quillEditor) return;
+            if (this.quillInstance) return;
+
+            try {
+                this.quillInstance = new Quill(this.$refs.quillEditor, {
+                    theme: 'snow',
+                    placeholder: 'Describe your question in detail...',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            ['blockquote', 'code-block'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link', 'clean']
+                        ]
+                    }
+                });
+
+                this.quillInstance.on('text-change', () => {
+                    if (!this.quillInstance) return;
+                    const text = this.quillInstance.getText().trim();
+                    const html = text.length > 0 ? this.quillInstance.root.innerHTML : '';
+                    this.clientErrors.description = '';
+                    if (this.$wire) {
+                        this.$wire.set('{{ $description }}', html, false);
+                    }
+                });
+            } catch (e) {
+                console.warn('Quill init warning:', e);
             }
         },
 
@@ -325,6 +362,21 @@
             if (payload.description !== undefined && this.$wire) {
                 this.$wire.set('{{ $description }}', payload.description, false);
             }
+
+            setTimeout(() => {
+                if (!this.quillInstance) {
+                    this.initQuill();
+                }
+                if (this.quillInstance) {
+                    try {
+                        if (payload.description) {
+                            this.quillInstance.root.innerHTML = payload.description;
+                        } else {
+                            this.quillInstance.root.innerHTML = '';
+                        }
+                    } catch (e) {}
+                }
+            }, 60);
 
             this.existingImage = payload.thumbnail || null;
             this.hasNewFile = false;
@@ -351,6 +403,15 @@
             this.editingId = (this.$wire && this.$wire.get('{{ $editingQuestionId }}')) || '';
             this.existingImage = (this.$wire && this.$wire.get('{{ $existingThumbnail }}')) || null;
             this.clientErrors = { title: '', description: '', tags: '', thumbnail: '' };
+
+            const wireDesc = (this.$wire && this.$wire.get('{{ $description }}')) || '';
+            if (this.quillInstance && wireDesc) {
+                try {
+                    if (this.quillInstance.root.innerHTML !== wireDesc) {
+                        this.quillInstance.root.innerHTML = wireDesc;
+                    }
+                } catch (e) {}
+            }
         },
 
         init() {
@@ -359,6 +420,11 @@
             this.$watch('show', (val) => {
                 if (val) {
                     this.syncFromWire();
+                    setTimeout(() => {
+                        if (!this.quillInstance) {
+                            this.initQuill();
+                        }
+                    }, 50);
                 } else {
                     this.removeNewFile();
                 }
@@ -443,8 +509,7 @@
                     <input 
                         type="text" 
                         x-model="formTitle"
-                        @input="clientErrors.title = ''; if ($wire) $wire.set('{{ $title }}', formTitle, false)"
-                        @blur="checkTitleUniqueness()"
+                        @input="clientErrors.title = ''"
                         placeholder="Add Question here" 
                         class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm placeholder-zinc-400 focus:outline-hidden focus:border-[#198BEA] focus:ring-2 focus:ring-[#198BEA]/15 transition-all"
                     />
@@ -454,7 +519,7 @@
                     </div>
                 </div>
 
-                <!-- 2. Details Section -->
+                <!-- 2. Details Section (Quill Rich Text Editor) -->
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
@@ -465,13 +530,12 @@
                         Introduce the problem and expand on what you put in the title. Minimum 20 characters.
                     </p>
 
-                    <textarea 
-                        wire:model="{{ $description }}"
-                        @input="clientErrors.description = ''"
-                        rows="6"
-                        placeholder="Describe your question in detail..." 
-                        class="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm placeholder-zinc-400 text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-[#198BEA] focus:ring-2 focus:ring-[#198BEA]/15 transition-all resize-y min-h-[140px]"
-                    ></textarea>
+                    <div 
+                        wire:ignore
+                        class="quill-editor-wrapper"
+                    >
+                        <div x-ref="quillEditor" class="min-h-[160px]"></div>
+                    </div>
                     <p x-show="clientErrors.description" x-text="clientErrors.description" x-cloak style="display: none;" class="text-rose-500 text-xs mt-1 font-medium"></p>
                     <div x-show="!clientErrors.description">
                         @error($description) <p class="text-rose-500 text-xs mt-1 font-medium">{{ $message }}</p> @enderror
@@ -565,10 +629,10 @@
                         <template x-for="(skill, index) in filteredSkills" :key="index">
                             <button 
                                 type="button" 
-                                @click.stop="addTag(typeof skill === 'object' && skill !== null ? (skill.name || skill.label || skill) : skill)"
+                                @click.stop="addTag(skill)"
                                 class="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-[#eaf5ff] hover:text-[#198BEA] dark:hover:bg-sky-950/50 dark:hover:text-sky-300 flex items-center justify-between transition-colors cursor-pointer"
                             >
-                                <span x-text="typeof skill === 'object' && skill !== null ? (skill.name || skill.label || skill) : skill"></span>
+                                <span x-text="skill"></span>
                                 <span class="text-[10px] text-zinc-400 font-semibold">+ Add</span>
                             </button>
                         </template>

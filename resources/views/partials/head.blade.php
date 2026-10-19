@@ -12,4 +12,8 @@
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
 
+<!-- Quill Editor v1.3.6 -->
+<link href="https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.min.js"></script>
+
 

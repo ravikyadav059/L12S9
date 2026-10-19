@@ -12,7 +12,7 @@ use Livewire\WithFileUploads;
 new #[Layout('components.layouts.admin')] #[Title('Edit Question - Admin')] class extends Component {
     use WithFileUploads;
 
-    public Question $question;
+    public mixed $question = null;
 
     public string $title = '';
     public string $slug = '';
@@ -263,17 +263,63 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Question - Admin')] clas
                 </div>
             </div>
 
-            <!-- 3. Question Description / Details -->
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
-                    Question Details / Content <span class="text-rose-500">*</span>
-                </label>
-                <textarea 
-                    wire:model="description" 
-                    rows="8" 
-                    placeholder="Enter full question description..."
-                    class="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition resize-y"
-                ></textarea>
+            <!-- 3. Question Description / Details (Quill Rich Text Editor) -->
+            <div 
+                x-data="{
+                    quillInstance: null,
+                    initQuill() {
+                        if (typeof Quill === 'undefined' || !this.$refs.quillEditor) return;
+                        if (this.quillInstance) return;
+
+                        try {
+                            this.quillInstance = new Quill(this.$refs.quillEditor, {
+                                theme: 'snow',
+                                placeholder: 'Describe the question details in depth...',
+                                modules: {
+                                    toolbar: [
+                                        [{ 'header': [1, 2, 3, false] }],
+                                        ['bold', 'italic', 'underline', 'strike'],
+                                        ['blockquote', 'code-block'],
+                                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                        ['link', 'clean']
+                                    ]
+                                }
+                            });
+
+                            const initialContent = @js($description);
+                            if (initialContent) {
+                                this.quillInstance.root.innerHTML = initialContent;
+                            }
+
+                            this.quillInstance.on('text-change', () => {
+                                if (!this.quillInstance) return;
+                                const text = this.quillInstance.getText().trim();
+                                const html = text.length > 0 ? this.quillInstance.root.innerHTML : '';
+                                if (this.$wire) {
+                                    this.$wire.set('description', html, false);
+                                }
+                            });
+                        } catch (e) {
+                            console.warn('Quill init warning in admin edit:', e);
+                        }
+                    }
+                }"
+                x-init="$nextTick(() => { initQuill(); })"
+                class="space-y-1.5"
+            >
+                <div class="flex items-center justify-between">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                        Question Details / Content <span class="text-rose-500">*</span>
+                    </label>
+                    <span class="text-[11px] text-zinc-400">Rich text with formatting, code snippets, and links</span>
+                </div>
+
+                <div 
+                    wire:ignore
+                    class="quill-editor-wrapper bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 transition"
+                >
+                    <div x-ref="quillEditor" class="min-h-[220px]"></div>
+                </div>
                 @error('description') <p class="text-rose-500 text-xs mt-1 font-medium">{{ $message }}</p> @enderror
             </div>
 
@@ -290,18 +336,20 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Question - Admin')] clas
                     lastQuery: '',
 
                     get filteredSkills() {
-                        const pool = this.remoteSkills.length ? this.remoteSkills : this.initialSkills;
+                        const pool = (this.remoteSkills && this.remoteSkills.length) ? this.remoteSkills : this.initialSkills;
+                        const cleanPool = (pool || []).map(s => {
+                            if (!s) return '';
+                            if (typeof s === 'object') {
+                                return (s.skills_title || s.name || s.label || s.title || '').trim();
+                            }
+                            return String(s).trim();
+                        }).filter(Boolean);
+
                         if (!this.search || !this.search.trim()) {
-                            return pool.filter(s => {
-                                const name = typeof s === 'object' && s !== null ? (s.name || s.label || s.skills_title || '') : String(s);
-                                return name && !this.selectedTags.includes(name);
-                            }).slice(0, 10);
+                            return cleanPool.filter(name => !this.selectedTags.includes(name)).slice(0, 10);
                         }
                         const q = this.search.toLowerCase().trim();
-                        return pool.filter(s => {
-                            const name = typeof s === 'object' && s !== null ? (s.name || s.label || s.skills_title || '') : String(s);
-                            return name && name.toLowerCase().includes(q) && !this.selectedTags.includes(name);
-                        }).slice(0, 10);
+                        return cleanPool.filter(name => name.toLowerCase().includes(q) && !this.selectedTags.includes(name)).slice(0, 10);
                     },
 
                     fetchRemoteSkills() {
@@ -451,10 +499,10 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Question - Admin')] clas
                     <template x-for="(skill, index) in filteredSkills" :key="index">
                         <button 
                             type="button" 
-                            @click.stop="addTag(typeof skill === 'object' && skill !== null ? (skill.name || skill.label || skill.skills_title || skill) : skill)"
+                            @click.stop="addTag(skill)"
                             class="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-brand/10 hover:text-brand dark:hover:bg-brand/20 flex items-center justify-between transition-colors cursor-pointer"
                         >
-                            <span x-text="typeof skill === 'object' && skill !== null ? (skill.name || skill.label || skill.skills_title || skill) : skill"></span>
+                            <span x-text="skill"></span>
                             <span class="text-[10px] text-zinc-400 font-semibold">+ Add</span>
                         </button>
                     </template>

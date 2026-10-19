@@ -137,28 +137,36 @@
                             </div>
                         </div>
                     </div>
-                    <button 
-                        wire:click="toggleFollowUser('{{ (string)$user->id }}', '{{ $uName }}')"
-                        type="button"
-                        class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer {{ $isFollow ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-600' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/50' }}"
-                    >
-                        @if($isFollow)
-                            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                <circle cx="9" cy="7" r="4"/>
-                                <polyline points="16 11 18 13 22 9"/>
-                            </svg>
-                            <span>Following</span>
-                        @else
-                            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                <circle cx="9" cy="7" r="4"/>
-                                <line x1="19" x2="19" y1="8" y2="14"/>
-                                <line x1="22" x2="16" y1="11" y2="11"/>
-                            </svg>
-                            <span>Follow</span>
+                    @auth
+                        @php
+                            $currentUserId = (string) (auth()->user()?->_id ?? auth()->id() ?? '');
+                            $isOwnUser = $currentUserId !== '' && $currentUserId === (string)$user->id;
+                        @endphp
+                        @if(!$isOwnUser)
+                            <button 
+                                wire:click="toggleFollowUser('{{ (string)$user->id }}', '{{ $uName }}')"
+                                type="button"
+                                class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer {{ $isFollow ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-600' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/50' }}"
+                            >
+                                @if($isFollow)
+                                    <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <polyline points="16 11 18 13 22 9"/>
+                                    </svg>
+                                    <span>Following</span>
+                                @else
+                                    <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <line x1="19" x2="19" y1="8" y2="14"/>
+                                        <line x1="22" x2="16" y1="11" y2="11"/>
+                                    </svg>
+                                    <span>Follow</span>
+                                @endif
+                            </button>
                         @endif
-                    </button>
+                    @endauth
                 </div>
             @endforeach
         </div>

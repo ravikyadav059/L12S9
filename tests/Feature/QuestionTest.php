@@ -604,3 +604,60 @@ test('answer author can start editing and save updated content in question show 
     $question->delete();
     $user->delete();
 });
+
+test('follow, upvote, downvote, and save buttons are only visible to authenticated users on question list and detail pages', function () {
+    $author = User::factory()->create();
+    $visitor = User::factory()->create();
+
+    $question = Question::create([
+        'title' => 'Question For Action Visibility '.uniqid(),
+        'description' => 'Test description for action button visibility testing',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+    ]);
+
+    // 1. Guest visits Question Index: No Follow, Upvote, Downvote, or Save
+    Volt::test('question.index')
+        ->assertDontSeeHtml('wire:click="toggleFollowUser(\''.$author->_id.'\'')
+        ->assertDontSeeHtml('wire:click="toggleFollowQuestion(\''.$question->id.'\'')
+        ->assertDontSeeHtml('wire:click="toggleVote(\''.$question->id.'\', \'upvote\'')
+        ->assertDontSeeHtml('wire:click="toggleVote(\''.$question->id.'\', \'downvote\'')
+        ->assertDontSeeHtml('wire:click="toggleSave(\''.$question->id.'\'')
+        ->assertDontSee('Follow Questions')
+        ->assertDontSee('Vote on Questions')
+        ->assertDontSee('Save Questions');
+
+    // 2. Guest visits Question Show: No Follow, Upvote, Downvote, or Save
+    Volt::test('question.show', ['slug' => $question->slug])
+        ->assertDontSeeHtml('wire:click="toggleFollowUser(\''.$author->_id.'\'')
+        ->assertDontSeeHtml('wire:click="toggleFollowQuestion(\''.$question->id.'\'')
+        ->assertDontSeeHtml('wire:click="toggleVote(\'upvote\'')
+        ->assertDontSeeHtml('wire:click="toggleVote(\'downvote\'')
+        ->assertDontSeeHtml('wire:click="toggleSave(\''.$question->id.'\'')
+        ->assertDontSee('Follow Questions')
+        ->assertDontSee('Follow Authors')
+        ->assertDontSee('Vote on Questions')
+        ->assertDontSee('Save Questions');
+
+    // 3. Authenticated user visits Question Index: Follow, Upvote, Downvote, Save visible
+    actingAs($visitor);
+    Volt::test('question.index')
+        ->assertSeeHtml('wire:click="toggleFollowUser(\''.$author->_id.'\'')
+        ->assertSeeHtml('wire:click="toggleFollowQuestion(\''.$question->id.'\'')
+        ->assertSeeHtml('wire:click="toggleVote(\''.$question->id.'\', \'upvote\'')
+        ->assertSeeHtml('wire:click="toggleVote(\''.$question->id.'\', \'downvote\'')
+        ->assertSeeHtml('wire:click="toggleSave(\''.$question->id.'\'');
+
+    // 4. Authenticated user visits Question Show: Follow, Upvote, Downvote, Save visible
+    Volt::test('question.show', ['slug' => $question->slug])
+        ->assertSeeHtml('wire:click="toggleFollowUser(\''.$author->_id.'\'')
+        ->assertSeeHtml('wire:click="toggleFollowQuestion(\''.$question->id.'\'')
+        ->assertSeeHtml('wire:click="toggleVote(\'upvote\'')
+        ->assertSeeHtml('wire:click="toggleVote(\'downvote\'')
+        ->assertSeeHtml('wire:click="toggleSave(\''.$question->id.'\'');
+
+    // Cleanup
+    $question->delete();
+    $author->delete();
+    $visitor->delete();
+});

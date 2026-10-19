@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\HandlesQuestionForms;
 use App\Livewire\Concerns\HandlesQuestionInteractions;
 use App\Models\Answer;
 use App\Models\Question;
@@ -16,7 +17,7 @@ use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 
 new #[Layout('components.layouts.app')] class extends Component {
-    use HandlesQuestionInteractions, WithFileUploads;
+    use HandlesQuestionForms, HandlesQuestionInteractions, WithFileUploads;
 
     public int $perPage = 10;
 
@@ -41,37 +42,7 @@ new #[Layout('components.layouts.app')] class extends Component {
 
     public string $newSkillInput = '';
 
-    // Ask Question Form
-    #[Validate('required|min:5|max:255')]
-    public string $newTitle = '';
-
-    #[Validate('required|min:10')]
-    public string $newDescription = '';
-
-    public string $newTags = '';
-
-    #[Validate('nullable|image|max:5120')]
-    public $newThumbnail;
-
-    // Edit Question Form
-    public ?string $editingQuestionId = null;
-
-    public string $editTitle = '';
-
-    public string $editDescription = '';
-
-    public string $editTags = '';
-
-    #[Validate('nullable|image|max:5120')]
-    public $editThumbnail;
-
-    public ?string $existingThumbnail = null;
-
     // Modals state
-    public bool $showAskModal = false;
-
-    public bool $showEditModal = false;
-
     public bool $showFilterModal = false;
 
     public bool $showSkillsModal = false;
@@ -137,183 +108,6 @@ new #[Layout('components.layouts.app')] class extends Component {
         session(['questions_per_page' => $this->perPage]);
     }
 
-    public function openAskModal(): void
-    {
-        $this->resetValidation();
-        $this->newTitle = '';
-        $this->newDescription = '';
-        $this->newTags = '';
-        $this->newThumbnail = null;
-        $this->showAskModal = true;
-    }
-
-    public function checkTitleAvailable(string $title, ?string $excludeId = null): bool
-    {
-        return Question::isTitleUnique($title, $excludeId);
-    }
-
-    public function submitQuestion(): void
-    {
-        if (! Auth::check()) {
-            $this->showAskModal = false;
-            $this->dispatch('open-auth-modal', 'Ask a Question');
-
-            return;
-        }
-
-        $this->validate();
-
-        $cleanTitle = trim($this->newTitle);
-        if (! Question::isTitleUnique($cleanTitle)) {
-            $this->addError('newTitle', 'A question with this title already exists. Please choose a unique title.');
-
-            return;
-        }
-
-        $tagList = array_values(array_filter(array_map('trim', explode(',', $this->newTags))));
-        if (empty($tagList)) {
-            $tagList = ['General'];
-        }
-
-        $thumbnailPath = null;
-        if ($this->newThumbnail) {
-            $thumbnailPath = $this->newThumbnail->store('thumbnails', 'public');
-        }
-
-        $user = Auth::user();
-
-        $question = Question::create([
-            'user_id' => $user->_id ?? (string) ($user->id ?? 'anonymous'),
-            'title' => $cleanTitle,
-            'description' => $this->newDescription,
-            'tags' => $tagList,
-            'category' => $tagList,
-            'thumbnail' => $thumbnailPath,
-            'views_count' => 0,
-            'votes_count' => 0,
-            'shared_count' => 0,
-            'answer_count' => 0,
-            'likes_count' => 0,
-            'is_closed' => false,
-            'status' => 1,
-            'follow' => [],
-            'save' => [],
-            'is_reported' => false,
-        ]);
-
-        $this->showAskModal = false;
-        $this->newTitle = '';
-        $this->newDescription = '';
-        $this->newTags = '';
-        $this->newThumbnail = null;
-
-        $this->dispatch('toast', message: 'Question posted successfully! 🎉', type: 'success');
-    }
-
-    public function openEditModal(string $questionId): void
-    {
-        if (! Auth::check()) {
-            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Edit a Question');
-
-            return;
-        }
-
-        $q = Question::find($questionId);
-        if (! $q) {
-            return;
-        }
-
-        $currentUserId = (string) (Auth::id() ?? '');
-        $questionAuthorId = (string) ($q->user_id ?? ($q->user->_id ?? $q->user->id ?? ''));
-        if ($currentUserId === '' || $currentUserId !== $questionAuthorId) {
-            $this->dispatch('toast', message: 'You are not authorized to edit this question.', type: 'error');
-
-            return;
-        }
-
-        $this->editingQuestionId = $questionId;
-        $this->editTitle = $q->title ?? '';
-        $this->editDescription = $q->description ?? '';
-        $tags = $q->tags ?? $q->category ?? [];
-        $this->editTags = is_array($tags) ? implode(', ', $tags) : (string) $tags;
-        $this->existingThumbnail = $q->thumbnail ?? null;
-        $this->editThumbnail = null;
-
-        // Dispatch fetched database data to edit modal
-        $this->dispatch('populate-edit-modal', [
-            'id' => (string) $q->_id,
-            'title' => $this->editTitle,
-            'description' => $this->editDescription,
-            'tags' => $this->editTags,
-            'thumbnail' => $this->existingThumbnail,
-        ]);
-
-        $this->showEditModal = true;
-    }
-
-    public function saveEdit(): void
-    {
-        if (! Auth::check()) {
-            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Edit a Question');
-
-            return;
-        }
-
-        if (! $this->editingQuestionId) {
-            return;
-        }
-
-        $cleanTitle = trim($this->editTitle);
-        if (empty($cleanTitle)) {
-            $this->addError('editTitle', 'The question title is required.');
-
-            return;
-        }
-
-        if (! Question::isTitleUnique($cleanTitle, $this->editingQuestionId)) {
-            $this->addError('editTitle', 'A question with this title already exists. Please choose a unique title.');
-
-            return;
-        }
-
-        $q = Question::find($this->editingQuestionId);
-        if ($q) {
-            $currentUserId = (string) (Auth::id() ?? '');
-            $questionAuthorId = (string) ($q->user_id ?? ($q->user->_id ?? $q->user->id ?? ''));
-            if ($currentUserId === '' || $currentUserId !== $questionAuthorId) {
-                $this->dispatch('toast', message: 'You are not authorized to edit this question.', type: 'error');
-
-                return;
-            }
-
-            $tagList = array_values(array_filter(array_map('trim', explode(',', $this->editTags))));
-            if (empty($tagList)) {
-                $tagList = ['General'];
-            }
-
-            $thumbnailPath = $this->existingThumbnail;
-            if ($this->editThumbnail) {
-                $thumbnailPath = $this->editThumbnail->store('thumbnails', 'public');
-            }
-
-            $q->update([
-                'title' => $cleanTitle,
-                'description' => $this->editDescription,
-                'tags' => $tagList,
-                'category' => $tagList,
-                'thumbnail' => $thumbnailPath,
-            ]);
-        }
-
-        $this->showEditModal = false;
-        $this->editingQuestionId = null;
-        $this->editTitle = '';
-        $this->editDescription = '';
-        $this->editTags = '';
-        $this->editThumbnail = null;
-        $this->existingThumbnail = null;
-        $this->dispatch('toast', message: 'Question updated successfully! ✨', type: 'success');
-    }
 
     public function openSkillsModal(): void
     {
@@ -541,12 +335,14 @@ new #[Layout('components.layouts.app')] class extends Component {
             ['name' => 'Node.js', 'count' => '620'],
         ];
 
-        $availableSkills = Cache::remember('qa_available_skills', 1800, function () {
+        $availableSkills = Cache::remember('qa_available_skills_v2', 1800, function () {
             $skills = Skill::query()
                 ->whereIn('skills_status', [1, '1'])
                 ->limit(50)
-                ->pluck('skills_title')
+                ->get()
+                ->map(fn ($s) => trim((string) ($s->skills_title ?? $s->name ?? $s->title ?? '')))
                 ->filter()
+                ->unique()
                 ->values()
                 ->all();
 
@@ -813,22 +609,6 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                 <span>Edit</span>
                                             </button>
                                         @endif
-                                    @else
-                                        @if($authorId !== '')
-                                            <button 
-                                                wire:click="toggleFollowUser('{{ $authorId }}', '{{ addslashes($authorName) }}')"
-                                                type="button"
-                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40"
-                                            >
-                                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                                    <circle cx="9" cy="7" r="4"/>
-                                                    <line x1="19" x2="19" y1="8" y2="14"/>
-                                                    <line x1="22" x2="16" y1="11" y2="11"/>
-                                                </svg>
-                                                <span>Follow</span>
-                                            </button>
-                                        @endif
                                     @endauth
                                 </div>
                             </div>
@@ -986,55 +766,6 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                                             </svg>
                                             <span>{{ $isSaved ? 'Saved' : 'Save' }}</span>
-                                        </button>
-                                    @else
-                                        <!-- Guest Upvote -->
-                                        <button 
-                                            @click="$dispatch('open-auth-modal', 'Vote on Questions')"
-                                            type="button"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-                                        >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
-                                            </svg>
-                                            <span>Upvote</span>
-                                        </button>
-
-                                        <!-- Guest Downvote -->
-                                        <button 
-                                            @click="$dispatch('open-auth-modal', 'Vote on Questions')"
-                                            type="button"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-                                        >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76 1.04m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
-                                            </svg>
-                                            <span>Downvote</span>
-                                        </button>
-
-                                        <!-- Guest Follow Question -->
-                                        <button 
-                                            @click="$dispatch('open-auth-modal', 'Follow Questions')"
-                                            type="button"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-                                        >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                                            </svg>
-                                            <span>{{ is_array($question->follow) ? count($question->follow) : (int)($question->follow ?? 0) }} Follow</span>
-                                        </button>
-
-                                        <!-- Guest Save -->
-                                        <button 
-                                            @click="$dispatch('open-auth-modal', 'Save Questions')"
-                                            type="button"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-                                            title="Save question"
-                                        >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
-                                            </svg>
-                                            <span>Save</span>
                                         </button>
                                     @endauth
 

@@ -2,6 +2,7 @@
 
 use App\Models\Question;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
@@ -12,6 +13,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
 
     public string $search = '';
     public string $statusFilter = 'all';
+    public string $dateOrder = 'new';
     public int $perPage = 15;
     public string $sortField = 'created_at';
     public string $sortDirection = 'desc';
@@ -25,6 +27,14 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
 
     public function updatingStatusFilter(): void
     {
+        $this->resetPage();
+    }
+
+    public function updatedDateOrder(string $value): void
+    {
+        $this->hasCustomSort = false;
+        $this->sortField = 'created_at';
+        $this->sortDirection = $value === 'old' ? 'asc' : 'desc';
         $this->resetPage();
     }
 
@@ -43,7 +53,16 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
             $this->sortDirection = 'asc';
         }
 
+        if ($field === 'created_at') {
+            $this->dateOrder = $this->sortDirection === 'desc' ? 'new' : 'old';
+        }
+
         $this->resetPage();
+    }
+
+    public function clearCountCache(): void
+    {
+        Cache::forget('admin_questions_counts');
     }
 
     public function toggleStatus(string $id): void
@@ -53,6 +72,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
             $isActive = in_array($question->status, [1, '1', true], true);
             $question->status = $isActive ? 0 : 1;
             $question->save();
+            $this->clearCountCache();
         }
     }
 
@@ -68,6 +88,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
             $question->status = $isActive ? 0 : 1;
             $question->save();
         }
+        $this->clearCountCache();
     }
 
     public function deleteQuestion(string $id): void
@@ -75,6 +96,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
         $question = Question::find($id);
         if ($question) {
             $question->delete();
+            $this->clearCountCache();
         }
     }
 
@@ -85,15 +107,42 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
         }
 
         Question::whereIn('_id', $ids)->delete();
+        $this->clearCountCache();
     }
 
     public function with(): array
     {
-        $totalCount = Question::count();
-        $activeCount = Question::whereIn('status', [1, '1', true])->count();
-        $inactiveCount = Question::whereIn('status', [0, '0', false, null])->count();
+        // High-Scale Cached Counts (cached for 60s, invalidated on mutate)
+        $counts = Cache::remember('admin_questions_counts', 60, function () {
+            return [
+                'total' => Question::count(),
+                'active' => Question::whereIn('status', [1, '1', true])->count(),
+                'inactive' => Question::whereIn('status', [0, '0', false, null])->count(),
+            ];
+        });
 
-        $query = Question::with('user');
+        $totalCount = $counts['total'] ?? 0;
+        $activeCount = $counts['active'] ?? 0;
+        $inactiveCount = $counts['inactive'] ?? 0;
+
+        // Optimized field projection for high scale (avoids loading massive description bodies)
+        $query = Question::query()
+            ->select([
+                '_id',
+                'title',
+                'slug',
+                'thumbnail',
+                'tags',
+                'category',
+                'status',
+                'user_id',
+                'created_at',
+                'answer_count',
+                'views_count',
+            ])
+            ->with(['user' => function ($q) {
+                $q->select(['_id', 'name', 'fullname', 'email']);
+            }]);
 
         if ($this->statusFilter === '1') {
             $query->whereIn('status', [1, '1', true]);
@@ -139,8 +188,13 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
             });
         }
 
+        $currentSortField = $this->hasCustomSort ? $this->sortField : 'created_at';
+        $currentSortDirection = $this->hasCustomSort
+            ? $this->sortDirection
+            : ($this->dateOrder === 'old' ? 'asc' : 'desc');
+
         return [
-            'questions' => $query->orderBy($this->sortField, $this->sortDirection)->paginate($this->perPage),
+            'questions' => $query->orderBy($currentSortField, $currentSortDirection)->paginate($this->perPage),
             'totalCount' => $totalCount,
             'activeCount' => $activeCount,
             'inactiveCount' => $inactiveCount,
@@ -242,23 +296,45 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
             </div>
             <input 
                 type="text" 
-                wire:model.live.debounce.300ms="search" 
+                wire:model.live.debounce.3000ms="search" 
                 placeholder="Search questions by title, slug, or ID..." 
-                class="w-full h-10 pl-10 pr-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
+                class="w-full h-10 pl-10 pr-10 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
             />
+            <div wire:loading wire:target="search" class="absolute right-3.5 top-3 text-brand">
+                <svg class="animate-spin size-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
         </div>
 
-        <!-- Status Filter Selection Option & Per Page Selector -->
+        <!-- Filter Options: Status, Date Order (New/Old), Per Page -->
         <div class="flex items-center gap-2.5 overflow-x-auto pb-1 sm:pb-0">
             <!-- Status Dropdown Select -->
             <div class="relative flex items-center">
                 <select 
                     wire:model.live="statusFilter" 
                     class="h-10 pl-3 pr-8 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer appearance-none"
+                    title="Filter by status"
                 >
                     <option value="all">All Status ({{ $totalCount }})</option>
                     <option value="1">Active ({{ $activeCount }})</option>
                     <option value="0">Inactive ({{ $inactiveCount }})</option>
+                </select>
+                <div class="absolute right-2.5 pointer-events-none text-zinc-400">
+                    <flux:icon name="chevron-down" class="size-3.5" />
+                </div>
+            </div>
+
+            <!-- Date Order Dropdown Select (New / Old) -->
+            <div class="relative flex items-center">
+                <select 
+                    wire:model.live="dateOrder" 
+                    class="h-10 pl-3 pr-8 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer appearance-none"
+                    title="Sort by date"
+                >
+                    <option value="new">Newest First (New)</option>
+                    <option value="old">Oldest First (Old)</option>
                 </select>
                 <div class="absolute right-2.5 pointer-events-none text-zinc-400">
                     <flux:icon name="chevron-down" class="size-3.5" />
@@ -270,6 +346,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
                 <select 
                     wire:model.live="perPage" 
                     class="h-10 pl-3 pr-8 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer appearance-none"
+                    title="Items per page"
                 >
                     <option value="10">10 / page</option>
                     <option value="15">15 / page</option>
@@ -336,6 +413,21 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
                                 <span class="inline-flex items-center gap-0.5 ml-1">
                                     <flux:icon name="chevron-up" class="size-3.5 {{ $sortField === 'status' && $sortDirection === 'asc' ? 'text-zinc-900 dark:text-white stroke-[2.5]' : 'text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400' }}" />
                                     <flux:icon name="chevron-down" class="size-3.5 {{ $sortField === 'status' && $sortDirection === 'desc' ? 'text-zinc-900 dark:text-white stroke-[2.5]' : 'text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400' }}" />
+                                </span>
+                            </button>
+                        </th>
+
+                        <!-- Date Column (Sortable) -->
+                        <th class="px-5 py-3.5 w-32">
+                            <button 
+                                type="button" 
+                                wire:click="sortBy('created_at')" 
+                                class="group inline-flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider {{ $sortField === 'created_at' ? 'text-zinc-900 dark:text-white font-extrabold' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white' }} focus:outline-none focus:ring-0 transition cursor-pointer select-none"
+                            >
+                                <span>Date</span>
+                                <span class="inline-flex items-center gap-0.5 ml-1">
+                                    <flux:icon name="chevron-up" class="size-3.5 {{ $sortField === 'created_at' && $sortDirection === 'asc' ? 'text-zinc-900 dark:text-white stroke-[2.5]' : 'text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400' }}" />
+                                    <flux:icon name="chevron-down" class="size-3.5 {{ $sortField === 'created_at' && $sortDirection === 'desc' ? 'text-zinc-900 dark:text-white stroke-[2.5]' : 'text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400' }}" />
                                 </span>
                             </button>
                         </th>
@@ -458,11 +550,6 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
                                             <flux:icon name="eye" class="size-3 text-zinc-400" />
                                             {{ (int) ($question->views_count ?? 0) }} views
                                         </span>
-                                        @if($question->created_at)
-                                            <span class="text-zinc-400">
-                                                {{ $question->created_at->format('M d, Y') }}
-                                            </span>
-                                        @endif
                                     </div>
                                 </div>
                             </td>
@@ -473,6 +560,20 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
                                     <span class="size-1.5 rounded-full {{ $isActive ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
                                     <span>{{ $isActive ? 'Active (1)' : 'Inactive (0)' }}</span>
                                 </span>
+                            </td>
+
+                            <!-- Date Column -->
+                            <td class="px-5 py-4 whitespace-nowrap text-zinc-500 dark:text-zinc-400 text-xs">
+                                @if($question->created_at)
+                                    <span class="font-medium text-zinc-700 dark:text-zinc-300">
+                                        {{ $question->created_at->format('M d, Y') }}
+                                    </span>
+                                    <span class="block text-[10px] text-zinc-400">
+                                        {{ $question->created_at->format('h:i A') }}
+                                    </span>
+                                @else
+                                    <span>—</span>
+                                @endif
                             </td>
 
                             <!-- Action Buttons: Edit, Toggle Status, Delete -->
@@ -516,13 +617,13 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-12 text-center text-zinc-400">
+                            <td colspan="7" class="px-5 py-12 text-center text-zinc-400">
                                 <div class="flex flex-col items-center justify-center">
                                     <div class="size-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 mb-3">
                                         <flux:icon name="question-mark-circle" class="size-6" />
                                     </div>
                                     <p class="font-semibold text-zinc-700 dark:text-zinc-300">No questions found</p>
-                                    <p class="text-xs text-zinc-400 mt-0.5">Try adjusting your search query or status filter.</p>
+                                    <p class="text-xs text-zinc-400 mt-0.5">Try adjusting your search query, status filter, or date order.</p>
                                 </div>
                             </td>
                         </tr>

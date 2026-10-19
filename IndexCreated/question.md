@@ -11,14 +11,16 @@ This document records all MongoDB indexes created and utilized for the **`questi
 | Index Name | Key Definition (JSON) | Type | Purpose / Query Optimization |
 | :--- | :--- | :--- | :--- |
 | **`_id_`** *(Default)* | `{"_id": 1}` | Single Field | Primary Unique MongoDB Object ID key (used by `Question::find()` and relationship resolution) |
-| **`status_1_created_at_-1`** | `{"status": 1, "created_at": -1}` | Compound | High-speed retrieval of active questions (`status != 0`) ordered from newest to oldest on the main Q&A feed |
+| **`status_1_created_at_-1`** | `{"status": 1, "created_at": -1}` | Compound | High-speed retrieval of active questions (`status != 0`) ordered newest-first on main Q&A feed and admin panel |
+| **`status_1_created_at_1`** | `{"status": 1, "created_at": 1}` | Compound | High-speed retrieval of active questions ordered oldest-first in Admin Manage Questions panel |
+| **`created_at_-1`** | `{"created_at": -1}` | Single Field | Rapid newest-first sorting across all questions in Admin Manage Questions panel |
 | **`status_1_votes_count_-1`** | `{"status": 1, "votes_count": -1}` | Compound | Instant sorting and pagination for "Most Voted" active questions |
 | **`status_1_views_count_-1`** | `{"status": 1, "views_count": -1}` | Compound | High-performance querying of top popular active questions for the sidebar widget |
 | **`status_1_tags_1`** | `{"status": 1, "tags": 1}` | Compound Multikey | Accelerates filtering active questions by tag / skill array pills and user expertise matching |
 | **`user_id_1_status_1`** | `{"user_id": 1, "status": 1}` | Compound | Fast resolution of questions authored by specific users and following feed queries |
 | **`slug_1_unique`** | `{"slug": 1}` | Single Field (Unique, Sparse) | Direct route parameter lookup and unique slug resolution (`/questions/{slug}`) |
-| **`title_1`** | `{"title": 1}` | Single Field | Rapid title search and case-insensitive uniqueness verification |
-| **`status_1`** | `{"status": 1}` | Single Field | Rapid counting and filtering of active questions (`Question::whereNotIn('status', [0, '0', false])`) |
+| **`title_1`** | `{"title": 1}` | Single Field | Rapid title search and case-insensitive uniqueness verification in Admin panel and public portal |
+| **`status_1`** | `{"status": 1}` | Single Field | Rapid counting and filtering of active/inactive questions in Admin panel and public portal |
 
 ---
 
@@ -226,6 +228,18 @@ db.question.createIndex(
 db.question.createIndex(
     { "status": 1 },
     { name: "status_1", background: true }
+);
+
+// 9. Compound Index: Active Status & Oldest-First Sort (Admin Panel)
+db.question.createIndex(
+    { "status": 1, "created_at": 1 },
+    { name: "status_1_created_at_1", background: true }
+);
+
+// 10. Single Field Index: Created Date Sort across all statuses (Admin Panel)
+db.question.createIndex(
+    { "created_at": -1 },
+    { name: "created_at_-1", background: true }
 );
 ```
 

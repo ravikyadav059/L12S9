@@ -60,30 +60,32 @@
                         </span>
                     @endif
 
-                    @if($ansUserId !== '' && !$isAnsOwner)
-                        <button 
-                            wire:click="toggleFollowUser('{{ $ansUserId }}', '{{ addslashes($ansUserName) }}')"
-                            type="button"
-                            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer {{ $isFollowingAnsAuthor ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-600' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40' }}"
-                        >
-                            @if($isFollowingAnsAuthor)
-                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="9" cy="7" r="4"/>
-                                    <polyline points="16 11 18 13 22 9"/>
-                                </svg>
-                                <span>Following</span>
-                            @else
-                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="9" cy="7" r="4"/>
-                                    <line x1="19" x2="19" y1="8" y2="14"/>
-                                    <line x1="22" x2="16" y1="11" y2="11"/>
-                                </svg>
-                                <span>Follow</span>
-                            @endif
-                        </button>
-                    @endif
+                    @auth
+                        @if($ansUserId !== '' && !$isAnsOwner)
+                            <button 
+                                wire:click="toggleFollowUser('{{ $ansUserId }}', '{{ addslashes($ansUserName) }}')"
+                                type="button"
+                                class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer {{ $isFollowingAnsAuthor ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-600' : 'text-[#198BEA] border border-[#198BEA] hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40' }}"
+                            >
+                                @if($isFollowingAnsAuthor)
+                                    <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <polyline points="16 11 18 13 22 9"/>
+                                    </svg>
+                                    <span>Following</span>
+                                @else
+                                    <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <line x1="19" x2="19" y1="8" y2="14"/>
+                                        <line x1="22" x2="16" y1="11" y2="11"/>
+                                    </svg>
+                                    <span>Follow</span>
+                                @endif
+                            </button>
+                        @endif
+                    @endauth
                 </div>
                 <span class="text-[11px] text-zinc-400 dark:text-zinc-500">
                      Answers {{ $ans->created_at ? $ans->created_at->diffForHumans() : 'recently' }}
@@ -155,21 +157,23 @@
                 </button>
             @endif
 
-            <!-- Follow Answer -->
-            @php
-                $ansFollowCount = count($ans->follow ?? []);
-                $isAnsFollowed = in_array((string) $ans->id, $followingAnswers, true);
-            @endphp
-            <button 
-                wire:click="toggleFollowAnswer('{{ $ans->id }}')"
-                type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsFollowed ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
-            >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-                <span>{{ $ansFollowCount }} Follow</span>
-            </button>
+            @auth
+                <!-- Follow Answer -->
+                @php
+                    $ansFollowCount = count($ans->follow ?? []);
+                    $isAnsFollowed = in_array((string) $ans->id, $followingAnswers, true);
+                @endphp
+                <button 
+                    wire:click="toggleFollowAnswer('{{ $ans->id }}')"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsFollowed ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    <span>{{ $ansFollowCount }} Follow</span>
+                </button>
+            @endauth
 
             <!-- Save Answer -->
             <button 
