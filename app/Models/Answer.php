@@ -30,6 +30,8 @@ class Answer extends Model
         'files',
         'content',
         'votes_count',
+        'upvotes_count',
+        'downvotes_count',
         'is_accepted',
         'status',
         'follow',
@@ -45,11 +47,37 @@ class Answer extends Model
     {
         return [
             'votes_count' => 'integer',
+            'upvotes_count' => 'integer',
+            'downvotes_count' => 'integer',
             'is_accepted' => 'boolean',
             'status' => 'integer',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Accessor for upvotes_count.
+     */
+    public function getUpvotesCountAttribute(): int
+    {
+        if (isset($this->attributes['upvotes_count'])) {
+            return (int) $this->attributes['upvotes_count'];
+        }
+
+        return (int) $this->votes()->where('vote_type', 'upvote')->count();
+    }
+
+    /**
+     * Accessor for downvotes_count.
+     */
+    public function getDownvotesCountAttribute(): int
+    {
+        if (isset($this->attributes['downvotes_count'])) {
+            return (int) $this->attributes['downvotes_count'];
+        }
+
+        return (int) $this->votes()->where('vote_type', 'downvote')->count();
     }
 
     /**

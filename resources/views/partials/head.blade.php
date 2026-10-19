@@ -16,10 +16,18 @@
 <link href="https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.min.js"></script>
 <style>
+    /* Prevent Alpine Flash of Unstyled Content (FOUC) */
+    [x-cloak] {
+        display: none !important;
+    }
+
     /* Quill Editor Auto-scroll & Min/Max Height */
     .quill-editor-wrapper .ql-container {
         font-family: inherit;
         font-size: 0.875rem;
+        border: none !important;
+        overflow: visible !important;
+        max-height: none !important;
     }
     .quill-editor-wrapper .ql-editor {
         min-height: 160px;
@@ -43,5 +51,3 @@
         background-color: rgba(113, 113, 122, 0.5);
     }
 </style>
-
-

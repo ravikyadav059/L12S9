@@ -68,19 +68,89 @@ new #[Layout('components.layouts.app')] class extends Component {
             ->first();
 
         if ($question) {
-            $question->increment('views_count');
+            $isPending = in_array($question->status, [0, '0', false], true) || (int) $question->status === 0;
+            if ($isPending) {
+                $currentUserId = (string) (Auth::user()?->_id ?? Auth::id() ?? '');
+                $qAuthorId = (string) ($question->user_id ?? '');
+                $isOwner = Auth::check() && $currentUserId !== '' && ($currentUserId === $qAuthorId || (string) Auth::id() === $qAuthorId);
+                $isAdmin = Auth::check() && Auth::user()->isAdmin();
+
+                if (! $isOwner && ! $isAdmin) {
+                    abort(404);
+                }
+            } else {
+                $question->increment('views_count');
+            }
+
             $this->initializeQuestionInteractions((string) ($question->_id ?? $question->id));
         } else {
-            $this->initializeQuestionInteractions();
+            abort(404);
         }
 
-        // Initialize user voted and saved answers if logged in
+        // Initialize user voted, saved, and followed answers if logged in
         if (Auth::check()) {
             $user = Auth::user();
             $userId = (string) ($user->_id ?? $user->id);
-            $this->savedAnswers = is_array($user->saved_answers ?? null) ? $user->saved_answers : [];
-            $dbFollowedAnswers = Answer::where('follow', $userId)->pluck('_id')->toArray();
-            $this->followingAnswers = array_map('strval', $dbFollowedAnswers);
+
+            // Fetch saved answers from MongoDB Answer models where save contains userId
+            $dbSavedAnswers = Answer::query()
+                ->where('save', $userId)
+                ->when(is_numeric($userId), fn ($q) => $q->orWhere('save', (int) $userId))
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->filter()
+                ->values()
+                ->all();
+
+            $userSaved = is_array($user->saved_answers ?? null) ? array_map('strval', $user->saved_answers) : [];
+            $this->savedAnswers = array_values(array_unique(array_filter(array_merge($userSaved, $dbSavedAnswers))));
+
+            // Fetch followed answers from MongoDB Answer models where follow contains userId
+            $dbFollowedAnswers = Answer::query()
+                ->where('follow', $userId)
+                ->when(is_numeric($userId), fn ($q) => $q->orWhere('follow', (int) $userId))
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->filter()
+                ->values()
+                ->all();
+
+            $this->followingAnswers = array_values(array_unique(array_filter($dbFollowedAnswers)));
+
+            // Also check question answers if already loaded on question instance
+            if ($question && ! empty($question->answers)) {
+                foreach ($question->answers as $qa) {
+                    $qaId = (string) ($qa->id ?? $qa->_id);
+                    if ($qaId === '') {
+                        continue;
+                    }
+                    if (! empty($qa->save) && is_array($qa->save)) {
+                        $saveList = array_map('strval', $qa->save);
+                        if (in_array($userId, $saveList, true) || (is_numeric($userId) && in_array((int) $userId, $qa->save, true))) {
+                            $this->savedAnswers[] = $qaId;
+                        }
+                    }
+                    if (! empty($qa->follow) && is_array($qa->follow)) {
+                        $followList = array_map('strval', $qa->follow);
+                        if (in_array($userId, $followList, true) || (is_numeric($userId) && in_array((int) $userId, $qa->follow, true))) {
+                            $this->followingAnswers[] = $qaId;
+                        }
+                    }
+                }
+                $this->savedAnswers = array_values(array_unique($this->savedAnswers));
+                $this->followingAnswers = array_values(array_unique($this->followingAnswers));
+            }
+
+            $userVotes = Vote::query()
+                ->where('user_id', $userId)
+                ->whereNotNull('answer_id')
+                ->get();
+            foreach ($userVotes as $uv) {
+                $ansKey = (string) ($uv->answer_id ?? $uv->votable_id ?? '');
+                if ($ansKey !== '') {
+                    $this->votedAnswers[$ansKey] = (string) $uv->vote_type;
+                }
+            }
         }
     }
 
@@ -203,62 +273,68 @@ new #[Layout('components.layouts.app')] class extends Component {
             return;
         }
 
-        $ans = Answer::find($answerId);
-        if (! $ans) {
-            return;
-        }
+        $userId = (string) (Auth::user()?->_id ?? Auth::id());
+        $result = Vote::toggleAnswerVote($userId, $answerId, $type);
 
-        $currentVote = $this->votedAnswers[$answerId] ?? null;
-        $count = (int) ($ans->votes_count ?? 0);
-
-        if ($currentVote === $type) {
-            unset($this->votedAnswers[$answerId]);
-            $count = $type === 'upvote' ? max(0, $count - 1) : $count + 1;
-            $ans->update(['votes_count' => $count]);
-            $this->dispatch('toast', message: 'Vote removed', type: 'info');
+        if ($result['vote_type']) {
+            $this->votedAnswers[$answerId] = $result['vote_type'];
         } else {
-            if ($currentVote === 'upvote' && $type === 'downvote') {
-                $count = max(0, $count - 2);
-            } elseif ($currentVote === 'downvote' && $type === 'upvote') {
-                $count = $count + 2;
-            } elseif ($type === 'upvote') {
-                $count++;
-            } else {
-                $count = max(0, $count - 1);
-            }
-
-            $this->votedAnswers[$answerId] = $type;
-            $ans->update(['votes_count' => $count]);
-            $this->dispatch('toast', message: $type === 'upvote' ? 'Upvoted answer!' : 'Downvoted answer', type: $type === 'upvote' ? 'success' : 'info');
+            unset($this->votedAnswers[$answerId]);
         }
+
+        $this->dispatch('toast', message: $result['message'], type: $result['toast_type']);
     }
 
     public function toggleAnswerSave(string $answerId): void
     {
         if (! Auth::check()) {
-            $this->dispatch('open-auth-modal', 'Save Answers');
+            $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Save Answers');
 
             return;
         }
 
         $userId = (string) (Auth::user()->_id ?? Auth::id());
-        $ans = Answer::find($answerId);
+        $ans = Answer::where('_id', $answerId)->orWhere('id', $answerId)->first();
 
-        if (in_array($answerId, $this->savedAnswers, true)) {
-            $this->savedAnswers = array_values(array_filter($this->savedAnswers, fn ($id) => $id !== $answerId));
+        $ansSaveList = ($ans && is_array($ans->save ?? null)) ? array_map('strval', $ans->save) : [];
+        $isCurrentlySaved = in_array($answerId, $this->savedAnswers, true)
+            || in_array($userId, $ansSaveList, true)
+            || (is_numeric($userId) && in_array((int) $userId, $ans->save ?? [], true));
+
+        if ($isCurrentlySaved) {
+            $this->savedAnswers = array_values(array_filter($this->savedAnswers, fn ($id) => (string) $id !== $answerId));
             if ($ans) {
-                $saveList = is_array($ans->save ?? null) ? $ans->save : [];
-                $ans->update(['save' => array_values(array_filter($saveList, fn ($id) => (string) $id !== $userId))]);
+                $newSave = array_values(array_filter($ansSaveList, fn ($id) => (string) $id !== $userId && (string) $id !== (string) (int) $userId));
+                $ans->update(['save' => $newSave]);
+                $ans->save = $newSave;
             }
             $this->dispatch('toast', message: 'Removed from bookmarks', type: 'info');
         } else {
-            $this->savedAnswers[] = $answerId;
+            if (! in_array($answerId, $this->savedAnswers, true)) {
+                $this->savedAnswers[] = $answerId;
+            }
             if ($ans) {
-                $saveList = is_array($ans->save ?? null) ? $ans->save : [];
-                $saveList[] = $userId;
-                $ans->update(['save' => array_values(array_unique($saveList))]);
+                $newSave = array_values(array_unique(array_merge($ansSaveList, [$userId])));
+                $ans->update(['save' => $newSave]);
+                $ans->save = $newSave;
             }
             $this->dispatch('toast', message: 'Answer saved to bookmarks!', type: 'success');
+        }
+
+        // Dual persistence with user model if supported
+        $user = Auth::user();
+        if ($user) {
+            $userSaved = is_array($user->saved_answers ?? null) ? array_map('strval', $user->saved_answers) : [];
+            if ($isCurrentlySaved) {
+                $userSaved = array_values(array_filter($userSaved, fn ($id) => (string) $id !== $answerId));
+            } else {
+                $userSaved[] = $answerId;
+                $userSaved = array_values(array_unique($userSaved));
+            }
+            try {
+                $user->update(['saved_answers' => $userSaved]);
+            } catch (\Throwable) {
+            }
         }
     }
 
@@ -271,25 +347,33 @@ new #[Layout('components.layouts.app')] class extends Component {
         }
 
         $userId = (string) (Auth::user()->_id ?? Auth::id());
-        $ans = Answer::find($answerId);
+        $ans = Answer::where('_id', $answerId)->orWhere('id', $answerId)->first();
         if (! $ans) {
             return;
         }
 
-        $followList = is_array($ans->follow ?? null) ? $ans->follow : [];
-        if (in_array($userId, $followList, true) || in_array((int) $userId, $followList, true)) {
-            $followList = array_values(array_filter($followList, fn ($id) => (string) $id !== $userId && (string) $id !== (string) (int) $userId));
-            $this->followingAnswers = array_values(array_filter($this->followingAnswers, fn ($id) => $id !== $answerId));
+        $ansFollowList = is_array($ans->follow ?? null) ? array_map('strval', $ans->follow) : [];
+        $isFollowing = in_array($answerId, $this->followingAnswers, true)
+            || in_array($userId, $ansFollowList, true)
+            || (is_numeric($userId) && in_array((int) $userId, $ans->follow ?? [], true));
+
+        if ($isFollowing) {
+            $newFollow = array_values(array_filter($ansFollowList, fn ($id) => (string) $id !== $userId && (string) $id !== (string) (int) $userId));
+            $this->followingAnswers = array_values(array_filter($this->followingAnswers, fn ($id) => (string) $id !== $answerId));
             $msg = 'Unfollowed answer';
             $toastType = 'info';
         } else {
-            $followList[] = $userId;
-            $this->followingAnswers[] = $answerId;
+            $newFollow = array_values(array_unique(array_merge($ansFollowList, [$userId])));
+            if (! in_array($answerId, $this->followingAnswers, true)) {
+                $this->followingAnswers[] = $answerId;
+            }
             $msg = 'Following answer updates! 🔔';
             $toastType = 'success';
         }
 
-        $ans->update(['follow' => array_values(array_unique($followList))]);
+        $ans->update(['follow' => $newFollow]);
+        $ans->follow = $newFollow;
+
         $this->dispatch('toast', message: $msg, type: $toastType);
     }
 
@@ -498,12 +582,27 @@ new #[Layout('components.layouts.app')] class extends Component {
                 $q->where('slug', $this->slug)
                     ->orWhere('_id', $this->slug);
             })
-            ->whereNotIn('status', [0, '0', false])
             ->firstOrFail();
+
+        $isPending = in_array($question->status, [0, '0', false], true) || (int) $question->status === 0;
+        if ($isPending) {
+            $currentUserId = (string) (Auth::user()?->_id ?? Auth::id() ?? '');
+            $qAuthorId = (string) ($question->user_id ?? '');
+            $isOwner = Auth::check() && $currentUserId !== '' && ($currentUserId === $qAuthorId || (string) Auth::id() === $qAuthorId);
+            $isAdmin = Auth::check() && Auth::user()->isAdmin();
+
+            if (! $isOwner && ! $isAdmin) {
+                abort(404);
+            }
+        }
 
         $answersQuery = $question->answers ?? collect([]);
 
         // Apply Answer Sorting
+        if (! Auth::check() && in_array($this->answerSort, ['saved', 'followed'], true)) {
+            $this->answerSort = 'default';
+        }
+
         if ($this->answerSort === 'most_vote') {
             $answers = $answersQuery->sortByDesc('votes_count');
         } elseif ($this->answerSort === 'latest') {
@@ -511,9 +610,43 @@ new #[Layout('components.layouts.app')] class extends Component {
         } elseif ($this->answerSort === 'accepted') {
             $answers = $answersQuery->sortByDesc('is_accepted');
         } elseif ($this->answerSort === 'saved') {
-            $answers = $answersQuery->filter(fn ($a) => in_array((string) ($a->_id ?? $a->id), $this->savedAnswers, true));
+            $currentUserId = (string) (Auth::user()?->_id ?? Auth::id() ?? '');
+            $answers = $answersQuery->filter(function ($a) use ($currentUserId) {
+                $aId = (string) ($a->_id ?? $a->id);
+                if (in_array($aId, $this->savedAnswers, true)) {
+                    return true;
+                }
+                if ($currentUserId !== '') {
+                    $saveList = is_array($a->save ?? null) ? array_map('strval', $a->save) : [];
+                    if (in_array($currentUserId, $saveList, true) || (is_numeric($currentUserId) && in_array((int) $currentUserId, $a->save ?? [], true))) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
         } elseif ($this->answerSort === 'followed') {
-            $answers = $answersQuery->filter(fn ($a) => in_array((string) ($a->user_id ?? ''), $this->followingUsers, true));
+            $currentUserId = (string) (Auth::user()?->_id ?? Auth::id() ?? '');
+            $answers = $answersQuery->filter(function ($a) use ($currentUserId) {
+                $aId = (string) ($a->_id ?? $a->id);
+                // 1. Followed the answer directly
+                if (in_array($aId, $this->followingAnswers, true)) {
+                    return true;
+                }
+                if ($currentUserId !== '') {
+                    $followList = is_array($a->follow ?? null) ? array_map('strval', $a->follow) : [];
+                    if (in_array($currentUserId, $followList, true) || (is_numeric($currentUserId) && in_array((int) $currentUserId, $a->follow ?? [], true))) {
+                        return true;
+                    }
+                }
+                // 2. Or followed the answer's author
+                $ansAuthorId = (string) ($a->user_id ?? '');
+                if ($ansAuthorId !== '' && in_array($ansAuthorId, $this->followingUsers, true)) {
+                    return true;
+                }
+
+                return false;
+            })->values();
         } else {
             // Default: Accepted first, then latest
             $answers = $answersQuery->sortByDesc(fn ($a) => [(bool) ($a->is_accepted ?? false), $a->created_at ?? 0]);
@@ -571,26 +704,26 @@ new #[Layout('components.layouts.app')] class extends Component {
             </a>
         </div>
 
-        <!-- Pending Approval Banner (from QDeatils.html) -->
-        @if($question->status === 0 || $question->status === '0')
-            <div x-data="{ open: true }" x-show="open" class="flex items-center gap-4 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 border-l-4 border-l-amber-500 rounded-2xl p-4 sm:p-5 mb-6 shadow-xs transition-all">
-                <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <span class="block text-sm sm:text-base font-bold text-amber-900 dark:text-amber-200">Your Question is not Get Approved yet Sorry!!!</span>
-                    <span class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">Only You can view this question</span>
-                </div>
-                <button @click="open = false" type="button" class="p-2 text-amber-700 dark:text-amber-300 hover:bg-amber-100/70 dark:hover:bg-amber-900/50 rounded-lg transition shrink-0" title="Dismiss">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-        @endif
-
         <div class="flex flex-col lg:flex-row gap-8 items-start">
             
             <!-- MAIN CONTENT AREA (Left Flex-1) -->
             <div class="flex-1 min-w-0 space-y-6">
+
+                <!-- Pending Approval Banner -->
+                @php
+                    $isPending = in_array($question->status, [0, '0', false], true) || (int) $question->status === 0;
+                @endphp
+                @if($isPending)
+                    <div class="flex items-center gap-4 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 border-l-4 border-l-amber-500 rounded-2xl p-4 sm:p-5 shadow-xs transition-all">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span class="block text-sm sm:text-base font-bold text-amber-900 dark:text-amber-200">Your Question is not Get Approved yet Sorry!!!</span>
+                            <span class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">Only You can view this question</span>
+                        </div>
+                    </div>
+                @endif
                 
                 <!-- Main Question Card -->
                 <article class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-xs">
@@ -645,7 +778,11 @@ new #[Layout('components.layouts.app')] class extends Component {
                                     @endauth
                                 </div>
                                 <p class="text-xs text-text-secondary dark:text-zinc-400 mt-0.5">
-                                    Asked {{ $question->created_at ? $question->created_at->diffForHumans() : 'recently' }}
+                                    @if($question->created_at)
+                                        <time datetime="{{ $question->created_at->toISOString() }}" data-qa-timeago="{{ $question->created_at->toISOString() }}" data-qa-prefix="Asked ">Asked {{ $question->created_at->diffForHumans() }}</time>
+                                    @else
+                                        Asked recently
+                                    @endif
                                 </p>
                             </div>
                         </div>
@@ -1004,7 +1141,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                         wire:ignore
                         class="quill-editor-wrapper bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:border-[#198BEA] focus-within:ring-2 focus-within:ring-[#198BEA]/15 transition"
                     >
-                        <div x-ref="quillEditor" class="min-h-[160px] max-h-[300px] overflow-y-auto [&_.ql-editor]:min-h-[160px] [&_.ql-editor]:max-h-[300px] [&_.ql-editor]:overflow-y-auto"></div>
+                        <div x-ref="quillEditor" class="[&_.ql-editor]:min-h-[160px] [&_.ql-editor]:max-h-[300px] [&_.ql-editor]:overflow-y-auto"></div>
                     </div>
 
                     <p x-show="clientError" x-text="clientError" x-cloak style="display: none;" class="text-xs text-rose-500 font-medium"></p>
@@ -1058,43 +1195,151 @@ new #[Layout('components.layouts.app')] class extends Component {
                     <!-- Answers Header with Sort Tabs (Matching QDeatils.html) -->
                     <div class="flex items-center justify-between flex-wrap gap-3 pb-1">
                         <div class="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">
-                            <span class="text-[#198BEA] font-extrabold">{{ count($answers) }}</span> Total Answers
+                            <span class="text-[#198BEA] font-extrabold">{{ count($answers) }}</span>
+                            @if($answerSort === 'saved')
+                                Saved {{ count($answers) === 1 ? 'Answer' : 'Answers' }}
+                            @elseif($answerSort === 'followed')
+                                Followed {{ count($answers) === 1 ? 'Answer' : 'Answers' }}
+                            @else
+                                Total Answers
+                            @endif
                         </div>
 
-                        <div class="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                            <span class="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mr-1">Sort by</span>
-                            @foreach(['default' => 'Default', 'most_vote' => 'Most Vote', 'latest' => 'Latest', 'accepted' => 'Accepted', 'saved' => 'Saved', 'followed' => 'Followed'] as $sKey => $sLabel)
-                                <button 
-                                    wire:click="$set('answerSort', '{{ $sKey }}')"
-                                    type="button"
-                                    class="px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer {{ $answerSort === $sKey ? 'bg-[#eaf5ff] text-[#198BEA] dark:bg-sky-950/60 dark:text-sky-300' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}"
+                        <div class="flex items-center gap-2">
+                            <label for="answerSortSelect" class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 shrink-0">
+                                Sort by:
+                            </label>
+                            <div class="relative flex items-center">
+                                <select 
+                                    id="answerSortSelect"
+                                    wire:model.live="answerSort"
+                                    class="appearance-none bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold rounded-xl pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#198BEA]/20 focus:border-[#198BEA] transition shadow-2xs cursor-pointer"
                                 >
-                                    {{ $sLabel }}
-                                </button>
-                            @endforeach
+                                    <option value="default">Default</option>
+                                    <option value="most_vote">Most Vote</option>
+                                    <option value="latest">Latest</option>
+                                    <option value="accepted">Accepted</option>
+                                    @auth
+                                        <option value="saved">Saved</option>
+                                        <option value="followed">Followed</option>
+                                    @endauth
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 dark:text-zinc-500">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    @forelse($answers as $ans)
-                        <x-question.answer-card 
-                            :ans="$ans" 
-                            :question="$question"
-                            :voted-answers="$votedAnswers"
-                            :saved-answers="$savedAnswers"
-                            :following-users="$followingUsers"
-                            :following-answers="$followingAnswers"
-                            :editing-answer-id="$editingAnswerId"
-                            :editing-answer-content="$editingAnswerContent"
-                        />
-                    @empty
-                        <div class="bg-white dark:bg-zinc-900 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl p-10 text-center text-zinc-400 text-sm">
-                            <svg class="w-12 h-12 mx-auto mb-3 text-zinc-300 dark:text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                            </svg>
-                            <p class="font-medium text-zinc-600 dark:text-zinc-300">No answers yet.</p>
-                            <p class="text-xs text-zinc-400 mt-1">Be the first to share knowledge and answer this question!</p>
-                        </div>
-                    @endforelse
+                    <div class="relative space-y-4">
+                        <!-- Global Loader Overlay while sorting answers -->
+                        <x-loader variant="overlay" size="lg" color="brand" text="Loading answers..." wireTarget="answerSort" />
+
+                        @forelse($answers as $ans)
+                            <x-question.answer-card 
+                                :ans="$ans" 
+                                :question="$question"
+                                :voted-answers="$votedAnswers"
+                                :saved-answers="$savedAnswers"
+                                :following-users="$followingUsers"
+                                :following-answers="$followingAnswers"
+                                :editing-answer-id="$editingAnswerId"
+                                :editing-answer-content="$editingAnswerContent"
+                            />
+                        @empty
+                            @if($answerSort === 'saved')
+                                <div class="relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 sm:p-12 text-center shadow-xs">
+                                    <div class="absolute inset-0 pointer-events-none opacity-[0.035] dark:opacity-[0.06]" style="background-image: radial-gradient(circle at 20% 50%, #198BEA 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, #7c3aed 1.5px, transparent 1.5px), radial-gradient(circle at 60% 80%, #059669 1.5px, transparent 1.5px); background-size: 60px 60px, 80px 80px, 50px 50px;"></div>
+                                    <div class="relative inline-flex items-center justify-center mb-5">
+                                        <div class="absolute -inset-2 rounded-full border-2 border-dashed border-[#198BEA]/20 dark:border-[#198BEA]/30 animate-[spin_25s_linear_infinite]"></div>
+                                        <div class="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-[#eaf5ff] to-sky-100/70 dark:from-sky-950/60 dark:to-zinc-800 flex items-center justify-center text-[#198BEA] shadow-inner">
+                                            <svg class="w-8 h-8 text-[#198BEA]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <h2 class="relative text-xl font-bold text-zinc-900 dark:text-white mb-2">No saved answers yet</h2>
+                                    <p class="relative text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed mb-5">
+                                        You haven't saved any answers on this question yet.
+                                    </p>
+                                    <div class="relative">
+                                        <button 
+                                            wire:click="$set('answerSort', 'default')" 
+                                            type="button"
+                                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#eaf5ff] text-[#198BEA] dark:bg-sky-950/50 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition cursor-pointer"
+                                        >
+                                            View all answers
+                                        </button>
+                                    </div>
+                                </div>
+                            @elseif($answerSort === 'followed')
+                                <div class="relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 sm:p-12 text-center shadow-xs">
+                                    <div class="absolute inset-0 pointer-events-none opacity-[0.035] dark:opacity-[0.06]" style="background-image: radial-gradient(circle at 20% 50%, #198BEA 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, #7c3aed 1.5px, transparent 1.5px), radial-gradient(circle at 60% 80%, #059669 1.5px, transparent 1.5px); background-size: 60px 60px, 80px 80px, 50px 50px;"></div>
+                                    <div class="relative inline-flex items-center justify-center mb-5">
+                                        <div class="absolute -inset-2 rounded-full border-2 border-dashed border-[#198BEA]/20 dark:border-[#198BEA]/30 animate-[spin_25s_linear_infinite]"></div>
+                                        <div class="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-[#eaf5ff] to-sky-100/70 dark:from-sky-950/60 dark:to-zinc-800 flex items-center justify-center text-[#198BEA] shadow-inner">
+                                            <svg class="w-8 h-8 text-[#198BEA]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <h2 class="relative text-xl font-bold text-zinc-900 dark:text-white mb-2">No followed answers yet.</h2>
+                                    <p class="relative text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed mb-5">
+                                        You are not following any authors who answered this question yet.
+                                    </p>
+                                    <div class="relative">
+                                        <button 
+                                            wire:click="$set('answerSort', 'default')" 
+                                            type="button"
+                                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#eaf5ff] text-[#198BEA] dark:bg-sky-950/50 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition cursor-pointer"
+                                        >
+                                            View all answers
+                                        </button>
+                                    </div>
+                                </div>
+                            @else
+                                <!-- EMPTY STATE — NO ANSWERS YET (Matching QdeatilswithNoAnswer.html) -->
+                                <div class="relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 sm:p-14 text-center shadow-xs">
+                                    <!-- Subtle radial dot pattern -->
+                                    <div class="absolute inset-0 pointer-events-none opacity-[0.035] dark:opacity-[0.06]" style="background-image: radial-gradient(circle at 20% 50%, #198BEA 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, #7c3aed 1.5px, transparent 1.5px), radial-gradient(circle at 60% 80%, #059669 1.5px, transparent 1.5px); background-size: 60px 60px, 80px 80px, 50px 50px;"></div>
+
+                                    <!-- Floating Icon with animated dashed ring -->
+                                    <div class="relative inline-flex items-center justify-center mb-6">
+                                        <div class="absolute -inset-2 rounded-full border-2 border-dashed border-[#198BEA]/20 dark:border-[#198BEA]/30 animate-[spin_25s_linear_infinite]"></div>
+                                        <div class="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-gradient-to-br from-[#eaf5ff] to-sky-100/70 dark:from-sky-950/60 dark:to-zinc-800 flex items-center justify-center text-[#198BEA] shadow-inner">
+                                            <!-- Chat Bubble with Plus Icon matching design -->
+                                            <svg class="w-9 h-9 sm:w-10 sm:h-10 text-[#198BEA]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v6m-3-3h6"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <!-- Title & Description -->
+                                    <h2 class="relative text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white mb-2.5">No answers yet</h2>
+                                    <p class="relative text-sm text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto leading-relaxed mb-6">
+                                        This question is waiting for its first answer. Your expertise could help many others in the community. Be the first to share your knowledge!
+                                    </p>
+
+                                    <!-- CTA Button -->
+                                    <div class="relative">
+                                        <button 
+                                            type="button"
+                                            onclick="const ed = document.querySelector('.quill-editor-wrapper'); if(ed){ ed.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(() => document.querySelector('.ql-editor')?.focus(), 400); }"
+                                            class="inline-flex items-center gap-2 px-8 py-3 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0a5f9e] text-white text-sm font-semibold rounded-2xl shadow-md shadow-sky-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-98"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"/>
+                                            </svg>
+                                            <span>Write the First Answer</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        @endforelse
+                    </div>
                 </div>
 
             </div>

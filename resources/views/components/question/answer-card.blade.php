@@ -15,9 +15,20 @@
     $ansUserName = $ansUser?->name ?? 'User';
     $ansUserAvatar = $ansUser?->avatar ?? 'https://picsum.photos/seed/user/80/80.jpg';
     $isAnsOwner = Auth::check() && ((string) Auth::id() === $ansUserId);
-    $isAnsVotedUp = ($votedAnswers[(string) $ans->id] ?? '') === 'upvote';
-    $isAnsVotedDown = ($votedAnswers[(string) $ans->id] ?? '') === 'downvote';
-    $isAnsSaved = in_array((string) $ans->id, $savedAnswers, true);
+    $ansIdStr = (string) ($ans->id ?? $ans->_id);
+    $currentAuthId = (string) (Auth::user()?->_id ?? Auth::id() ?? '');
+
+    $isAnsVotedUp = ($votedAnswers[$ansIdStr] ?? '') === 'upvote';
+    $isAnsVotedDown = ($votedAnswers[$ansIdStr] ?? '') === 'downvote';
+
+    $ansSaveList = is_array($ans->save ?? null) ? array_map('strval', $ans->save) : [];
+    $isAnsSaved = in_array($ansIdStr, $savedAnswers, true)
+        || ($currentAuthId !== '' && (in_array($currentAuthId, $ansSaveList, true) || (is_numeric($currentAuthId) && in_array((int) $currentAuthId, $ans->save ?? [], true))));
+
+    $ansFollowList = is_array($ans->follow ?? null) ? array_map('strval', $ans->follow) : [];
+    $isAnsFollowed = in_array($ansIdStr, $followingAnswers, true)
+        || ($currentAuthId !== '' && (in_array($currentAuthId, $ansFollowList, true) || (is_numeric($currentAuthId) && in_array((int) $currentAuthId, $ans->follow ?? [], true))));
+
     $isFollowingAnsAuthor = $ansUserId !== '' && in_array($ansUserId, $followingUsers, true);
     $isQOwner = Auth::check() && ((string) Auth::id() === (string) ($question->user_id ?? ''));
     $ansReplies = $ans->replies ?? collect([]);
@@ -74,7 +85,11 @@
                     @endauth
                 </div>
                 <span class="text-[11px] text-zinc-400 dark:text-zinc-500">
-                     Answers {{ $ans->created_at ? $ans->created_at->diffForHumans() : 'recently' }}
+                    @if($ans->created_at)
+                        <time datetime="{{ $ans->created_at->toISOString() }}" data-qa-timeago="{{ $ans->created_at->toISOString() }}" data-qa-prefix="Answered ">Answered {{ $ans->created_at->diffForHumans() }}</time>
+                    @else
+                        Answered recently
+                    @endif
                 </span>
             </div>
         </div>
@@ -183,7 +198,7 @@
                 wire:ignore
                 class="quill-editor-wrapper bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden focus-within:border-[#198BEA] focus-within:ring-2 focus-within:ring-[#198BEA]/15 transition"
             >
-                <div x-ref="editQuillEditor" class="min-h-[120px] max-h-[260px] overflow-y-auto [&_.ql-editor]:min-h-[120px] [&_.ql-editor]:max-h-[260px] [&_.ql-editor]:overflow-y-auto"></div>
+                <div x-ref="editQuillEditor" class="[&_.ql-editor]:min-h-[120px] [&_.ql-editor]:max-h-[260px] [&_.ql-editor]:overflow-y-auto"></div>
             </div>
             <div class="flex items-center justify-end gap-2">
                 <button wire:click="cancelEditAnswer" type="button" class="px-3.5 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors">Cancel</button>
@@ -209,9 +224,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
                 </svg>
                 <span>Upvote</span>
-                @if(($ans->votes_count ?? 0) > 0)
-                    <span class="font-bold ml-0.5">{{ $ans->votes_count }}</span>
-                @endif
+                <span class="font-bold ml-0.5">{{ number_format($ans->upvotes_count ?? $ans->votes_count ?? 0) }}</span>
             </button>
 
             <!-- Downvote Answer -->
@@ -224,29 +237,35 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76 1.04m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
                 </svg>
                 <span>Downvote</span>
+                <span class="font-bold ml-0.5">{{ number_format($ans->downvotes_count ?? 0) }}</span>
             </button>
 
-            @auth
-                <!-- Follow Answer -->
-                @php
-                    $ansFollowCount = count($ans->follow ?? []);
-                    $isAnsFollowed = in_array((string) $ans->id, $followingAnswers, true);
-                @endphp
-                <button 
-                    wire:click="toggleFollowAnswer('{{ $ans->id }}')"
-                    type="button"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsFollowed ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
-                >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
-                    <span>{{ $ansFollowCount }} Follow</span>
-                </button>
-            @endauth
+            <!-- Follow Answer -->
+            @php
+                $ansFollowCount = count($ans->follow ?? []);
+            @endphp
+            <button 
+                @guest
+                    @click.prevent="$dispatch('open-auth-modal', 'Follow Answer Updates')"
+                @else
+                    wire:click="toggleFollowAnswer('{{ $ansIdStr }}')"
+                @endguest
+                type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsFollowed ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+            >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                <span>{{ $ansFollowCount }} {{ $isAnsFollowed ? 'Following' : 'Follow' }}</span>
+            </button>
 
             <!-- Save Answer -->
             <button 
-                wire:click="toggleAnswerSave('{{ $ans->id }}')"
+                @guest
+                    @click.prevent="$dispatch('open-auth-modal', 'Save Answers')"
+                @else
+                    wire:click="toggleAnswerSave('{{ $ansIdStr }}')"
+                @endguest
                 type="button"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
             >
@@ -296,7 +315,7 @@
         </div>
 
         <!-- Collapsible Comments Area -->
-        <div x-show="showComments" x-collapse class="mt-3 space-y-3">
+        <div x-show="showComments" x-cloak x-collapse style="display: none;" class="mt-3 space-y-3">
             <!-- List of existing comments -->
             @if($replyCount > 0)
                 <div class="space-y-2.5 divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -320,7 +339,13 @@
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 flex-wrap text-xs">
                                     <span class="font-bold text-zinc-900 dark:text-white">{{ $repUserName }}</span>
-                                    <span class="text-[11px] text-zinc-400 dark:text-zinc-500">{{ $repCreatedAt }}</span>
+                                    <span class="text-[11px] text-zinc-400 dark:text-zinc-500">
+                                        @if($reply->created_at)
+                                            <time datetime="{{ $reply->created_at->toISOString() }}" data-qa-timeago="{{ $reply->created_at->toISOString() }}">{{ $repCreatedAt }}</time>
+                                        @else
+                                            {{ $repCreatedAt }}
+                                        @endif
+                                    </span>
                                 </div>
                                 <p class="text-xs text-zinc-700 dark:text-zinc-300 mt-0.5 leading-relaxed">
                                     {{ $repContent }}

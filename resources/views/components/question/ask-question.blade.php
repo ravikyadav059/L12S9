@@ -474,7 +474,7 @@
                         wire:ignore
                         class="quill-editor-wrapper"
                     >
-                        <div x-ref="quillEditor" class="min-h-[160px] max-h-[280px] overflow-y-auto [&_.ql-editor]:min-h-[160px] [&_.ql-editor]:max-h-[280px] [&_.ql-editor]:overflow-y-auto"></div>
+                        <div x-ref="quillEditor" class="[&_.ql-editor]:min-h-[160px] [&_.ql-editor]:max-h-[280px] [&_.ql-editor]:overflow-y-auto"></div>
                     </div>
                     <p x-show="clientErrors.description" x-text="clientErrors.description" x-cloak style="display: none;" class="text-rose-500 text-xs mt-1 font-medium"></p>
                     <div x-show="!clientErrors.description">

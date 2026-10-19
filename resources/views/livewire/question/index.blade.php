@@ -292,7 +292,39 @@ new #[Layout('components.layouts.app')] class extends Component {
             'unanswered' => $query->where(function ($q) {
                 $q->where('answer_count', 0)->orWhereNull('answer_count');
             })->latest(),
-            'active' => $query->orderByDesc('updated_at'),
+            'active' => (function () use ($query) {
+                $answeredQuestionIds = Answer::query()
+                    ->pluck('question_id')
+                    ->map(fn ($id) => (string) $id)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $acceptedQuestionIds = Answer::query()
+                    ->where('is_accepted', true)
+                    ->pluck('question_id')
+                    ->map(fn ($id) => (string) $id)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $query->where(function ($q) use ($answeredQuestionIds) {
+                    $q->where('answer_count', '>', 0);
+                    if (! empty($answeredQuestionIds)) {
+                        $q->orWhereIn('_id', $answeredQuestionIds)
+                          ->orWhereIn('id', $answeredQuestionIds);
+                    }
+                });
+
+                if (! empty($acceptedQuestionIds)) {
+                    $query->whereNotIn('_id', $acceptedQuestionIds)
+                          ->whereNotIn('id', $acceptedQuestionIds);
+                }
+
+                return $query->orderByDesc('updated_at');
+            })(),
             'most_voted' => $query->orderByDesc('votes_count'),
             default => $query->latest(),
         };
@@ -450,38 +482,27 @@ new #[Layout('components.layouts.app')] class extends Component {
 
                 <!-- 3. SORT ROW & ACTIVE TAG FILTER -->
                 <div class="flex items-center justify-between flex-wrap gap-3 mb-6">
-                    <div class="flex items-center gap-1.5 sm:gap-2">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mr-1">
-                            Sort by
-                        </span>
-                        <button 
-                            wire:click="setSort('newest')"
-                            type="button"
-                            class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer {{ $sortBy === 'newest' ? 'bg-[#eaf5ff] text-[#198BEA] font-semibold dark:bg-sky-950/60 dark:text-sky-300' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}"
-                        >
-                            Newest
-                        </button>
-                        <button 
-                            wire:click="setSort('unanswered')"
-                            type="button"
-                            class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer {{ $sortBy === 'unanswered' ? 'bg-[#eaf5ff] text-[#198BEA] font-semibold dark:bg-sky-950/60 dark:text-sky-300' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}"
-                        >
-                            Unanswered
-                        </button>
-                        <button 
-                            wire:click="setSort('active')"
-                            type="button"
-                            class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer {{ $sortBy === 'active' ? 'bg-[#eaf5ff] text-[#198BEA] font-semibold dark:bg-sky-950/60 dark:text-sky-300' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}"
-                        >
-                            Active
-                        </button>
-                        <button 
-                            wire:click="setSort('most_voted')"
-                            type="button"
-                            class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer {{ $sortBy === 'most_voted' ? 'bg-[#eaf5ff] text-[#198BEA] font-semibold dark:bg-sky-950/60 dark:text-sky-300' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}"
-                        >
-                            Most Voted
-                        </button>
+                    <div class="flex items-center gap-2">
+                        <label for="questionSortSelect" class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 shrink-0">
+                            Sort by:
+                        </label>
+                        <div class="relative flex items-center">
+                            <select 
+                                id="questionSortSelect"
+                                wire:model.live="sortBy"
+                                class="appearance-none bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold rounded-xl pl-3.5 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#198BEA]/20 focus:border-[#198BEA] transition shadow-2xs cursor-pointer"
+                            >
+                                <option value="newest">Newest</option>
+                                <option value="unanswered">Unanswered</option>
+                                <option value="active">Active</option>
+                                <option value="most_voted">Most Voted</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 dark:text-zinc-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
 
                     @if($selectedTag !== '')
@@ -495,7 +516,10 @@ new #[Layout('components.layouts.app')] class extends Component {
                 </div>
 
                 <!-- 4. QUESTIONS FEED LIST -->
-                <div class="space-y-4">
+                <div class="relative space-y-4">
+                    <!-- Overlay loader while sorting questions -->
+                    <x-loader variant="overlay" size="lg" color="brand" text="Loading questions..." wireTarget="sortBy" />
+
                     @forelse($questions as $question)
                         @php
                             $author = $question->user;
@@ -544,7 +568,11 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         @endif
 
                                         <span class="text-xs text-zinc-400 dark:text-zinc-500">
-                                            • {{ $question->created_at ? $question->created_at->diffForHumans() : 'Recently' }}
+                                            @if($question->created_at)
+                                                • <time datetime="{{ $question->created_at->toISOString() }}" data-qa-timeago="{{ $question->created_at->toISOString() }}">{{ $question->created_at->diffForHumans() }}</time>
+                                            @else
+                                                • Recently
+                                            @endif
                                         </span>
                                     </div>
                                 </div>
@@ -701,7 +729,13 @@ new #[Layout('components.layouts.app')] class extends Component {
                                     <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
-                                    <span>{{ $question->created_at ? $question->created_at->diffForHumans() : 'Recent' }}</span>
+                                    <span>
+                                        @if($question->created_at)
+                                            <time datetime="{{ $question->created_at->toISOString() }}" data-qa-timeago="{{ $question->created_at->toISOString() }}">{{ $question->created_at->diffForHumans() }}</time>
+                                        @else
+                                            Recent
+                                        @endif
+                                    </span>
                                 </span>
                             </div>
 

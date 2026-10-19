@@ -277,15 +277,62 @@ class Vote extends Model
             $newVoteType = $type;
         }
 
-        $currentVotes = (int) ($answer->votes_count ?? 0);
-        $answer->update(['votes_count' => max(0, $currentVotes + $delta)]);
+        $voteCounts = static::recalculateAnswerVotes($answer);
 
         return [
             'action' => $action,
             'vote_type' => $newVoteType,
             'delta' => $delta,
+            'upvotes_count' => $voteCounts['upvotes'],
+            'downvotes_count' => $voteCounts['downvotes'],
+            'votes_count' => $voteCounts['votes_count'],
             'message' => $msg,
             'toast_type' => $toastType,
+        ];
+    }
+
+    /**
+     * Recalculate and update the votes_count, upvotes_count, and downvotes_count on an answer.
+     *
+     * @return array{upvotes: int, downvotes: int, votes_count: int}
+     */
+    public static function recalculateAnswerVotes(string|Answer $answerOrId): array
+    {
+        $answer = $answerOrId instanceof Answer
+            ? $answerOrId
+            : Answer::query()->where('_id', $answerOrId)->orWhere('id', $answerOrId)->first();
+
+        if (! $answer) {
+            return ['upvotes' => 0, 'downvotes' => 0, 'votes_count' => 0];
+        }
+
+        $answerId = (string) ($answer->_id ?? $answer->id);
+
+        $upvotes = static::query()
+            ->where(function ($q) use ($answerId) {
+                $q->where('answer_id', $answerId)->orWhere('votable_id', $answerId);
+            })
+            ->where('vote_type', 'upvote')
+            ->count();
+
+        $downvotes = static::query()
+            ->where(function ($q) use ($answerId) {
+                $q->where('answer_id', $answerId)->orWhere('votable_id', $answerId);
+            })
+            ->where('vote_type', 'downvote')
+            ->count();
+
+        $actualVotesCount = max(0, $upvotes - $downvotes);
+        $answer->update([
+            'votes_count' => $actualVotesCount,
+            'upvotes_count' => $upvotes,
+            'downvotes_count' => $downvotes,
+        ]);
+
+        return [
+            'upvotes' => $upvotes,
+            'downvotes' => $downvotes,
+            'votes_count' => $actualVotesCount,
         ];
     }
 }

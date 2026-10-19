@@ -917,4 +917,313 @@ test('rapid duplicate submissions of the same answer do not create duplicate ans
     $responder->delete();
 });
 
+test('answer cards and question render real-time timeago data attributes', function () {
+    $author = User::factory()->create();
+    $responder = User::factory()->create();
 
+    $question = Question::create([
+        'title' => 'Question For Real-time TimeAgo Test '.uniqid(),
+        'description' => 'Test description for timeago attribute testing.',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+        'answer_count' => 1,
+    ]);
+
+    $answer = Answer::create([
+        'question_id' => (string) $question->id,
+        'user_id' => (string) $responder->_id,
+        'content' => '<p>This is an answer with real-time timestamp.</p>',
+        'status' => 1,
+    ]);
+
+    $component = Volt::test('question.show', ['slug' => $question->slug]);
+
+    // 1. Question timeago attribute
+    $component->assertSeeHtml('data-qa-timeago="'.$question->created_at->toISOString().'"');
+    $component->assertSeeHtml('data-qa-prefix="Asked "');
+
+    // 2. Answer timeago attribute
+    $component->assertSeeHtml('data-qa-timeago="'.$answer->created_at->toISOString().'"');
+    $component->assertSeeHtml('data-qa-prefix="Answered "');
+
+    $answer->delete();
+    $question->delete();
+    $author->delete();
+    $responder->delete();
+});
+
+test('pending approval questions with status 0 can only be viewed by author or admin', function () {
+    $author = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $pendingQuestion = Question::create([
+        'title' => 'Pending Approval Question '.uniqid(),
+        'description' => 'Pending approval question description.',
+        'user_id' => (string) $author->_id,
+        'status' => 0,
+        'tags' => ['PHP'],
+    ]);
+
+    // 1. Guest gets 404
+    $this->get(route('questions.show', $pendingQuestion->slug))->assertNotFound();
+
+    // 2. Other user gets 404
+    $this->actingAs($otherUser)
+        ->get(route('questions.show', $pendingQuestion->slug))
+        ->assertNotFound();
+
+    // 3. Question author can view and sees approval banner
+    $this->actingAs($author)
+        ->get(route('questions.show', $pendingQuestion->slug))
+        ->assertOk()
+        ->assertSee('Your Question is not Get Approved yet Sorry!!!')
+        ->assertSee('Only You can view this question');
+
+    // 4. Admin can view and sees approval banner
+    $this->actingAs($admin)
+        ->get(route('questions.show', $pendingQuestion->slug))
+        ->assertOk()
+        ->assertSee('Your Question is not Get Approved yet Sorry!!!');
+
+    $pendingQuestion->delete();
+    $author->delete();
+    $otherUser->delete();
+    $admin->delete();
+});
+
+test('answer upvote and downvote counts are displayed and updated correctly', function () {
+    $user = User::factory()->create();
+    $question = Question::create([
+        'title' => 'Vote Count Question '.uniqid(),
+        'description' => 'Testing upvote and downvote counts on answers.',
+        'user_id' => (string) $user->_id,
+        'status' => 1,
+        'tags' => ['PHP'],
+    ]);
+
+    $answer = Answer::create([
+        'question_id' => (string) $question->id,
+        'user_id' => (string) $user->_id,
+        'content' => '<p>Answer to test upvote and downvote counts.</p>',
+        'status' => 1,
+        'votes_count' => 0,
+        'upvotes_count' => 0,
+        'downvotes_count' => 0,
+    ]);
+
+    // Initial render shows Upvote and Downvote
+    $component = Volt::actingAs($user)
+        ->test('question.show', ['slug' => $question->slug]);
+
+    $component->assertSee('Upvote')
+        ->assertSee('Downvote');
+
+    // Upvote the answer
+    $component->call('toggleAnswerVote', (string) $answer->id, 'upvote');
+    $answer->refresh();
+    expect($answer->upvotes_count)->toBe(1);
+    expect($answer->downvotes_count)->toBe(0);
+
+    // Switch to downvote
+    $component->call('toggleAnswerVote', (string) $answer->id, 'downvote');
+    $answer->refresh();
+    expect($answer->upvotes_count)->toBe(0);
+    expect($answer->downvotes_count)->toBe(1);
+
+    Vote::where('answer_id', (string) $answer->id)->delete();
+    $answer->delete();
+    $question->delete();
+    $user->delete();
+});
+
+test('active sort filters questions that have answers but no accepted answer', function () {
+    $author = User::factory()->create();
+
+    // 1. Has answers, none accepted -> Should appear in active
+    $activeUnaccepted = Question::create([
+        'title' => 'Active Unaccepted Question '.uniqid(),
+        'description' => 'Has answers but none accepted.',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+        'answer_count' => 1,
+        'tags' => ['PHP'],
+    ]);
+    $ans1 = Answer::create([
+        'question_id' => (string) $activeUnaccepted->id,
+        'user_id' => (string) $author->_id,
+        'content' => 'Regular unaccepted answer.',
+        'status' => 1,
+        'is_accepted' => false,
+    ]);
+
+    // 2. Has answers, one accepted -> Should NOT appear in active
+    $resolvedQuestion = Question::create([
+        'title' => 'Resolved Accepted Question '.uniqid(),
+        'description' => 'Has an accepted answer.',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+        'answer_count' => 1,
+        'tags' => ['PHP'],
+    ]);
+    $ans2 = Answer::create([
+        'question_id' => (string) $resolvedQuestion->id,
+        'user_id' => (string) $author->_id,
+        'content' => 'Accepted answer.',
+        'status' => 1,
+        'is_accepted' => true,
+    ]);
+
+    // 3. No answers -> Should NOT appear in active
+    $noAnswersQuestion = Question::create([
+        'title' => 'No Answers Question '.uniqid(),
+        'description' => 'No answers at all.',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+        'answer_count' => 0,
+        'tags' => ['PHP'],
+    ]);
+
+    $component = Volt::test('question.index')
+        ->set('sortBy', 'active');
+
+    $component->assertSee($activeUnaccepted->title)
+        ->assertDontSee($resolvedQuestion->title)
+        ->assertDontSee($noAnswersQuestion->title);
+
+    $ans1->delete();
+    $ans2->delete();
+    $activeUnaccepted->delete();
+    $resolvedQuestion->delete();
+    $noAnswersQuestion->delete();
+    $author->delete();
+});
+
+test('answer sort dropdown only shows saved and followed options for authenticated users', function () {
+    $user = User::factory()->create();
+    $question = Question::create([
+        'title' => 'Auth Sort Test Question '.uniqid(),
+        'description' => 'Testing auth options in answer sort dropdown.',
+        'user_id' => (string) $user->_id,
+        'status' => 1,
+        'tags' => ['PHP'],
+    ]);
+
+    // Guest view: should not see Saved or Followed in the dropdown
+    $guestTest = Volt::test('question.show', ['slug' => $question->slug]);
+    $guestTest->assertSeeHtml('<option value="default">Default</option>')
+        ->assertSeeHtml('<option value="most_vote">Most Vote</option>')
+        ->assertDontSeeHtml('<option value="saved">Saved</option>')
+        ->assertDontSeeHtml('<option value="followed">Followed</option>');
+
+    // Auth view: should see Saved and Followed
+    $authTest = Volt::actingAs($user)->test('question.show', ['slug' => $question->slug]);
+    $authTest->assertSeeHtml('<option value="saved">Saved</option>')
+        ->assertSeeHtml('<option value="followed">Followed</option>');
+
+    $question->delete();
+    $user->delete();
+});
+
+test('answer sort empty states display contextual messages for saved, followed, and default', function () {
+    $user = User::factory()->create();
+    $question = Question::create([
+        'title' => 'Empty State Context Test '.uniqid(),
+        'description' => 'Testing contextual empty state messages.',
+        'user_id' => (string) $user->_id,
+        'status' => 1,
+    ]);
+
+    // 1. Default empty state
+    Volt::actingAs($user)->test('question.show', ['slug' => $question->slug])
+        ->set('answerSort', 'default')
+        ->assertSee('Total Answers')
+        ->assertSee('No answers yet')
+        ->assertSee('Write the First Answer');
+
+    // 2. Saved empty state
+    Volt::actingAs($user)->test('question.show', ['slug' => $question->slug])
+        ->set('answerSort', 'saved')
+        ->assertSee('0')
+        ->assertSee('Saved Answers')
+        ->assertSee('No saved answers yet');
+
+    // 3. Followed empty state
+    Volt::actingAs($user)->test('question.show', ['slug' => $question->slug])
+        ->set('answerSort', 'followed')
+        ->assertSee('0')
+        ->assertSee('Followed Answers')
+        ->assertSee('No followed answers yet.')
+        ->assertSee('You are not following any authors who answered this question yet.');
+
+    $question->delete();
+    $user->delete();
+});
+
+it('persists saved and followed answers across page reload and sorts them correctly', function () {
+    $user = User::factory()->create();
+    $author = User::factory()->create();
+
+    $question = Question::create([
+        'title' => 'Answer Save and Follow Persistence Test '.uniqid(),
+        'description' => 'Testing answer save and follow persistence.',
+        'user_id' => (string) $author->_id,
+        'status' => 1,
+    ]);
+
+    $ans1 = Answer::create([
+        'question_id' => (string) $question->_id,
+        'user_id' => (string) $author->_id,
+        'content' => 'First Answer Content For Testing',
+        'status' => 1,
+    ]);
+
+    $ans2 = Answer::create([
+        'question_id' => (string) $question->_id,
+        'user_id' => (string) $author->_id,
+        'content' => 'Second Answer Content For Testing',
+        'status' => 1,
+    ]);
+
+    $ans1Id = (string) ($ans1->id ?? $ans1->_id);
+    $ans2Id = (string) ($ans2->id ?? $ans2->_id);
+
+    // 1. User saves ans1 and follows ans2
+    Volt::actingAs($user)->test('question.show', ['slug' => $question->slug])
+        ->call('toggleAnswerSave', $ans1Id)
+        ->assertDispatched('toast', message: 'Answer saved to bookmarks!')
+        ->call('toggleFollowAnswer', $ans2Id)
+        ->assertDispatched('toast', message: 'Following answer updates! 🔔');
+
+    // Verify in MongoDB
+    $freshAns1 = Answer::find($ans1Id);
+    expect($freshAns1->save)->toContain((string) $user->_id);
+
+    $freshAns2 = Answer::find($ans2Id);
+    expect($freshAns2->follow)->toContain((string) $user->_id);
+
+    // 2. Reload the page (simulate new request mounting)
+    Volt::actingAs($user)->test('question.show', ['slug' => $question->slug])
+        ->assertSet('savedAnswers', fn ($val) => in_array($ans1Id, $val, true))
+        ->assertSet('followingAnswers', fn ($val) => in_array($ans2Id, $val, true))
+        ->assertSee('Saved')
+        ->assertSee('Following')
+        // Sort by Saved
+        ->set('answerSort', 'saved')
+        ->assertSee('1')
+        ->assertSee('Saved Answer')
+        ->assertSee('First Answer Content For Testing')
+        ->assertDontSee('Second Answer Content For Testing')
+        // Sort by Followed
+        ->set('answerSort', 'followed')
+        ->assertSee('1')
+        ->assertSee('Followed Answer')
+        ->assertSee('Second Answer Content For Testing')
+        ->assertDontSee('First Answer Content For Testing');
+
+    $ans1->delete();
+    $ans2->delete();
+    $question->delete();
+    $author->delete();
+    $user->delete();
+});

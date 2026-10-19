@@ -4,6 +4,7 @@
  * allow your team to quickly build robust real-time web applications.
  */
 
+import './timeago';
 import './echo';
 import flatpickr from 'flatpickr';
 import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js';
