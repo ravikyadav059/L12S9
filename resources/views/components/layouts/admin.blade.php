@@ -27,7 +27,6 @@
         <flux:navlist variant="outline">
             <flux:navlist.group heading="Core Management" class="grid">
                 <flux:navlist.item icon="home" href="{{ route('admin.dashboard') }}" :current="request()->routeIs('admin.dashboard')">Dashboard</flux:navlist.item>
-                <flux:navlist.item icon="document-text" href="{{ route('admin.publications.index') }}" :current="request()->routeIs('admin.publications.*')">Publications</flux:navlist.item>
                 
                 <!-- Users Section with Expandable Submenu -->
                 <div x-data="{ open: {{ request()->routeIs('admin.users.*') ? 'true' : 'false' }} }" class="space-y-0.5">
@@ -92,7 +91,10 @@
                     </div>
                 </div>
 
+                <flux:navlist.item icon="document-text" href="{{ route('admin.publications.index') }}" :current="request()->routeIs('admin.publications.*')">Publications</flux:navlist.item>
                 <flux:navlist.item icon="question-mark-circle" href="{{ route('admin.questions.index') }}" :current="request()->routeIs('admin.questions.*')">Manage Questions</flux:navlist.item>
+
+                <flux:navlist.item icon="academic-cap" href="{{ route('admin.institutes.index') }}" :current="request()->routeIs('admin.institutes.*')">Institutes</flux:navlist.item>
             </flux:navlist.group>
 
             <flux:navlist.group heading="Database Tools" class="grid">

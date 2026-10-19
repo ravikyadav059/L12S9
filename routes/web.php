@@ -46,6 +46,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('users', 'admin.users.index')->name('users.index');
     Volt::route('questions', 'admin.questions.index')->name('questions.index');
     Volt::route('questions/{question}/edit', 'admin.questions.edit')->name('questions.edit');
+    Volt::route('institutes', 'admin.institutes.index')->name('institutes.index');
+    Volt::route('institutes/create', 'admin.institutes.create')->name('institutes.create');
+    Volt::route('institutes/{organization}/edit', 'admin.institutes.edit')->name('institutes.edit');
 
     // For below the database fixing
     Volt::route('database-fixing', 'admin.database-fixing.index')->name('database-fixing.index');

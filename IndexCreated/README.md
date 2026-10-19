@@ -17,11 +17,31 @@ This directory serves as the centralized catalog and knowledge base for all Mong
 | **`journal_role`** | [journal_role.md](./journal_role.md) | 3 Indexes | Primary `_id_`, role name lookup, and status filtering. |
 | **`request_review_paper`** | [request_review_paper.md](./request_review_paper.md) | 5 Indexes | Primary `_id_`, journal ID lookups, user ID queries, status, and created date sorting. |
 | **`country`, `state`, `city`** | [geo_locations.md](./geo_locations.md) | 6 Indexes | Hierarchical lookups (country -> state -> city) and status filtering. |
-| **`organization`** | [organization.md](./organization.md) | 7 Indexes | Primary `_id_`, slug routing (`/institution/{slug}`), serial number calculation/sorting, name search, and type & country filtering. |
+| **`organization`** | [organization.md](./organization.md) | 9 Indexes | Primary `_id_`, slug routing (`/institution/{slug}`), serial number calculation/sorting, name search, type & country filtering, created_at sort, and compound type/status admin filtering. |
 | **`experience`** | [experience.md](./experience.md) | 2 Indexes | Primary `_id_`, compound organization ID & current organization filter for scholar/alumni calculations. |
 | **`reviewer_profile`** | [reviewer_profile.md](./reviewer_profile.md) | 7 Indexes | Primary `_id_`, compound user ID & status lookup, active publication counts sorting, and multikey array indexes on publication, experience, seminar, and RoleInResearchJournal. |
 | **`skills`** | [skills.md](./skills.md) | 4 Indexes | Primary `_id_`, compound `skills_status` & `skills_title` for instant tag autocomplete/filtering, `skills_title` search, and sparse `slug` routing. |
 | **`question`** | [question.md](./question.md) | 10 Indexes | Primary `_id_`, compound active `status` & `created_at` (newest/oldest sorting in Admin & Public feed), standalone `created_at` date sort, active `status` & `votes_count` most voted sorting, active `status` & `views_count` popular sorting, compound `status` & `tags` multikey skill filtering, user author lookups, `title` search, and sparse `slug` routing. |
+
+---
+
+## Standing Principles for `IndexCreated/` Files
+
+> [!IMPORTANT]
+> **Strict Governance for Maintaining Database Indexes Across Application Workflows:**
+>
+> 1. **Never Drop or Alter Existing Indexes**:
+>    - Existing indexes are actively utilized across other modules (e.g., Public Portal, Scholar Profiles, Livewire Search, CMS Admin, APIs).
+>    - Removing or modifying an existing index can cause queries across other features to fall back to unindexed `COLLSCAN` (full collection scan) or break application functionality.
+>
+> 2. **Additive Changes Only**:
+>    - When optimizing a new feature, filter, or query, always introduce new complementary single-field or compound indexes without removing or mutating existing established indexes.
+>
+> 3. **Cross-File Impact Analysis**:
+>    - Before proposing or changing any index definition, cross-reference all queries throughout the codebase (in Blade views, Livewire components, Eloquent models, and Controllers) to ensure zero regressions and preserve 100% backward compatibility.
+>
+> 4. **Keep Registry Documents in Sync**:
+>    - Any index added or updated in database collections must be synchronously documented in its corresponding catalog file in this directory (`IndexCreated/<collection>.md`) with its purpose, query examples, and `mongosh` creation commands.
 
 ---
 

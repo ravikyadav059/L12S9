@@ -101,10 +101,11 @@
                     <button 
                         wire:click="startEditAnswer('{{ $ans->id }}')"
                         type="button"
-                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                        class="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                        title="Edit answer"
                     >
                         <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"/></svg>
-                        <span>Edit</span>
+                        <span class="hidden sm:inline">Edit</span>
                     </button>
                 @endif
 
@@ -113,10 +114,11 @@
                         wire:click="deleteAnswer('{{ $ans->id }}')"
                         wire:confirm="Are you sure you want to delete this answer? This action cannot be undone."
                         type="button"
-                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
+                        class="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
+                        title="Delete answer"
                     >
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-                        <span>Delete</span>
+                        <span class="hidden sm:inline">Delete</span>
                     </button>
                 @endif
             </div>
@@ -129,7 +131,7 @@
             <button 
                 wire:click="toggleAcceptAnswer('{{ $ans->id }}')"
                 type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $ans->is_accepted ? 'bg-emerald-50 text-emerald-700 border border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50/60' }}"
+                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $ans->is_accepted ? 'bg-emerald-50 text-emerald-700 border border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50/60' }}"
                 title="{{ $ans->is_accepted ? 'Click to unaccept' : 'Mark as accepted solution' }}"
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -138,7 +140,7 @@
         </div>
     @elseif($ans->is_accepted)
         <div class="flex items-center">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-300">
+            <span class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-300" title="Accepted answer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span>Accepted</span>
             </span>
@@ -218,26 +220,28 @@
             <button 
                 wire:click="toggleAnswerVote('{{ $ans->id }}', 'upvote')"
                 type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsVotedUp ? 'border border-[#198BEA] text-[#198BEA] bg-[#f0f7ff] dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-600' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsVotedUp ? 'border border-[#198BEA] text-[#198BEA] bg-[#f0f7ff] dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-600' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                title="Upvote answer ({{ number_format($ans->upvotes_count ?? $ans->votes_count ?? 0) }})"
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
                 </svg>
-                <span>Upvote</span>
-                <span class="font-bold ml-0.5">{{ number_format($ans->upvotes_count ?? $ans->votes_count ?? 0) }}</span>
+                <span class="hidden sm:inline">Upvote</span>
+                <span class="hidden sm:inline font-bold ml-0.5">{{ number_format($ans->upvotes_count ?? $ans->votes_count ?? 0) }}</span>
             </button>
 
             <!-- Downvote Answer -->
             <button 
                 wire:click="toggleAnswerVote('{{ $ans->id }}', 'downvote')"
                 type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsVotedDown ? 'border border-rose-400 text-rose-600 bg-rose-50 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-500' : 'text-zinc-700 dark:text-zinc-200 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800' }}"
+                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsVotedDown ? 'border border-rose-400 text-rose-600 bg-rose-50 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-500' : 'text-zinc-700 dark:text-zinc-200 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800' }}"
+                title="Downvote answer ({{ number_format($ans->downvotes_count ?? 0) }})"
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76 1.04m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
                 </svg>
-                <span>Downvote</span>
-                <span class="font-bold ml-0.5">{{ number_format($ans->downvotes_count ?? 0) }}</span>
+                <span class="hidden sm:inline">Downvote</span>
+                <span class="hidden sm:inline font-bold ml-0.5">{{ number_format($ans->downvotes_count ?? 0) }}</span>
             </button>
 
             <!-- Follow Answer -->
@@ -251,12 +255,13 @@
                     wire:click="toggleFollowAnswer('{{ $ansIdStr }}')"
                 @endguest
                 type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsFollowed ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsFollowed ? 'bg-[#ecfdf5] text-[#059669] border border-[#10b981] dark:bg-emerald-950/50 dark:text-emerald-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                title="{{ $isAnsFollowed ? 'Following answer' : 'Follow answer' }}"
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                 </svg>
-                <span>{{ $ansFollowCount }} {{ $isAnsFollowed ? 'Following' : 'Follow' }}</span>
+                <span class="hidden sm:inline">{{ $ansFollowCount }} {{ $isAnsFollowed ? 'Following' : 'Follow' }}</span>
             </button>
 
             <!-- Save Answer -->
@@ -267,12 +272,13 @@
                     wire:click="toggleAnswerSave('{{ $ansIdStr }}')"
                 @endguest
                 type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
+                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isAnsSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
+                title="{{ $isAnsSaved ? 'Saved answer' : 'Save answer' }}"
             >
                 <svg class="w-3.5 h-3.5 {{ $isAnsSaved ? 'fill-amber-500 text-amber-500' : '' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                 </svg>
-                <span>{{ $isAnsSaved ? 'Saved' : 'Save' }}</span>
+                <span class="hidden sm:inline">{{ $isAnsSaved ? 'Saved' : 'Save' }}</span>
             </button>
         </div>
 
@@ -282,12 +288,13 @@
             <button 
                 type="button"
                 @click="showComments = !showComments; if(showComments) $nextTick(() => $refs.commentInput && $refs.commentInput.focus())"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-[#198BEA] border border-sky-200 dark:border-sky-900/50 hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40 transition-all cursor-pointer"
+                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold text-[#198BEA] border border-sky-200 dark:border-sky-900/50 hover:bg-[#eaf5ff] dark:hover:bg-sky-950/40 transition-all cursor-pointer"
+                title="Toggle comments"
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                 </svg>
-                <span>Comment</span>
+                <span class="hidden sm:inline">Comment</span>
             </button>
         </div>
     </div>

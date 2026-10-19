@@ -623,7 +623,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                 wire:loading.attr="disabled"
                                                 wire:target="openEditModal('{{ $question->id }}')"
                                                 type="button"
-                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer disabled:opacity-60"
+                                                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:text-[#198BEA] hover:border-[#198BEA] hover:bg-sky-50 dark:hover:bg-zinc-800 transition-all cursor-pointer disabled:opacity-60"
                                                 title="Edit question"
                                             >
                                                 <svg wire:loading wire:target="openEditModal('{{ $question->id }}')" class="animate-spin w-3.5 h-3.5 text-[#198BEA]" fill="none" viewBox="0 0 24 24">
@@ -634,7 +634,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 21h-7" />
                                                 </svg>
-                                                <span>Edit</span>
+                                                <span class="hidden sm:inline">Edit</span>
                                             </button>
                                         @endif
                                     @endauth
@@ -747,24 +747,26 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         <button 
                                             wire:click="toggleVote('{{ $question->id }}', 'upvote')"
                                             type="button"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedUp ? 'border border-[#198BEA] text-[#198BEA] bg-[#f0f7ff] hover:bg-[#e0f0fe] dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-600' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                                            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedUp ? 'border border-[#198BEA] text-[#198BEA] bg-[#f0f7ff] hover:bg-[#e0f0fe] dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-600' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                                            title="Upvote"
                                         >
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
                                             </svg>
-                                            <span>Upvote</span>
+                                            <span class="hidden sm:inline">Upvote</span>
                                         </button>
 
                                         <!-- Downvote -->
                                         <button 
                                             wire:click="toggleVote('{{ $question->id }}', 'downvote')"
                                             type="button"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedDown ? 'border border-rose-400 text-rose-600 bg-rose-50 hover:bg-rose-100/70 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-500' : 'text-zinc-700 dark:text-zinc-200 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800' }}"
+                                            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isVotedDown ? 'border border-rose-400 text-rose-600 bg-rose-50 hover:bg-rose-100/70 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-500' : 'text-zinc-700 dark:text-zinc-200 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-zinc-800' }}"
+                                            title="Downvote"
                                         >
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76 1.04m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
                                             </svg>
-                                            <span>Downvote</span>
+                                            <span class="hidden sm:inline">Downvote</span>
                                         </button>
 
                                         <!-- Follow Question -->
@@ -778,12 +780,13 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         <button 
                                             wire:click="toggleFollowQuestion('{{ $question->id }}')"
                                             type="button"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isFollowingQuestion ? 'bg-sky-50 text-[#198BEA] border border-sky-300 dark:bg-sky-950/50 dark:text-sky-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                                            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isFollowingQuestion ? 'bg-sky-50 text-[#198BEA] border border-sky-300 dark:bg-sky-950/50 dark:text-sky-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800' }}"
+                                            title="{{ $isFollowingQuestion ? 'Following question' : 'Follow question' }}"
                                         >
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                                             </svg>
-                                            <span>{{ $followCount }} {{ $isFollowingQuestion ? 'Following' : 'Follow' }}</span>
+                                            <span class="hidden sm:inline">{{ $followCount }} {{ $isFollowingQuestion ? 'Following' : 'Follow' }}</span>
                                         </button>
 
                                         <!-- Save -->
@@ -793,13 +796,13 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         <button 
                                             wire:click="toggleSave('{{ $question->id }}')"
                                             type="button"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
-                                            title="Save question"
+                                            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer {{ $isSaved ? 'bg-amber-50 text-amber-600 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:bg-amber-50/60 dark:hover:bg-zinc-800' }}"
+                                            title="{{ $isSaved ? 'Saved question' : 'Save question' }}"
                                         >
                                             <svg class="w-4 h-4 {{ $isSaved ? 'fill-amber-500 text-amber-500' : '' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                                             </svg>
-                                            <span>{{ $isSaved ? 'Saved' : 'Save' }}</span>
+                                            <span class="hidden sm:inline">{{ $isSaved ? 'Saved' : 'Save' }}</span>
                                         </button>
                                     @endauth
 
@@ -811,24 +814,26 @@ new #[Layout('components.layouts.app')] class extends Component {
                                     <button 
                                         type="button"
                                         @click="$dispatch('open-share-modal', { url: '{{ $questionShareUrl }}', title: '{{ addslashes($question->title) }}', type: 'question', header: 'Share Question', subtitle: 'Share this question across academic and social networks' })"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                        class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-[#198BEA] hover:bg-sky-50/60 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                        title="Share question"
                                     >
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
                                         </svg>
-                                        <span>{{ $shareCount }} Share</span>
+                                        <span class="hidden sm:inline">{{ $shareCount }} Share</span>
                                     </button>
                                 </div>
 
                                 <!-- Answer Action Button (Direct Link to Question Detail Page with write-answer anchor) -->
                                 <a 
                                     href="{{ route('questions.show', $question->slug ?: (string) $question->_id) }}#write-answer"
-                                    class="inline-flex items-center gap-2 px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0f67b0] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-98"
+                                    class="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 bg-[#198BEA] hover:bg-[#1476c9] active:bg-[#0f67b0] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-98"
+                                    title="Answer question"
                                 >
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
                                     </svg>
-                                    <span>Answer</span>
+                                    <span class="hidden sm:inline">Answer</span>
                                 </a>
                             </div>
                         </article>
