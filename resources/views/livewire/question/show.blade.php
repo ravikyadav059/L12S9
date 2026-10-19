@@ -445,6 +445,7 @@ new #[Layout('components.layouts.app')] class extends Component {
             Replies::whereIn('answer_id', array_map('strval', $answerIds))->delete();
         }
         Answer::where('question_id', (string) $question->id)->delete();
+        $question->deleteThumbnailFromStorage();
         $question->delete();
 
         $this->dispatch('toast', message: 'Question deleted successfully.', type: 'info');

@@ -210,10 +210,20 @@ trait HandlesQuestionForms
         $this->showEditModal = true;
     }
 
+    public function removeExistingThumbnail(): void
+    {
+        $this->existingThumbnail = null;
+    }
+
+    public function removeEditThumbnail(): void
+    {
+        $this->editThumbnail = null;
+    }
+
     /**
      * Save updates to the currently edited question.
      */
-    public function saveEdit(?string $title = null, ?string $description = null, ?string $tags = null): void
+    public function saveEdit(?string $title = null, ?string $description = null, ?string $tags = null, mixed $existingThumbnail = 'KEEP_CURRENT'): void
     {
         if (! Auth::check()) {
             $this->dispatch('open-auth-alert', title: 'Connect to Scholar9 to Edit a Question');
@@ -238,6 +248,9 @@ trait HandlesQuestionForms
         }
         if ($tags !== null) {
             $this->editTags = $tags;
+        }
+        if ($existingThumbnail !== 'KEEP_CURRENT') {
+            $this->existingThumbnail = ! empty($existingThumbnail) ? $existingThumbnail : null;
         }
 
         $cleanTitle = trim($this->editTitle);
@@ -269,9 +282,20 @@ trait HandlesQuestionForms
                 $tagList = ['General'];
             }
 
-            $thumbnailPath = $this->existingThumbnail ?? $q->thumbnail;
+            $oldThumbnail = $q->thumbnail;
+
             if ($this->editThumbnail) {
                 $thumbnailPath = $this->editThumbnail->store('thumbnails', 'public');
+                if (! empty($oldThumbnail) && $oldThumbnail !== $thumbnailPath) {
+                    Question::deleteThumbnailFile($oldThumbnail);
+                }
+            } elseif ($this->existingThumbnail === null || $this->existingThumbnail === '') {
+                if (! empty($oldThumbnail)) {
+                    Question::deleteThumbnailFile($oldThumbnail);
+                }
+                $thumbnailPath = null;
+            } else {
+                $thumbnailPath = $this->existingThumbnail;
             }
 
             $q->update([

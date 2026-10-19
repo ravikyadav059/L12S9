@@ -95,6 +95,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
     {
         $question = Question::find($id);
         if ($question) {
+            $question->deleteThumbnailFromStorage();
             $question->delete();
             $this->clearCountCache();
         }
@@ -104,6 +105,11 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
     {
         if (empty($ids)) {
             return;
+        }
+
+        $questions = Question::whereIn('_id', $ids)->get();
+        foreach ($questions as $q) {
+            $q->deleteThumbnailFromStorage();
         }
 
         Question::whereIn('_id', $ids)->delete();

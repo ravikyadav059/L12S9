@@ -207,6 +207,9 @@
             }
             if (this.$wire) {
                 this.$wire.set('{{ $thumbnail }}', null, false);
+                if (typeof this.$wire.removeEditThumbnail === 'function') {
+                    this.$wire.removeEditThumbnail();
+                }
             }
         },
 
@@ -214,6 +217,9 @@
             this.existingImage = null;
             if (this.$wire) {
                 this.$wire.set('{{ $existingThumbnail }}', null, false);
+                if (typeof this.$wire.removeExistingThumbnail === 'function') {
+                    this.$wire.removeExistingThumbnail();
+                }
             }
         },
 
@@ -305,7 +311,8 @@
                 this.$wire.set('{{ $description }}', htmlContent, false);
                 this.$wire.set('{{ $title }}', cleanTitle, false);
                 this.$wire.set('{{ $tags }}', this.selectedTags.join(', '), false);
-                this.$wire.call('{{ $submitAction }}', cleanTitle, htmlContent, this.selectedTags.join(', '));
+                this.$wire.set('{{ $existingThumbnail }}', this.existingImage || null, false);
+                this.$wire.call('{{ $submitAction }}', cleanTitle, htmlContent, this.selectedTags.join(', '), this.existingImage || null);
             }
         },
 

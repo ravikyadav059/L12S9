@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\QuestionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use MongoDB\BSON\Regex;
 use MongoDB\Laravel\Eloquent\Model;
@@ -252,5 +253,40 @@ class Question extends Model
     public function followCount(): int
     {
         return is_array($this->follow) ? count($this->follow) : (int) ($this->follow ?? 0);
+    }
+
+    /**
+     * Delete a thumbnail file from the public storage disk if it is locally stored.
+     */
+    public static function deleteThumbnailFile(?string $thumbnailPath): void
+    {
+        if (empty($thumbnailPath)) {
+            return;
+        }
+
+        // Do not delete external URLs
+        if (Str::startsWith($thumbnailPath, ['http://', 'https://'])) {
+            return;
+        }
+
+        // Normalize path by removing leading slash and 'storage/' prefix
+        $normalized = ltrim($thumbnailPath, '/');
+        if (Str::startsWith($normalized, 'storage/')) {
+            $normalized = substr($normalized, 8);
+        }
+
+        $normalized = ltrim($normalized, '/');
+
+        if (! empty($normalized) && Storage::disk('public')->exists($normalized)) {
+            Storage::disk('public')->delete($normalized);
+        }
+    }
+
+    /**
+     * Delete this question's current thumbnail file from public storage.
+     */
+    public function deleteThumbnailFromStorage(): void
+    {
+        static::deleteThumbnailFile($this->thumbnail);
     }
 }

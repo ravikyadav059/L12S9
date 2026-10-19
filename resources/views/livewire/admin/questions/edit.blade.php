@@ -144,12 +144,20 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Question - Admin')] clas
         $this->question->is_closed = (bool) $this->is_closed;
 
         // Handle thumbnail upload if provided
+        $oldThumbnail = $this->question->thumbnail;
+
         if ($this->thumbnailUpload) {
             $path = $this->thumbnailUpload->store('thumbnails', 'public');
+            if (! empty($oldThumbnail) && $oldThumbnail !== $path && $oldThumbnail !== 'storage/' . $path) {
+                Question::deleteThumbnailFile($oldThumbnail);
+            }
             $this->question->thumbnail = 'storage/' . $path;
             $this->existingThumbnail = 'storage/' . $path;
             $this->thumbnailUpload = null;
-        } elseif ($this->existingThumbnail === null) {
+        } elseif ($this->existingThumbnail === null || $this->existingThumbnail === '') {
+            if (! empty($oldThumbnail)) {
+                Question::deleteThumbnailFile($oldThumbnail);
+            }
             $this->question->thumbnail = null;
         }
 

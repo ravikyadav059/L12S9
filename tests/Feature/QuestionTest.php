@@ -2,6 +2,8 @@
 
 use App\Models\Question;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 
 use function Pest\Laravel\actingAs;
@@ -660,4 +662,115 @@ test('follow, upvote, downvote, and save buttons are only visible to authenticat
     $question->delete();
     $author->delete();
     $visitor->delete();
+});
+
+test('editing question and removing attachment clears thumbnail in database and removes file from storage', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $fakeFilePath = 'thumbnails/test-old-attachment-'.uniqid().'.jpg';
+    Storage::disk('public')->put($fakeFilePath, 'old-image-binary-data');
+
+    Storage::disk('public')->assertExists($fakeFilePath);
+
+    $question = Question::create([
+        'user_id' => (string) $user->_id,
+        'title' => 'Question with Thumbnail for Removal Test '.uniqid(),
+        'description' => 'A valid detailed question description with at least 20 characters.',
+        'tags' => ['Laravel', 'Storage'],
+        'thumbnail' => $fakeFilePath,
+        'status' => 1,
+    ]);
+
+    actingAs($user);
+
+    Volt::test('question.index')
+        ->call('openEditModal', (string) $question->_id)
+        ->assertSet('editingQuestionId', (string) $question->_id)
+        ->assertSet('existingThumbnail', $fakeFilePath)
+        ->call('removeExistingThumbnail')
+        ->assertSet('existingThumbnail', null)
+        ->call('saveEdit', $question->title, $question->description, 'Laravel, Storage', null)
+        ->assertSet('showEditModal', false);
+
+    $question->refresh();
+    expect($question->thumbnail)->toBeNull();
+
+    // Verify file was deleted from storage disk
+    Storage::disk('public')->assertMissing($fakeFilePath);
+
+    $question->delete();
+    $user->delete();
+});
+
+test('editing question and uploading replacement thumbnail deletes old file and saves new file in storage', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $oldFilePath = 'thumbnails/old-to-be-replaced-'.uniqid().'.jpg';
+    Storage::disk('public')->put($oldFilePath, 'old-bytes');
+    Storage::disk('public')->assertExists($oldFilePath);
+
+    $question = Question::create([
+        'user_id' => (string) $user->_id,
+        'title' => 'Question Replacing Image Test '.uniqid(),
+        'description' => 'A valid detailed question description with at least 20 characters.',
+        'tags' => ['Laravel', 'Upload'],
+        'thumbnail' => $oldFilePath,
+        'status' => 1,
+    ]);
+
+    actingAs($user);
+
+    $newFile = UploadedFile::fake()->image('new-thumbnail.png');
+
+    Volt::test('question.index')
+        ->call('openEditModal', (string) $question->_id)
+        ->set('editThumbnail', $newFile)
+        ->call('saveEdit')
+        ->assertSet('showEditModal', false);
+
+    $question->refresh();
+    expect($question->thumbnail)->not->toBeNull();
+    expect($question->thumbnail)->not->toBe($oldFilePath);
+
+    // Old file must be deleted from storage
+    Storage::disk('public')->assertMissing($oldFilePath);
+
+    // New file must exist on storage disk
+    Storage::disk('public')->assertExists($question->thumbnail);
+
+    $question->delete();
+    $user->delete();
+});
+
+test('admin edit question removing thumbnail clears database and deletes file from storage', function () {
+    Storage::fake('public');
+
+    $oldFilePath = 'thumbnails/admin-test-thumb-'.uniqid().'.jpg';
+    Storage::disk('public')->put($oldFilePath, 'admin-image-content');
+    Storage::disk('public')->assertExists($oldFilePath);
+
+    $question = Question::create([
+        'title' => 'Admin Question Thumbnail Removal Test '.uniqid(),
+        'description' => 'A valid detailed question description with at least 20 characters for admin.',
+        'tags' => ['Admin', 'Test'],
+        'thumbnail' => 'storage/'.$oldFilePath,
+        'status' => 1,
+    ]);
+
+    Volt::test('admin.questions.edit', ['question' => $question])
+        ->assertSet('existingThumbnail', 'storage/'.$oldFilePath)
+        ->call('removeExistingThumbnail')
+        ->assertSet('existingThumbnail', null)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $question->refresh();
+    expect($question->thumbnail)->toBeNull();
+
+    // Verify storage file was deleted
+    Storage::disk('public')->assertMissing($oldFilePath);
+
+    $question->delete();
 });
