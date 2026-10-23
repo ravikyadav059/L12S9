@@ -95,6 +95,7 @@
                 <flux:navlist.item icon="question-mark-circle" href="{{ route('admin.questions.index') }}" :current="request()->routeIs('admin.questions.*')">Manage Questions</flux:navlist.item>
 
                 <flux:navlist.item icon="academic-cap" href="{{ route('admin.institutes.index') }}" :current="request()->routeIs('admin.institutes.*')">Institutes</flux:navlist.item>
+                <flux:navlist.item icon="book-open" href="{{ route('admin.journals.index') }}" :current="request()->routeIs('admin.journals.*')">Journals</flux:navlist.item>
             </flux:navlist.group>
 
             <flux:navlist.group heading="Database Tools" class="grid">

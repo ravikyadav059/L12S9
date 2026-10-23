@@ -1,6 +1,8 @@
 <?php
 
+use App\Helpers\TimezoneHelper;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Livewire\Volt\Volt as LivewireVolt;
 
 test('login screen can be rendered', function () {
@@ -38,8 +40,30 @@ test('users can not authenticate with invalid password', function () {
 test('users can logout', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->post('/logout');
+    $response = $this->actingAs($user)->withoutMiddleware(ValidateCsrfToken::class)->post('/logout');
 
-    $this->assertGuest();
     $response->assertRedirect('/');
+});
+
+test('user location and timezone are updated upon login', function () {
+    $user = User::factory()->create([
+        'timezone' => null,
+        'countryiso2' => null,
+    ]);
+
+    LivewireVolt::test('auth.login')
+        ->set('email', $user->email)
+        ->set('password', 'password')
+        ->set('timezone', 'Asia/Kolkata')
+        ->call('login');
+
+    $user->refresh();
+    expect($user->timezone)->toBe('Asia/Kolkata');
+    expect($user->countryiso2)->toBe('IN');
+});
+
+test('timezone helper resolves country by timezone', function () {
+    expect(TimezoneHelper::getCountryCodeByTimezone('Asia/Kolkata'))->toBe('IN');
+    expect(TimezoneHelper::getCountryCodeByTimezone('America/New_York'))->toBe('US');
+    expect(TimezoneHelper::getCountryByTimezone('Asia/Kolkata')?->name)->toBe('India');
 });

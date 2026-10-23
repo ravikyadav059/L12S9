@@ -1,5 +1,7 @@
 <?php
 
+use App\Helpers\TimezoneHelper;
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -18,6 +20,13 @@ new #[Layout('components.layouts.app')] class extends Component {
     public string $password = '';
 
     public bool $remember = false;
+
+    public string $timezone = '';
+
+    public function mount(): void
+    {
+        $this->timezone = (string) (request()->cookie('app_timezone') ?? '');
+    }
 
     /**
      * Handle an incoming authentication request.
@@ -40,6 +49,11 @@ new #[Layout('components.layouts.app')] class extends Component {
         Session::regenerate();
 
         $user = Auth::user();
+        if ($user instanceof User) {
+            $tz = ! empty($this->timezone) ? $this->timezone : request()->cookie('app_timezone');
+            TimezoneHelper::updateUserLocation($user, $tz);
+        }
+
         if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
             $this->redirectIntended(default: route('admin.dashboard', absolute: false), navigate: true);
         } else {
@@ -85,6 +99,8 @@ new #[Layout('components.layouts.app')] class extends Component {
     <x-auth-session-status class="text-center" :status="session('status')" />
 
     <form wire:submit="login" class="flex flex-col gap-6">
+        <input type="hidden" wire:model="timezone" x-init="if (!$wire.timezone) { try { $wire.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {} }" />
+
         <!-- Email Address -->
         <flux:input wire:model="email" label="{{ __('Email address') }}" type="email" name="email" required autofocus autocomplete="email" placeholder="email@example.com" />
 

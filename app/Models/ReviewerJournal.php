@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Helpers\IssnHelper;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use MongoDB\Laravel\Eloquent\Model;
 
 class ReviewerJournal extends Model
@@ -57,6 +59,7 @@ class ReviewerJournal extends Model
         'feesAssociatedWithPublishing',
         'preservation',
         'DOI',
+        'doi',
         'ScopusProfile',
         'GoogleScholar',
         'WebofScience',
@@ -85,6 +88,13 @@ class ReviewerJournal extends Model
         'conference_allowed',
         'journal_id',
         'external_journal_id',
+
+        // Verification Status & Metadata
+        'is_verified',
+        'verification_status',
+        'verification_source',
+        'verified_at',
+        'verification_details',
 
         // Indexing & Directory URLs / Checkboxes
         'ABCD',
@@ -455,14 +465,53 @@ class ReviewerJournal extends Model
             'serial_number' => 'integer',
             'first_publication_year' => 'integer',
             'is_credited' => 'boolean',
-            'conference_allowed' => 'boolean',
-            'registered_co_author' => 'array',
-            'unregistered_co_author' => 'array',
-            'languages' => 'array',
-            'journal_subjects' => 'array',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (ReviewerJournal $journal): void {
+            if (empty($journal->serial_number)) {
+                $maxSerial = (int) static::max('serial_number');
+                $journal->serial_number = $maxSerial + 1;
+            }
+
+            if (empty($journal->slug)) {
+                $base = Str::slug($journal->journal_title ?: $journal->journal_short_name ?: 'journal');
+                $journal->slug = $base !== '' ? "{$base}-{$journal->serial_number}" : (string) $journal->serial_number;
+            }
+
+            if ($journal->status === null || $journal->status === '') {
+                $journal->status = 0;
+            } else {
+                $journal->status = (int) $journal->status;
+            }
+        });
+
+        static::saved(function (): void {
+            static::forgetCaches();
+        });
+
+        static::deleted(function (): void {
+            static::forgetCaches();
+        });
+    }
+
+    /**
+     * Clear cached journal counts and filter lists from Redis/Cache.
+     */
+    public static function forgetCaches(): void
+    {
+        Cache::forget('total_active_journals_count');
+        Cache::forget('journal_disciplines_list');
+        Cache::forget('journal_indexers_list');
+        Cache::put('j_search_version', time());
+        IndexingAgency::forgetCached();
     }
 
     /**
@@ -478,5 +527,167 @@ class ReviewerJournal extends Model
         $countries = Cache::remember('countries_all_collection', 86400, fn () => Country::all());
 
         return $countries->firstWhere('id', (int) $val)?->name ?? (string) $val;
+    }
+
+    /**
+     * Format an ISSN string to standard XXXX-XXXX format.
+     */
+    public static function formatIssn(?string $issn): string
+    {
+        return IssnHelper::format($issn);
+    }
+
+    /**
+     * Check if an ISSN string has a valid XXXX-XXXX format.
+     */
+    public static function isValidIssn(?string $issn): bool
+    {
+        return IssnHelper::isValid($issn);
+    }
+
+    /**
+     * Search existing journals by title for autocomplete / auto-fill.
+     * Searches both active and inactive journals (excludes only deleted).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function searchTitles(string $query, int $limit = 15): array
+    {
+        $query = trim($query);
+        if (mb_strlen($query) < 2) {
+            return [];
+        }
+
+        $searchVer = Cache::get('j_search_version', 1);
+        $cacheKey = 'j_search_v3_'.$searchVer.'_'.md5(strtolower($query).'_'.$limit);
+
+        return Cache::remember($cacheKey, 300, function () use ($query, $limit) {
+            $fields = [
+                '_id',
+                'journal_title',
+                'journal_short_name',
+                'user_id',
+                'status',
+                'e_issn',
+                'p_issn',
+                'journal_webiste_url',
+                'first_publication_year',
+                'issn_assignee_country',
+                'journal_impact_factor',
+                'impact_factor_assignee_agency',
+                'organization_name',
+                'issue_frequency',
+                'languages',
+                'journal_subjects',
+            ];
+
+            // Exclude only deleted journals (status 3), including active (1) and inactive (0)
+            $results = static::where(function ($q) {
+                $q->where('status', '!=', 3)->where('status', '!=', '3');
+            })
+                ->where('journal_title', 'like', "{$query}%")
+                ->limit($limit)
+                ->get($fields);
+
+            // Also check if title starts with quotation mark (e.g. "'Chintan'...")
+            if ($results->count() < $limit) {
+                $quoted = static::where(function ($q) {
+                    $q->where('status', '!=', 3)->where('status', '!=', '3');
+                })
+                    ->where('journal_title', 'like', "'{$query}%")
+                    ->limit($limit - $results->count())
+                    ->get($fields);
+                $results = $results->merge($quoted);
+            }
+
+            // If fewer than $limit results, supplement with contains search
+            if ($results->count() < $limit) {
+                $remaining = $limit - $results->count();
+                $excludeIds = $results->pluck('_id')->toArray();
+
+                $more = static::where(function ($q) {
+                    $q->where('status', '!=', 3)->where('status', '!=', '3');
+                })
+                    ->where('journal_title', 'like', "%{$query}%")
+                    ->whereNotIn('_id', $excludeIds)
+                    ->limit($remaining)
+                    ->get($fields);
+
+                $results = $results->merge($more);
+            }
+
+            return $results->map(function ($j) {
+                $hasUser = ! empty($j->user_id);
+                $statusInt = (int) ($j->status ?? 1);
+
+                return [
+                    'id' => (string) $j->_id,
+                    'journal_title' => (string) ($j->journal_title ?? ''),
+                    'journal_short_name' => (string) ($j->journal_short_name ?? ''),
+                    'has_user' => $hasUser,
+                    'user_id' => $hasUser ? (string) $j->user_id : null,
+                    'status' => $statusInt,
+                    'status_label' => $statusInt === 1 ? 'Active' : 'Inactive',
+                    'e_issn' => (string) ($j->e_issn ?? ''),
+                    'p_issn' => (string) ($j->p_issn ?? ''),
+                    'journal_webiste_url' => (string) ($j->journal_webiste_url ?? ''),
+                    'first_publication_year' => $j->first_publication_year ? (int) $j->first_publication_year : null,
+                    'issn_assignee_country' => (string) ($j->issn_assignee_country ?? ''),
+                    'journal_impact_factor' => (string) ($j->journal_impact_factor ?? ''),
+                    'impact_factor_assignee_agency' => (string) ($j->impact_factor_assignee_agency ?? ''),
+                    'organization_name' => (string) ($j->organization_name ?? ''),
+                    'issue_frequency' => (string) ($j->issue_frequency ?? ''),
+                    'languages' => is_array($j->languages) ? array_values(array_filter($j->languages)) : (! empty($j->languages) ? [(string) $j->languages] : []),
+                    'journal_subjects' => is_array($j->journal_subjects) ? array_values(array_filter($j->journal_subjects)) : (! empty($j->journal_subjects) ? [(string) $j->journal_subjects] : []),
+                ];
+            })
+                ->values()
+                ->toArray();
+        });
+    }
+
+    /**
+     * Get list of publication years from current year down to 1800 formatted for searchable select.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    public static function getPublicationYears(): array
+    {
+        $currentYear = (int) date('Y');
+        $years = [];
+        for ($y = $currentYear; $y >= 1800; $y--) {
+            $years[] = [
+                'id' => $y,
+                'name' => (string) $y,
+            ];
+        }
+
+        return $years;
+    }
+
+    /**
+     * Get default languages for journal acceptance.
+     *
+     * @return array<int, string>
+     */
+    public static function getDefaultLanguages(): array
+    {
+        return [
+            'Hindi',
+            'English',
+        ];
+    }
+
+    /**
+     * Get default disciplines/subjects for journals.
+     *
+     * @return array<int, string>
+     */
+    public static function getDefaultDisciplines(): array
+    {
+        return [
+            'Socila',
+            'Developing',
+        ];
     }
 }

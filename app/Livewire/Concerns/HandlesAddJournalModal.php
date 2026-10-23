@@ -4,6 +4,7 @@ namespace App\Livewire\Concerns;
 
 use App\Models\ReviewerJournal;
 use App\Rules\ValidIssn;
+use App\Services\JournalVerificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use MongoDB\BSON\Regex;
@@ -170,6 +171,37 @@ trait HandlesAddJournalModal
             }
         }
 
+        $verificationData = [
+            'is_verified' => true,
+            'verification_status' => 'verified',
+            'verification_source' => 'auto',
+            'verified_at' => now(),
+        ];
+
+        if (! app()->environment('testing')) {
+            /** @var JournalVerificationService $verificationService */
+            $verificationService = app(JournalVerificationService::class);
+            $issnToVerify = $eClean ?: $pClean;
+            $verResult = $verificationService->verify($issnToVerify, 'auto', $titleClean);
+
+            if (! $verResult->isValid && ! empty($pClean) && $issnToVerify !== $pClean) {
+                $secondCheck = $verificationService->verify($pClean, 'auto', $titleClean);
+                if ($secondCheck->isValid) {
+                    $verResult = $secondCheck;
+                }
+            }
+
+            if (! $verResult->isValid) {
+                $errField = ! empty($eClean) ? 'newJournalEIssn' : 'newJournalPIssn';
+                $this->addError($errField, $verResult->message);
+
+                return null;
+            }
+
+            $verificationData['verification_source'] = $verResult->source ?? 'auto';
+            $verificationData['verification_details'] = $verResult->toArray();
+        }
+
         // Calculate next auto-incrementing serial_number
         $maxSerial = (int) ReviewerJournal::max('serial_number');
         if ($maxSerial <= 0) {
@@ -181,7 +213,7 @@ trait HandlesAddJournalModal
         $baseSlug = Str::slug($titleClean);
         $journalSlug = $baseSlug !== '' ? ($baseSlug.'-'.$nextSerialNumber) : (string) $nextSerialNumber;
 
-        $journal = ReviewerJournal::create([
+        $journal = ReviewerJournal::create(array_merge([
             'journal_title' => $titleClean,
             'serial_number' => $nextSerialNumber,
             'slug' => $journalSlug,
@@ -189,7 +221,7 @@ trait HandlesAddJournalModal
             'p_issn' => $pClean ?: null,
             'status' => 1,
             'user_id' => Auth::id(),
-        ]);
+        ], $verificationData));
 
         // Auto-populate calling component's fields if present
         if (property_exists($this, 'selectedJournalId')) {

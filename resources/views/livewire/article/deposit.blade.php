@@ -1436,24 +1436,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                         class="space-y-1.5" 
                                         id="field-issn"
                                         x-data="{
-                                            issnType: @entangle('issnType'),
-                                            formatIssn(e, field) {
-                                                let raw = (e.target.value || '').toUpperCase();
-                                                let clean = '';
-                                                for (let i = 0; i < raw.length && clean.length < 8; i++) {
-                                                    let ch = raw[i];
-                                                    if (clean.length < 7) {
-                                                        if (/[0-9]/.test(ch)) clean += ch;
-                                                    } else {
-                                                        if (/[0-9X]/.test(ch)) clean += ch;
-                                                    }
-                                                }
-                                                if (clean.length > 4) {
-                                                    clean = clean.substring(0, 4) + '-' + clean.substring(4);
-                                                }
-                                                e.target.value = clean;
-                                                $wire.set(field, clean);
-                                            }
+                                            issnType: @entangle('issnType')
                                         }"
                                     >
                                         <div class="flex items-center justify-between gap-2">

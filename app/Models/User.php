@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use MongoDB\Laravel\Auth\User as Authenticatable;
 use MongoDB\Laravel\Relations\HasMany;
@@ -153,6 +154,14 @@ class User extends Authenticatable // implements MustVerifyEmail
             if (! empty($user->email)) {
                 $user->email = strtolower(trim((string) $user->email));
             }
+        });
+
+        static::saved(function (): void {
+            static::forgetCachedPublishers();
+        });
+
+        static::deleted(function (): void {
+            static::forgetCachedPublishers();
         });
     }
 
@@ -397,5 +406,146 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function followersCount(): int
     {
         return is_array($this->followers) ? count($this->followers) : 0;
+    }
+
+    /**
+     * Cache key for active publishers.
+     */
+    public const CACHE_KEY_PUBLISHERS = 'publishers:initial';
+
+    /**
+     * Get initial list of active publishers (limited for scale and performance).
+     *
+     * @return array<int, array{id: string, name: string, email: string}>
+     */
+    public static function getInitialPublishers(int $limit = 20, ?string $selectedId = null): array
+    {
+        $cached = Cache::get(self::CACHE_KEY_PUBLISHERS);
+
+        if (is_array($cached) && ! empty($cached)) {
+            $list = $cached;
+        } else {
+            $list = static::whereIn('status', [1, '1'])
+                ->whereIn('publisher_status', [1, '1'])
+                ->whereNotNull('slug')
+                ->select('_id', 'first_name', 'last_name', 'fullname', 'email')
+                ->limit(50)
+                ->get()
+                ->map(function ($u) {
+                    $fullName = trim(($u->first_name ?? '').' '.($u->last_name ?? ''));
+                    if ($fullName === '' && ! empty($u->fullname)) {
+                        $fullName = trim((string) $u->fullname);
+                    }
+
+                    return [
+                        'id' => (string) $u->_id,
+                        'name' => $fullName !== '' ? $fullName : 'Publisher',
+                        'email' => (string) ($u->email ?? ''),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            if (! empty($list)) {
+                Cache::put(self::CACHE_KEY_PUBLISHERS, $list, 3600);
+            }
+        }
+
+        $result = array_slice($list, 0, $limit);
+
+        if (! empty($selectedId)) {
+            $alreadyPresent = false;
+            foreach ($result as $item) {
+                if ($item['id'] === (string) $selectedId) {
+                    $alreadyPresent = true;
+                    break;
+                }
+            }
+
+            if (! $alreadyPresent) {
+                foreach ($list as $item) {
+                    if ($item['id'] === (string) $selectedId) {
+                        array_unshift($result, $item);
+                        $alreadyPresent = true;
+                        break;
+                    }
+                }
+
+                if (! $alreadyPresent) {
+                    $selectedUser = static::find($selectedId);
+                    if ($selectedUser) {
+                        $fullName = trim(($selectedUser->first_name ?? '').' '.($selectedUser->last_name ?? ''));
+                        if ($fullName === '' && ! empty($selectedUser->fullname)) {
+                            $fullName = trim((string) $selectedUser->fullname);
+                        }
+                        array_unshift($result, [
+                            'id' => (string) $selectedUser->_id,
+                            'name' => $fullName !== '' ? $fullName : 'Publisher',
+                            'email' => (string) ($selectedUser->email ?? ''),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Search active publishers dynamically on-demand with debounced queries.
+     *
+     * @return array<int, array{id: string, name: string, email: string}>
+     */
+    public static function searchPublishers(string $query = '', int $limit = 20): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return static::getInitialPublishers($limit);
+        }
+
+        return static::whereIn('status', [1, '1'])
+            ->whereIn('publisher_status', [1, '1'])
+            ->whereNotNull('slug')
+            ->where(function ($sub) use ($query) {
+                $sub->where('first_name', 'like', "%{$query}%")
+                    ->orWhere('last_name', 'like', "%{$query}%")
+                    ->orWhere('fullname', 'like', "%{$query}%")
+                    ->orWhere('email', 'like', "%{$query}%");
+            })
+            ->select('_id', 'first_name', 'last_name', 'fullname', 'email')
+            ->limit($limit)
+            ->get()
+            ->map(function ($u) {
+                $fullName = trim(($u->first_name ?? '').' '.($u->last_name ?? ''));
+                if ($fullName === '' && ! empty($u->fullname)) {
+                    $fullName = trim((string) $u->fullname);
+                }
+
+                return [
+                    'id' => (string) $u->_id,
+                    'name' => $fullName !== '' ? $fullName : 'Publisher',
+                    'email' => (string) ($u->email ?? ''),
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Get cached list of active publishers.
+     *
+     * @return array<int, array{id: string, name: string, email: string}>
+     */
+    public static function getCachedPublishers(): array
+    {
+        return static::getInitialPublishers(50);
+    }
+
+    /**
+     * Clear cached list of publishers from cache/redis.
+     */
+    public static function forgetCachedPublishers(): void
+    {
+        Cache::forget(self::CACHE_KEY_PUBLISHERS);
     }
 }

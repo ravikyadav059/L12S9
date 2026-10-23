@@ -93,60 +93,12 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Institute - Admin')] cla
 
     public function getStatesList(): array
     {
-        if (empty($this->country)) {
-            return [];
-        }
-
-        $cId = (string) $this->country;
-
-        return Cache::remember("states_lookup_{$cId}", 86400, function () use ($cId) {
-            $docs = State::raw(fn ($col) => $col->find(
-                ['country_id' => ['$in' => [(int) $cId, (string) $cId]]],
-                ['projection' => ['id' => 1, 'name' => 1], 'sort' => ['name' => 1]]
-            ));
-
-            $list = [];
-            foreach ($docs as $doc) {
-                if (isset($doc['id']) && isset($doc['name'])) {
-                    $list[] = [
-                        'id' => (string) $doc['id'],
-                        'name' => (string) $doc['name'],
-                    ];
-                }
-            }
-            usort($list, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
-
-            return $list;
-        });
+        return State::getCachedByCountry($this->country);
     }
 
     public function getCitiesList(): array
     {
-        if (empty($this->state)) {
-            return [];
-        }
-
-        $sId = (string) $this->state;
-
-        return Cache::remember("cities_lookup_{$sId}", 86400, function () use ($sId) {
-            $docs = City::raw(fn ($col) => $col->find(
-                ['state_id' => ['$in' => [(int) $sId, (string) $sId]]],
-                ['projection' => ['id' => 1, 'name' => 1], 'sort' => ['name' => 1]]
-            ));
-
-            $list = [];
-            foreach ($docs as $doc) {
-                if (isset($doc['id']) && isset($doc['name'])) {
-                    $list[] = [
-                        'id' => (string) $doc['id'],
-                        'name' => (string) $doc['name'],
-                    ];
-                }
-            }
-            usort($list, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
-
-            return $list;
-        });
+        return City::getCachedByState($this->state);
     }
 
     public function removeExistingLogo(): void
@@ -189,28 +141,8 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Institute - Admin')] cla
 
     public function with(): array
     {
-        $countries = Cache::remember('all_countries_options_v4', 86400, function () {
-            $docs = Country::raw(fn ($col) => $col->find(
-                [],
-                ['projection' => ['id' => 1, 'name' => 1], 'sort' => ['name' => 1]]
-            ));
-
-            $list = [];
-            foreach ($docs as $doc) {
-                if (isset($doc['id']) && isset($doc['name'])) {
-                    $list[] = [
-                        'id' => (string) $doc['id'],
-                        'name' => (string) $doc['name'],
-                    ];
-                }
-            }
-            usort($list, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
-
-            return $list;
-        });
-
         return [
-            'countries' => $countries,
+            'countries' => Country::getCachedAll(),
             'states' => $this->getStatesList(),
             'cities' => $this->getCitiesList(),
         ];

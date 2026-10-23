@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\LinkPreviewController;
+use App\Models\ReviewerJournal;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -14,6 +16,14 @@ Route::view('dashboard', 'dashboard')
 
 // Link Preview API Route
 Route::post('api/link-preview', [LinkPreviewController::class, 'preview'])->name('api.link-preview');
+
+// Search Journals API Route
+Route::get('search-journals', function (Request $request) {
+    $query = (string) $request->input('search', '');
+    $journals = ReviewerJournal::searchTitles($query, 30);
+
+    return response()->json(['journals' => $journals]);
+})->name('search-journals');
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
@@ -49,6 +59,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('institutes', 'admin.institutes.index')->name('institutes.index');
     Volt::route('institutes/create', 'admin.institutes.create')->name('institutes.create');
     Volt::route('institutes/{organization}/edit', 'admin.institutes.edit')->name('institutes.edit');
+
+    Volt::route('journals', 'admin.journals.index')->name('journals.index');
+    Volt::route('journals/create', 'admin.journals.create')->name('journals.create');
+    Volt::route('journals/{journal}/edit', 'admin.journals.edit')->name('journals.edit');
 
     // For below the database fixing
     Volt::route('database-fixing', 'admin.database-fixing.index')->name('database-fixing.index');

@@ -17,6 +17,8 @@ This document records all MongoDB indexes created and utilized for the **`review
 | **`issn_1`** | `{"issn": 1}` | Single Field | Fast ISSN lookup and cross-referencing |
 | **`status_1`** | `{"status": 1}` | Single Field | Filters active and verified journals |
 | **`created_at_-1`** | `{"created_at": -1}` | Single Field | High-speed sorting for newest added journals |
+| **`e_issn_1`** | `{"e_issn": 1}` | Single Field | Rapid electronic ISSN lookups and cross-referencing |
+| **`p_issn_1`** | `{"p_issn": 1}` | Single Field | Rapid print ISSN lookups and cross-referencing |
 
 ---
 
@@ -99,6 +101,28 @@ This document records all MongoDB indexes created and utilized for the **`review
 
 ---
 
+#### 8. `e_issn_1`
+- **Fields**:
+  ```json
+  { "e_issn": 1 }
+  ```
+- **Options**: Default / Background: `true`
+- **Used by**:
+  - Electronic ISSN filter and admin lookup
+
+---
+
+#### 9. `p_issn_1`
+- **Fields**:
+  ```json
+  { "p_issn": 1 }
+  ```
+- **Options**: Default / Background: `true`
+- **Used by**:
+  - Print ISSN filter and admin lookup
+
+---
+
 ### How to Create in MongoDB Compass
 
 1. Open **MongoDB Compass** and connect to your database.
@@ -122,4 +146,6 @@ db.reviewer_journal.createIndex({ "slug": 1 }, { background: true });
 db.reviewer_journal.createIndex({ "issn": 1 }, { background: true });
 db.reviewer_journal.createIndex({ "status": 1 }, { background: true });
 db.reviewer_journal.createIndex({ "created_at": -1 }, { background: true });
+db.reviewer_journal.createIndex({ "e_issn": 1 }, { background: true });
+db.reviewer_journal.createIndex({ "p_issn": 1 }, { background: true });
 ```

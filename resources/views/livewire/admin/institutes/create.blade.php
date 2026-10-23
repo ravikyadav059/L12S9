@@ -1,5 +1,6 @@
 <?php
 
+use App\Helpers\TimezoneHelper;
 use App\Models\City;
 use App\Models\Country;
 use App\Models\Organization;
@@ -54,6 +55,33 @@ new #[Layout('components.layouts.admin')] #[Title('Add Institute - Admin')] clas
     public ?string $createdSlug = null;
     public ?string $createdName = null;
 
+    public function mount(): void
+    {
+        if (empty($this->country)) {
+            $defaultCountryId = TimezoneHelper::detectDefaultCountryId();
+            if ($defaultCountryId) {
+                $this->country = (string) $defaultCountryId;
+            }
+        }
+    }
+
+    public function autoDetectCountry(?string $clientTimezone = null): void
+    {
+        if (empty($this->country) && ! empty($clientTimezone)) {
+            $countryId = TimezoneHelper::detectDefaultCountryId($clientTimezone);
+            if ($countryId) {
+                $this->country = (string) $countryId;
+            }
+        }
+
+        if (Auth::check() && ! empty($clientTimezone)) {
+            $user = Auth::user();
+            if ($user instanceof User && (empty($user->timezone) || empty($user->country))) {
+                TimezoneHelper::updateUserLocation($user, $clientTimezone);
+            }
+        }
+    }
+
     public function updatedCountry(): void
     {
         $this->state = '';
@@ -67,60 +95,12 @@ new #[Layout('components.layouts.admin')] #[Title('Add Institute - Admin')] clas
 
     public function getStatesList(): array
     {
-        if (empty($this->country)) {
-            return [];
-        }
-
-        $cId = (string) $this->country;
-
-        return Cache::remember("states_lookup_{$cId}", 86400, function () use ($cId) {
-            $docs = State::raw(fn ($col) => $col->find(
-                ['country_id' => ['$in' => [(int) $cId, (string) $cId]]],
-                ['projection' => ['id' => 1, 'name' => 1], 'sort' => ['name' => 1]]
-            ));
-
-            $list = [];
-            foreach ($docs as $doc) {
-                if (isset($doc['id']) && isset($doc['name'])) {
-                    $list[] = [
-                        'id' => (string) $doc['id'],
-                        'name' => (string) $doc['name'],
-                    ];
-                }
-            }
-            usort($list, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
-
-            return $list;
-        });
+        return State::getCachedByCountry($this->country);
     }
 
     public function getCitiesList(): array
     {
-        if (empty($this->state)) {
-            return [];
-        }
-
-        $sId = (string) $this->state;
-
-        return Cache::remember("cities_lookup_{$sId}", 86400, function () use ($sId) {
-            $docs = City::raw(fn ($col) => $col->find(
-                ['state_id' => ['$in' => [(int) $sId, (string) $sId]]],
-                ['projection' => ['id' => 1, 'name' => 1], 'sort' => ['name' => 1]]
-            ));
-
-            $list = [];
-            foreach ($docs as $doc) {
-                if (isset($doc['id']) && isset($doc['name'])) {
-                    $list[] = [
-                        'id' => (string) $doc['id'],
-                        'name' => (string) $doc['name'],
-                    ];
-                }
-            }
-            usort($list, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
-
-            return $list;
-        });
+        return City::getCachedByState($this->state);
     }
 
     public function save(): void
@@ -199,28 +179,8 @@ new #[Layout('components.layouts.admin')] #[Title('Add Institute - Admin')] clas
 
     public function with(): array
     {
-        $countries = Cache::remember('all_countries_options_v4', 86400, function () {
-            $docs = Country::raw(fn ($col) => $col->find(
-                [],
-                ['projection' => ['id' => 1, 'name' => 1], 'sort' => ['name' => 1]]
-            ));
-
-            $list = [];
-            foreach ($docs as $doc) {
-                if (isset($doc['id']) && isset($doc['name'])) {
-                    $list[] = [
-                        'id' => (string) $doc['id'],
-                        'name' => (string) $doc['name'],
-                    ];
-                }
-            }
-            usort($list, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
-
-            return $list;
-        });
-
         return [
-            'countries' => $countries,
+            'countries' => Country::getCachedAll(),
             'states' => $this->getStatesList(),
             'cities' => $this->getCitiesList(),
         ];
@@ -228,7 +188,20 @@ new #[Layout('components.layouts.admin')] #[Title('Add Institute - Admin')] clas
 };
 ?>
 
-<div class="space-y-6 w-full">
+<div 
+    x-data 
+    x-init="
+        if (!$wire.country) {
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (tz) {
+                    $wire.autoDetectCountry(tz);
+                }
+            } catch (e) {}
+        }
+    "
+    class="space-y-6 w-full"
+>
     <!-- BREADCRUMBS & TOP BAR -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">

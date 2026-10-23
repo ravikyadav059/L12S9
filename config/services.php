@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'journal_verification' => [
+        'mailto' => env('JOURNAL_VERIFICATION_MAILTO', env('MAIL_FROM_ADDRESS', 'admin@scholar9.com')),
+        'timeout' => (int) env('JOURNAL_VERIFICATION_TIMEOUT', 5),
+    ],
+
 ];

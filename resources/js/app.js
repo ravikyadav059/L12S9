@@ -14,4 +14,6 @@ import 'flatpickr/dist/plugins/monthSelect/style.css';
 window.flatpickr = flatpickr;
 window.monthSelectPlugin = monthSelectPlugin;
 
+import './helpers';
+
 
