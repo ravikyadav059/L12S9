@@ -407,6 +407,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
 ?>
 
 <div 
+    x-on:close-registry-search-modal.window="closeRegistrySearchModal()"
     x-data="{
         // Modal 1: Existing Journal Selected from Dropdown
         showExistingModal: false,
@@ -440,6 +441,32 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
         foundIssnJournal: null,
         checkedIssns: {},
         dismissedIssns: {},
+
+        // Modal 4: Search Official Registry by Title (100% JS-driven open/close)
+        showRegistrySearchModal: false,
+        registrySearchInput: '',
+
+        openRegistrySearchModal(seed = '') {
+            let titleVal = (seed || this.title || (document.querySelector('input[x-model=\x22title\x22]')?.value || '')).trim();
+            this.registrySearchInput = titleVal;
+            this.showRegistrySearchModal = true;
+            if (titleVal && titleVal.length >= 2) {
+                $wire.set('searchRegistryTitle', titleVal);
+                $wire.searchRegistryByTitle();
+            }
+        },
+
+        closeRegistrySearchModal() {
+            this.showRegistrySearchModal = false;
+        },
+
+        triggerRegistrySearch() {
+            let q = (this.registrySearchInput || '').trim();
+            if (q) {
+                $wire.set('searchRegistryTitle', q);
+                $wire.searchRegistryByTitle();
+            }
+        },
 
         formatIssnValue(event, field) {
             if (typeof formatIssn === 'function') {
@@ -641,6 +668,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                             open: false,
                             results: [],
                             loading: false,
+                            hasSearched: false,
                             lastQuery: '',
                             title: @entangle('journal_title'),
                             cache: {},
@@ -651,19 +679,24 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                                     this.title = '';
                                     this.lastQuery = '';
                                     this.results = [];
+                                    this.hasSearched = false;
                                     this.open = false;
                                 });
                                 window.addEventListener('revert-journal-title', (e) => {
                                     this.title = e.detail || '';
                                     this.lastQuery = e.detail || '';
                                     this.results = [];
+                                    this.hasSearched = false;
                                     this.open = false;
                                 });
                                 window.addEventListener('journal-auto-filled', (e) => {
                                     if (e.detail && e.detail.journal_title) {
                                         this.title = e.detail.journal_title;
-                                        this.lastQuery = e.detail.journal_title;
+                                        this.lastQuery = '';
+                                        this.results = [];
+                                        this.hasSearched = false;
                                         this.open = false;
+                                        this.search();
                                     }
                                 });
                             },
@@ -674,6 +707,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                                     this.results = [];
                                     this.open = false;
                                     this.loading = false;
+                                    this.hasSearched = false;
                                     if (this.controller) {
                                         this.controller.abort();
                                     }
@@ -681,11 +715,13 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                                 }
                                 this.open = true;
                                 if (q === this.lastQuery && this.results.length > 0) {
+                                    this.hasSearched = true;
                                     return;
                                 }
                                 if (this.cache[q]) {
                                     this.results = this.cache[q];
                                     this.loading = false;
+                                    this.hasSearched = true;
                                     this.lastQuery = q;
                                     return;
                                 }
@@ -706,6 +742,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                                         this.cache[q] = list;
                                         if ((this.title || '').trim() === q) {
                                             this.results = list;
+                                            this.hasSearched = true;
                                         }
                                     }
                                 } catch (e) {
@@ -754,14 +791,25 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                             <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
                                 Journal Full Name <span class="text-rose-500">*</span>
                             </label>
-                            <span x-show="loading" class="text-[11px] text-brand font-medium animate-pulse" style="display: none;">Searching existing...</span>
+                            <div class="flex items-center gap-2">
+                                <span x-show="loading" class="text-[11px] text-brand font-medium animate-pulse" style="display: none;">Searching existing...</span>
+                                <button 
+                                    type="button" 
+                                    @click="openRegistrySearchModal(title)" 
+                                    class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex flex-row items-center gap-1 cursor-pointer whitespace-nowrap"
+                                    title="Search Crossref / OpenAlex official registries by this title"
+                                >
+                                    <flux:icon name="magnifying-glass" class="size-3 shrink-0" />
+                                    <span>Search Registry by Name</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="relative">
                             <input 
                                 type="text" 
                                 x-model="title"
                                 @input.debounce.350ms="search()"
-                                @focus="if ((title || '').trim().length >= 2) open = true"
+                                @focus="if ((title || '').trim().length >= 2) { search(); open = true; }"
                                 @keydown.escape="open = false"
                                 @keydown.enter.prevent="selectNew()"
                                 placeholder="Type or search journal name (e.g. International Journal of Engineering...)"
@@ -788,6 +836,15 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                             class="absolute left-0 right-0 z-50 mt-1 max-h-80 overflow-y-auto rounded-xl bg-white dark:bg-[#111c26] border border-zinc-200 dark:border-zinc-800 shadow-xl py-1 text-xs"
                             style="display: none;"
                         >
+                            <!-- Loading indicator inside dropdown when opening first time -->
+                            <div x-show="loading && results.length === 0" class="px-3.5 py-3 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
+                                <svg class="animate-spin size-4 text-brand" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                </svg>
+                                <span>Searching registered journals...</span>
+                            </div>
+
                             <template x-if="results.length > 0">
                                 <div>
                                     <div class="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
@@ -830,7 +887,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
 
                             <!-- Option when NO matching journals exist -->
                             <div 
-                                x-show="results.length === 0 && !loading"
+                                x-show="hasSearched && results.length === 0 && !loading"
                                 @click="selectNew()"
                                 class="px-3.5 py-2.5 bg-brand/5 hover:bg-brand/10 dark:bg-brand/10 dark:hover:bg-brand/20 cursor-pointer flex items-center justify-between gap-3 transition"
                             >
@@ -984,7 +1041,17 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        <button 
+                            type="button"
+                            @click="openRegistrySearchModal()"
+                            class="inline-flex flex-row items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                            title="Search Crossref / OpenAlex official registries by journal name"
+                        >
+                            <flux:icon name="magnifying-glass" class="size-3.5 shrink-0" />
+                            <span>Search by Name</span>
+                        </button>
+
                         <select 
                             wire:model.live="verificationSource"
                             class="px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-brand"
@@ -999,21 +1066,21 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
 
                         <button 
                             type="button"
-                            wire:click="verifyJournalOnline"
+                            @click="let eVal = (document.querySelector('input[wire\\:model*=\x22e_issn\x22]')?.value || '').trim(); let pVal = (document.querySelector('input[wire\\:model*=\x22p_issn\x22]')?.value || '').trim(); $wire.verifyJournalOnline(eVal || pVal);"
                             wire:loading.attr="disabled"
                             wire:target="verifyJournalOnline"
-                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-500 active:bg-sky-700 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                            class="inline-flex flex-row items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-500 active:bg-sky-700 shadow-xs transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
                         >
-                            <span wire:loading.remove wire:target="verifyJournalOnline" class="flex items-center gap-1.5">
-                                <flux:icon name="magnifying-glass" class="size-3.5" />
-                                Verify Journal
+                            <span wire:loading.remove wire:target="verifyJournalOnline" class="inline-flex flex-row items-center gap-1.5 whitespace-nowrap">
+                                <flux:icon name="magnifying-glass" class="size-3.5 shrink-0" />
+                                <span>Verify Journal</span>
                             </span>
-                            <span wire:loading wire:target="verifyJournalOnline" class="flex items-center gap-1.5">
-                                <svg class="animate-spin size-3.5" viewBox="0 0 24 24" fill="none">
+                            <span wire:loading.inline-flex wire:target="verifyJournalOnline" class="inline-flex flex-row items-center gap-1.5 whitespace-nowrap">
+                                <svg class="animate-spin size-3.5 shrink-0 inline-block text-white" viewBox="0 0 24 24" fill="none">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                                 </svg>
-                                Verifying...
+                                <span>Verifying...</span>
                             </span>
                         </button>
                     </div>
@@ -1076,7 +1143,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                         </label>
                         <input 
                             type="text" 
-                            wire:model="e_issn" 
+                            wire:model.live.debounce.250ms="e_issn" 
                             x-on:input="
                                 formatIssnValue($event, 'e_issn');
                                 if ($event.target.value.length === 9) {
@@ -1097,7 +1164,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
                         </label>
                         <input 
                             type="text" 
-                            wire:model="p_issn" 
+                            wire:model.live.debounce.250ms="p_issn" 
                             x-on:input="
                                 formatIssnValue($event, 'p_issn');
                                 if ($event.target.value.length === 9) {
@@ -2020,6 +2087,10 @@ new #[Layout('components.layouts.admin')] #[Title('Edit Journal - Admin')] class
         :auto-fill-diff="$autoFillDiff" 
         :existing-db-journal-info="$existingDbJournalInfo" 
         :verified-source-label="$verifiedSourceLabel" 
+        :show-registry-search-modal="$showRegistrySearchModal"
+        :search-registry-title="$searchRegistryTitle"
+        :registry-title-candidates="$registryTitleCandidates"
+        :is-searching-registry-title="$isSearchingRegistryTitle"
     />
 
     <script>

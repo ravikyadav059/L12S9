@@ -64,6 +64,16 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('journals/create', 'admin.journals.create')->name('journals.create');
     Volt::route('journals/{journal}/edit', 'admin.journals.edit')->name('journals.edit');
 
+    Volt::route('indexing-agencies', 'admin.indexing-agencies.index')->name('indexing-agencies.index');
+    Volt::route('indexing-agencies/create', 'admin.indexing-agencies.create')->name('indexing-agencies.create');
+    Volt::route('indexing-agencies/{agency}/edit', 'admin.indexing-agencies.edit')->name('indexing-agencies.edit');
+
+    Volt::route('journal-role-requests', 'admin.journal-role-requests.index')->name('journal-role-requests.index');
+
+    Volt::route('journal-roles', 'admin.journal-roles.index')->name('journal-roles.index');
+    Volt::route('journal-roles/create', 'admin.journal-roles.create')->name('journal-roles.create');
+    Volt::route('journal-roles/{journalRole}/edit', 'admin.journal-roles.edit')->name('journal-roles.edit');
+
     // For below the database fixing
     Volt::route('database-fixing', 'admin.database-fixing.index')->name('database-fixing.index');
     Volt::route('database-fixing/publication/status', 'admin.database-fixing.publication.status')->name('database-fixing.publication.status');

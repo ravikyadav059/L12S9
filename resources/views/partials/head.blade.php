@@ -3,6 +3,26 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>{{ $title ?? 'Laravel' }}</title>
 
+<!-- FAST THEME INITIALIZATION TO PREVENT FLASH OF DARK MODE / UNSTYLED THEME (FOUC) -->
+<script>
+    (function () {
+        function syncTheme() {
+            try {
+                const appearance = localStorage.getItem('flux.appearance') || 'system';
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const isDark = appearance === 'dark' || (appearance === 'system' && prefersDark);
+                if (isDark) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            } catch (e) {}
+        }
+        syncTheme();
+        document.addEventListener('livewire:navigated', syncTheme);
+    })();
+</script>
+
 <!-- FAVICON -->
 <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
 

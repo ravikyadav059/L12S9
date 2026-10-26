@@ -474,7 +474,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
                                 $tagsList = $question->category;
                             }
                         @endphp
-                        <tr class="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition">
+                        <tr class="odd:bg-zinc-200/70 even:bg-white dark:odd:bg-zinc-950/60 dark:even:bg-[#111c26] hover:bg-zinc-200 dark:hover:bg-zinc-800/80 transition">
                             <!-- Checkbox Row Column -->
                             <td class="px-4 py-4 text-center">
                                 <input 

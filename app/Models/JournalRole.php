@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Support\Facades\Cache;
+use MongoDB\BSON\Regex;
 use MongoDB\Laravel\Eloquent\Model;
 use MongoDB\Laravel\Relations\HasMany;
 
@@ -99,5 +100,24 @@ class JournalRole extends Model
         }
 
         return $roles;
+    }
+
+    /**
+     * Check if a role name already exists (case-insensitive).
+     */
+    public static function isNameTaken(string $name, ?string $excludeId = null): bool
+    {
+        $trimmed = trim($name);
+        if ($trimmed === '') {
+            return false;
+        }
+
+        $query = static::where('name', 'regex', new Regex('^'.preg_quote($trimmed, '/').'$', 'i'));
+
+        if ($excludeId) {
+            $query->where('_id', '!=', $excludeId);
+        }
+
+        return $query->exists();
     }
 }

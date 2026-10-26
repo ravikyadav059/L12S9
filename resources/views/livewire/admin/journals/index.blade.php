@@ -224,7 +224,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Journals - Admin')] cl
                             $isActive = in_array((string) $j->status, ['1', 1, 'active', true], true);
                             $title = $j->journal_title;
                         @endphp
-                        <tr class="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
+                        <tr class="odd:bg-zinc-200/70 even:bg-white dark:odd:bg-zinc-950/60 dark:even:bg-[#111c26] hover:bg-zinc-200 dark:hover:bg-zinc-800/80 transition">
                             <!-- Photo & Title (Compact size, full title only, no slug) -->
                             <td class="py-2.5 px-4">
                                 <div class="flex items-center gap-2.5">

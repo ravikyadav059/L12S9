@@ -249,7 +249,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Institutes - Admin')] 
                             }
                             $isActive = in_array((string) $org->status, ['1', 1, 'active', true], true);
                         @endphp
-                        <tr class="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
+                        <tr class="odd:bg-zinc-200/70 even:bg-white dark:odd:bg-zinc-950/60 dark:even:bg-[#111c26] hover:bg-zinc-200 dark:hover:bg-zinc-800/80 transition">
                             <!-- Institute Info -->
                             <td class="py-3 px-4">
                                 <div class="flex items-center gap-3">

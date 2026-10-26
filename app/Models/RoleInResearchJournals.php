@@ -73,4 +73,28 @@ class RoleInResearchJournals extends Model
     {
         return $this->belongsTo(JournalRole::class, 'role', '_id');
     }
+
+    /**
+     * Get the resolved Journal title with fallback.
+     */
+    public function getJournalNameAttribute(): string
+    {
+        return (string) ($this->reviewerJournal?->journal_title ?? $this->journal_title ?? '—');
+    }
+
+    /**
+     * Get the resolved User display name with fallback.
+     */
+    public function getUserDisplayNameAttribute(): string
+    {
+        return (string) ($this->user?->name ?? '—');
+    }
+
+    /**
+     * Get the resolved Role display name with fallback.
+     */
+    public function getRoleDisplayNameAttribute(): string
+    {
+        return (string) ($this->journalRole?->name ?? $this->role ?? '—');
+    }
 }

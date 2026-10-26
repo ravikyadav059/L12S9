@@ -450,7 +450,7 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Publications - Admin')
                             $rawStatus = (string) ($publication->status ?? $publication->option ?? '0');
                             $isPub = in_array($publication->status, ['published', 1, '1', true], true) || in_array($publication->option, ['published', 1, '1', true], true);
                         @endphp
-                        <tr class="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition">
+                        <tr class="odd:bg-zinc-200/70 even:bg-white dark:odd:bg-zinc-950/60 dark:even:bg-[#111c26] hover:bg-zinc-200 dark:hover:bg-zinc-800/80 transition">
                             <!-- Checkbox Row Column -->
                             <td class="px-4 py-4 text-center">
                                 <input 

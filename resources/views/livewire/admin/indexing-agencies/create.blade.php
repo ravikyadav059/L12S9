@@ -1,0 +1,287 @@
+<?php
+
+use App\Models\IndexingAgency;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
+use Livewire\Attributes\Validate;
+use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
+
+new #[Layout('components.layouts.admin')] #[Title('Add Indexing Agency - Admin')] class extends Component {
+    use WithFileUploads;
+
+    public int $serial_number = 1;
+
+    #[Validate('required|string|max:255')]
+    public string $agency_name = '';
+
+    #[Validate('required|in:1,0')]
+    public string $status = '1';
+
+    #[Validate('required|image|mimes:jpg,jpeg,png,webp,svg,gif|max:2048', message: [
+        'image.required' => 'The agency icon is required.',
+        'image.image' => 'The agency icon must be a valid image file.',
+        'image.max' => 'The agency icon may not be greater than 2MB.',
+    ])]
+    public mixed $image = null;
+
+    public function mount(): void
+    {
+        $this->serial_number = IndexingAgency::generateUniqueSerialNumber();
+    }
+
+    public function updatedAgencyName(): void
+    {
+        $name = trim($this->agency_name);
+        if ($name !== '' && IndexingAgency::isNameTaken($name)) {
+            $this->addError('agency_name', "The agency name '{$name}' is already registered. Please choose a unique name.");
+        } else {
+            $this->resetErrorBag('agency_name');
+        }
+    }
+
+    public function save(): void
+    {
+        $this->validate();
+
+        $name = trim($this->agency_name);
+        if (IndexingAgency::isNameTaken($name)) {
+            $this->addError('agency_name', "The agency name '{$name}' is already registered. Please choose a unique name.");
+
+            return;
+        }
+
+        // Guarantee unique serial number on save
+        $uniqueSerial = IndexingAgency::generateUniqueSerialNumber();
+
+        // Handle image upload to uploads/indexingAgency
+        $dir = public_path('uploads/indexingAgency');
+        if (! File::exists($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
+        $cleanSlug = Str::slug($name) ?: 'agency';
+        $filename = $cleanSlug.'_'.time().'.'.$this->image->getClientOriginalExtension();
+        $this->image->move($dir, $filename);
+        $imagePath = 'uploads/indexingAgency/'.$filename;
+
+        $agency = IndexingAgency::create([
+            'serial_number' => (int) $uniqueSerial,
+            'agency_name' => $name,
+            'status' => (int) $this->status,
+            'image' => $imagePath,
+        ]);
+
+        session()->flash('message', "Indexing Agency '{$agency->agency_name}' (#{$agency->serial_number}) created successfully.");
+        $this->redirect(route('admin.indexing-agencies.index'), navigate: true);
+    }
+};
+?>
+
+<div class="space-y-6 w-full">
+    <!-- TOP HEADER & BREADCRUMBS -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-200/80 dark:border-zinc-800">
+        <div>
+            <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                <a href="{{ route('admin.dashboard') }}" wire:navigate class="hover:text-brand transition">Admin</a>
+                <span>/</span>
+                <a href="{{ route('admin.indexing-agencies.index') }}" wire:navigate class="hover:text-brand transition">Indexing Agencies</a>
+                <span>/</span>
+                <span class="font-bold text-zinc-900 dark:text-white">Add New</span>
+            </div>
+            <h1 class="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                <flux:icon name="plus-circle" class="size-6 text-brand" />
+                <span>Add Indexing Agency</span>
+            </h1>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Register a new indexing database, bibliographical source, or citation registry.
+            </p>
+        </div>
+
+        <div>
+            <a 
+                href="{{ route('admin.indexing-agencies.index') }}" 
+                wire:navigate 
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+            >
+                <flux:icon name="arrow-left" class="size-3.5" />
+                <span>Back to Directory</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- MAIN FORM CARD -->
+    <form wire:submit="save" class="space-y-6">
+        <div class="bg-white dark:bg-[#111c26] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+            <div class="p-5 sm:p-6 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 flex items-center gap-3">
+                <div class="size-10 rounded-xl bg-brand/10 border border-brand/20 text-brand flex items-center justify-center shrink-0">
+                    <flux:icon name="tag" class="size-5" />
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-zinc-900 dark:text-white">Agency Information</h2>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400">Configure core registry identity, serial ordering, and iconography.</p>
+                </div>
+            </div>
+
+            <div class="p-6 sm:p-8 space-y-6">
+                <!-- GRID: Serial Number & Status -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Serial Number (Prefilled & Readonly) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                                Serial Number <span class="text-rose-500">*</span>
+                            </label>
+                            <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+                                <flux:icon name="lock-closed" class="size-3" />
+                                <span>Auto-Assigned & Locked</span>
+                            </span>
+                        </div>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                value="#{{ $serial_number }}" 
+                                readonly 
+                                disabled
+                                class="w-full px-4 py-2.5 bg-zinc-100/80 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-not-allowed select-none"
+                            />
+                        </div>
+                        <p class="text-[11px] text-zinc-400 mt-1">
+                            Calculated automatically to guarantee no duplicates in directory sequence.
+                        </p>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
+                            Status <span class="text-rose-500">*</span>
+                        </label>
+                        <select 
+                            wire:model="status" 
+                            class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition @error('status') border-rose-400 @enderror"
+                        >
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        @error('status') <p class="text-rose-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+
+                <!-- Agency Name (with duplicate protection) -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
+                        Agency Name <span class="text-rose-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        wire:model.blur="agency_name" 
+                        placeholder="e.g. Scopus, Web of Science, PubMed, Google Scholar, DOAJ..."
+                        class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition @error('agency_name') border-rose-400 @enderror"
+                    />
+                    <p class="text-[11px] text-zinc-400 mt-1">
+                        Must be unique. Case-insensitive duplicate checks prevent duplicate agency registrations.
+                    </p>
+                    @error('agency_name') 
+                        <p class="text-rose-500 text-xs mt-1.5 font-semibold flex items-center gap-1.5">
+                            <flux:icon name="exclamation-circle" class="size-4 shrink-0" />
+                            <span>{{ $message }}</span>
+                        </p> 
+                    @enderror
+                </div>
+
+                <!-- Agency Icon & Current/Preview Section -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
+                        Agency Icon <span class="text-rose-500">*</span>
+                    </label>
+
+                    <div class="p-5 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/30 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-5">
+                            <!-- Preview Box -->
+                            <div class="flex flex-col items-center gap-1.5 shrink-0">
+                                <span class="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                    Current / Preview:
+                                </span>
+                                <div class="relative size-24 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 flex items-center justify-center overflow-hidden shadow-xs">
+                                    @if ($image)
+                                        <img src="{{ $image->temporaryUrl() }}" alt="Agency Icon Preview" class="w-full h-full object-contain rounded-lg" />
+                                        <button 
+                                            type="button" 
+                                            wire:click="$set('image', null)" 
+                                            class="absolute top-1 right-1 size-5 bg-rose-500 text-white rounded-full flex items-center justify-center text-xs shadow-xs hover:bg-rose-600 transition cursor-pointer"
+                                            title="Remove icon"
+                                        >
+                                            &times;
+                                        </button>
+                                    @else
+                                        <div class="text-center p-2 text-zinc-400">
+                                            <flux:icon name="photo" class="size-8 mx-auto opacity-50" />
+                                            <span class="text-[10px] block mt-1">No Icon</span>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Upload Inputs -->
+                            <div class="flex-1 space-y-2">
+                                <input 
+                                    type="file" 
+                                    wire:model="image" 
+                                    accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/gif"
+                                    class="block w-full text-xs text-zinc-500 dark:text-zinc-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand file:text-white hover:file:bg-brand-600 transition cursor-pointer"
+                                />
+                                <div class="text-[11px] text-zinc-400 space-y-0.5">
+                                    <p>&bull; Supported formats: PNG, JPG, JPEG, WEBP, SVG, GIF (Max: 2MB).</p>
+                                    <p>&bull; Recommended: Transparent square PNG with at least 128x128 resolution.</p>
+                                </div>
+
+                                <div wire:loading wire:target="image" class="text-xs text-brand font-semibold flex items-center gap-1.5 pt-1">
+                                    <svg class="animate-spin size-3.5" viewBox="0 0 24 24" fill="none">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                    </svg>
+                                    <span>Uploading & generating preview...</span>
+                                </div>
+
+                                @error('image') 
+                                    <p class="text-rose-500 text-xs mt-1 font-semibold">{{ $message }}</p> 
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOTER BUTTONS -->
+            <div class="p-5 sm:p-6 border-t border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 flex items-center justify-end gap-3">
+                <a 
+                    href="{{ route('admin.indexing-agencies.index') }}" 
+                    wire:navigate 
+                    class="px-4 py-2.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition cursor-pointer"
+                >
+                    Cancel
+                </a>
+
+                <button 
+                    type="submit" 
+                    wire:loading.attr="disabled"
+                    class="px-5 py-2.5 text-xs font-bold text-white bg-brand hover:bg-brand-600 rounded-xl shadow-xs transition inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                    <span wire:loading.remove wire:target="save" class="inline-flex items-center gap-1.5">
+                        <flux:icon name="check" class="size-4" />
+                        <span>Save Indexing Agency</span>
+                    </span>
+                    <span wire:loading.inline-flex wire:target="save" class="inline-flex items-center gap-1.5">
+                        <svg class="animate-spin size-4" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        <span>Saving...</span>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     @include('partials.head', ['title' => ($title ?? 'Admin Panel') . ' - Scholar Admin'])
 </head>
@@ -96,6 +96,11 @@
 
                 <flux:navlist.item icon="academic-cap" href="{{ route('admin.institutes.index') }}" :current="request()->routeIs('admin.institutes.*')">Institutes</flux:navlist.item>
                 <flux:navlist.item icon="book-open" href="{{ route('admin.journals.index') }}" :current="request()->routeIs('admin.journals.*')">Journals</flux:navlist.item>
+                <flux:navlist.item icon="clipboard-document-check" href="#">Claim Journals List</flux:navlist.item>
+                <flux:navlist.item icon="document-duplicate" href="#">Journal Publication Paper</flux:navlist.item>
+                <flux:navlist.item icon="tag" href="{{ route('admin.indexing-agencies.index') }}" :current="request()->routeIs('admin.indexing-agencies.*')">Indexing Agency</flux:navlist.item>
+                <flux:navlist.item icon="user-group" href="{{ route('admin.journal-role-requests.index') }}" :current="request()->routeIs('admin.journal-role-requests.*')">All Journal Role Requests</flux:navlist.item>
+                <flux:navlist.item icon="briefcase" href="{{ route('admin.journal-roles.index') }}" :current="request()->routeIs('admin.journal-roles.*')">Journal Roles</flux:navlist.item>
             </flux:navlist.group>
 
             <flux:navlist.group heading="Database Tools" class="grid">

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Support\Facades\Cache;
+use MongoDB\BSON\Regex;
 use MongoDB\Laravel\Eloquent\Model;
 
 class IndexingAgency extends Model
@@ -119,5 +120,80 @@ class IndexingAgency extends Model
         }));
 
         return array_slice($matches, 0, $limit);
+    }
+
+    /**
+     * Get the resolved URL for the agency image icon.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if (empty($this->image)) {
+            return null;
+        }
+
+        if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
+            return $this->image;
+        }
+
+        return asset($this->image);
+    }
+
+    /**
+     * Get the next serial number.
+     */
+    public static function getNextSerialNumber(): int
+    {
+        $max = static::all()->max(fn ($agency) => (int) $agency->serial_number) ?? 0;
+
+        return max((int) $max + 1, 1);
+    }
+
+    /**
+     * Check if a serial number is already assigned.
+     */
+    public static function isSerialNumberTaken(int $serialNumber, ?string $excludeId = null): bool
+    {
+        $query = static::where(function ($q) use ($serialNumber) {
+            $q->where('serial_number', $serialNumber)
+                ->orWhere('serial_number', (string) $serialNumber);
+        });
+
+        if ($excludeId) {
+            $query->where('_id', '!=', $excludeId);
+        }
+
+        return $query->exists();
+    }
+
+    /**
+     * Generate guaranteed next unique serial number.
+     */
+    public static function generateUniqueSerialNumber(?string $excludeId = null): int
+    {
+        $next = static::getNextSerialNumber();
+        while (static::isSerialNumberTaken($next, $excludeId)) {
+            $next++;
+        }
+
+        return $next;
+    }
+
+    /**
+     * Check if an agency name already exists (case-insensitive).
+     */
+    public static function isNameTaken(string $name, ?string $excludeId = null): bool
+    {
+        $trimmed = trim($name);
+        if ($trimmed === '') {
+            return false;
+        }
+
+        $query = static::where('agency_name', 'regex', new Regex('^'.preg_quote($trimmed, '/').'$', 'i'));
+
+        if ($excludeId) {
+            $query->where('_id', '!=', $excludeId);
+        }
+
+        return $query->exists();
     }
 }
