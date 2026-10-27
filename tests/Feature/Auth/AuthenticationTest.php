@@ -26,6 +26,42 @@ test('users can authenticate using the login screen', function () {
     $this->assertAuthenticated();
 });
 
+test('admin user with type 1 and status 0 is redirected to admin dashboard', function () {
+    $admin = User::factory()->create([
+        'type' => 1,
+        'status' => 0,
+    ]);
+
+    $response = LivewireVolt::test('auth.login')
+        ->set('email', $admin->email)
+        ->set('password', 'password')
+        ->call('login');
+
+    $response
+        ->assertHasNoErrors()
+        ->assertRedirect(route('admin.dashboard', absolute: false));
+
+    $this->assertAuthenticated();
+});
+
+test('simple user with type 0 is redirected to dashboard', function () {
+    $user = User::factory()->create([
+        'type' => 0,
+        'status' => 1,
+    ]);
+
+    $response = LivewireVolt::test('auth.login')
+        ->set('email', $user->email)
+        ->set('password', 'password')
+        ->call('login');
+
+    $response
+        ->assertHasNoErrors()
+        ->assertRedirect(route('dashboard', absolute: false));
+
+    $this->assertAuthenticated();
+});
+
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();
 

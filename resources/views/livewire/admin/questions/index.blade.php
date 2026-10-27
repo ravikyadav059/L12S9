@@ -5,13 +5,16 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
 new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] class extends Component {
     use WithPagination;
 
+    #[Url(as: 'search', history: true)]
     public string $search = '';
+
     public string $statusFilter = 'all';
     public string $dateOrder = 'new';
     public int $perPage = 15;
@@ -19,10 +22,25 @@ new #[Layout('components.layouts.admin')] #[Title('Manage Questions - Admin')] c
     public string $sortDirection = 'desc';
     public bool $hasCustomSort = false;
 
+    public function mount(): void
+    {
+        if (request()->has('search')) {
+            $this->search = (string) request()->query('search');
+            session()->put('admin_questions_search', $this->search);
+        } elseif (empty($this->search) && session()->has('admin_questions_search')) {
+            $this->search = (string) session('admin_questions_search');
+        }
+    }
+
     public function updatingSearch(): void
     {
         $this->hasCustomSort = false;
         $this->resetPage();
+    }
+
+    public function updatedSearch(): void
+    {
+        session()->put('admin_questions_search', $this->search);
     }
 
     public function updatingStatusFilter(): void

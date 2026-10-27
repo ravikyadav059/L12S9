@@ -11,16 +11,31 @@ use Livewire\WithPagination;
 new #[Layout('components.layouts.admin')] #[Title('Manage Journals - Admin')] class extends Component {
     use WithPagination;
 
-    #[Url]
+    #[Url(as: 'search', history: true)]
     public string $search = '';
     public string $statusFilter = 'all';
     public int $perPage = 15;
     public string $sortField = 'created_at';
     public string $sortDirection = 'desc';
 
+    public function mount(): void
+    {
+        if (request()->has('search')) {
+            $this->search = (string) request()->query('search');
+            session()->put('admin_journals_search', $this->search);
+        } elseif (empty($this->search) && session()->has('admin_journals_search')) {
+            $this->search = (string) session('admin_journals_search');
+        }
+    }
+
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedSearch(): void
+    {
+        session()->put('admin_journals_search', $this->search);
     }
 
     public function updatingStatusFilter(): void

@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -31,9 +32,7 @@ class User extends Authenticatable // implements MustVerifyEmail
         'prefix',
         'email',
         'password',
-        'role',
         'user_role',
-        'is_admin',
         'type',
         'admin_permission',
         'status',
@@ -60,6 +59,7 @@ class User extends Authenticatable // implements MustVerifyEmail
         'publisher_status',
         'reviewer_status',
         'reviewer_date',
+        'enable_conference',
         'review_request_status',
         'followers',
         'following',
@@ -166,16 +166,38 @@ class User extends Authenticatable // implements MustVerifyEmail
     }
 
     /**
-     * Check if the user is an administrator (type=1, role=admin, admin_permission=1).
+     * Check if the user is an administrator.
+     * Users with type=1 or "1" (even if status is 0 or "0") are treated as admin.
+     * Users with type=0 or "0" are treated as simple users.
      */
     public function isAdmin(): bool
     {
-        return (int) ($this->type ?? 0) === 1
-            || ($this->type ?? '') === 'admin'
-            || (bool) ($this->is_admin ?? false)
-            || ($this->role ?? '') === 'admin'
-            || ($this->user_role ?? '') === 'admin'
-            || (bool) ($this->admin_permission ?? false);
+        $type = $this->type ?? null;
+
+        // If type is explicitly 0 or "0", the user is a simple user, not an admin
+        if ($type === 0 || $type === '0') {
+            return false;
+        }
+
+        // If type is 1 or "1", they are treated as admin (even if status is 0 or "0")
+        if ($type === 1 || $type === '1' || (is_numeric($type) && (int) $type === 1) || (is_string($type) && strtolower($type) === 'admin')) {
+            return true;
+        }
+
+        // Explicit is_admin boolean flag set by admin management
+        if (! empty($this->is_admin) && filter_var($this->is_admin, FILTER_VALIDATE_BOOLEAN)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the user is a simple/standard user (type=0, "0", or not an admin).
+     */
+    public function isSimpleUser(): bool
+    {
+        return ! $this->isAdmin();
     }
 
     /**
@@ -547,5 +569,55 @@ class User extends Authenticatable // implements MustVerifyEmail
     public static function forgetCachedPublishers(): void
     {
         Cache::forget(self::CACHE_KEY_PUBLISHERS);
+    }
+
+    /**
+     * Get unique scholar profile slug for routing (/profile/{slug}).
+     */
+    public function profileSlug(): string
+    {
+        if (! empty($this->slug)) {
+            return (string) $this->slug;
+        }
+
+        if (! empty($this->unique_id)) {
+            $nameForSlug = trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
+            if (empty($nameForSlug)) {
+                $nameForSlug = trim((string) ($this->fullname ?? ($this->name ?? 'author')));
+            }
+            $base = Str::slug($nameForSlug) ?: 'author';
+
+            return $base.'-'.$this->unique_id;
+        }
+
+        return (string) $this->_id;
+    }
+
+    /**
+     * Get status integer code: 0=Pending, 1=Active, 2=Re-Document, 3=Reject.
+     */
+    public function getStatusCode(): int
+    {
+        $raw = strtolower(trim((string) ($this->status ?? '0')));
+
+        return match ($raw) {
+            '1', 'active' => 1,
+            '2', 'redocument', 're-document' => 2,
+            '3', 'reject', 'rejected' => 3,
+            default => 0,
+        };
+    }
+
+    /**
+     * Get human-readable status label.
+     */
+    public function getStatusLabel(): string
+    {
+        return match ($this->getStatusCode()) {
+            1 => 'Active',
+            2 => 'Re-Document',
+            3 => 'Reject',
+            default => 'Pending',
+        };
     }
 }

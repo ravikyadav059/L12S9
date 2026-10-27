@@ -183,6 +183,15 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - If you have modified any PHP files, you must run `vendor/bin/pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
 - Do not run `vendor/bin/pint --test --format agent`, simply run `vendor/bin/pint --format agent` to fix any formatting issues.
 
+=== alpine/modals rules ===
+
+# Modals & Client-Side UI Toggles
+
+- Always use Alpine.js (`x-data`, `x-show`, `x-cloak`, `@click`, `@keydown.escape.window`) for modals, dropdowns, and client-side UI visibility toggles.
+- Do NOT send unwanted Livewire server network requests just to open, show, or close a modal.
+- Only send Livewire/server requests when submitting form data or executing backend actions (e.g. `wire:submit`).
+- On successful server action, dispatch an event (e.g. `$this->dispatch('close-modal')` or `$this->dispatch('password-updated')`) so Alpine closes the modal on the client.
+
 === pest/core rules ===
 
 ## Pest

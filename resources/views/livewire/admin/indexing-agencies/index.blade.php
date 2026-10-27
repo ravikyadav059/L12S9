@@ -12,7 +12,7 @@ use Livewire\WithPagination;
 new #[Layout('components.layouts.admin')] #[Title('Indexing Agencies - Admin')] class extends Component {
     use WithPagination;
 
-    #[Url]
+    #[Url(as: 'search', history: true)]
     public string $search = '';
 
     public string $statusFilter = 'all';
@@ -23,9 +23,24 @@ new #[Layout('components.layouts.admin')] #[Title('Indexing Agencies - Admin')] 
 
     public string $sortDirection = 'asc';
 
+    public function mount(): void
+    {
+        if (request()->has('search')) {
+            $this->search = (string) request()->query('search');
+            session()->put('admin_indexing_agencies_search', $this->search);
+        } elseif (empty($this->search) && session()->has('admin_indexing_agencies_search')) {
+            $this->search = (string) session('admin_indexing_agencies_search');
+        }
+    }
+
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedSearch(): void
+    {
+        session()->put('admin_indexing_agencies_search', $this->search);
     }
 
     public function updatingStatusFilter(): void

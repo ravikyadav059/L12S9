@@ -1,0 +1,438 @@
+<section style="background: #F5FCFF;">
+    <div class="container-reviewerFirstErollPage">
+        <main>
+            <!-- Hero Section -->
+            <section class="hero">
+                <div class="hero-bg"></div>
+                <div class="hero-content">
+                    <div class="badge">
+                        <span class="badge-dot"></span>
+                        Join our global reviewer community
+                    </div>
+                    <h1>
+                        <span class="word">Become</span>
+                        <span class="word">a</span>
+                        <span class="word highlight">Research</span>
+                        <span class="word">Paper</span>
+                        <span class="word highlight">Reviewer</span>
+                    </h1>
+                    <p>Empower the future of academia. Review cutting-edge papers, connect with experts, and advance
+                        your career—all from one intuitive platform.</p>
+                    <a href="#enrollment" class="cta-buttonenrollment">
+                        <span>Start Reviewing Today</span>
+                        <svg class="arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="m12 19-7-7 7-7"></path>
+                            <path d="M19 12H5"></path>
+                        </svg>
+                    </a>
+                </div>
+            </section>
+
+            <!-- How It Works Section -->
+            <section class="how-it-works">
+                <div class="section-header">
+                    <h2>How It Works</h2>
+                    <p>Four effortless steps to launch your reviewing journey</p>
+                </div>
+                <div class="steps-container">
+                    <div class="progress-line"></div>
+                    <div class="steps-grid">
+                        <div class="step" data-step="1">
+                            <div class="step-number">1</div>
+                            <div class="step-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <line x1="19" x2="19" y1="8" y2="14"></line>
+                                    <line x1="22" x2="16" y1="11" y2="11"></line>
+                                </svg>
+                            </div>
+                            <h3>Enroll as reviewer</h3>
+                            <p>Enroll as a trusted reviewer by accepting the terms and conditions to start contributing
+                                to impactful research.</p>
+                        </div>
+                        <div class="step" data-step="2">
+                            <div class="step-number">2</div>
+                            <div class="step-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                                    <path d="M4.268 21a2 2 0 0 0 1.727 1H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v3">
+                                    </path>
+                                    <path d="m9 18-1.5-1.5"></path>
+                                    <circle cx="5" cy="14" r="3"></circle>
+                                </svg>
+                            </div>
+                            <h3>Start getting review requests</h3>
+                            <p>Get personalized review requests based on your field and availability.</p>
+                        </div>
+                        <div class="step" data-step="3">
+                            <div class="step-number">3</div>
+                            <div class="step-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M12 7v14"></path>
+                                    <path
+                                        d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h3>Review papers within our system</h3>
+                            <p>Use our intuitive tools to read, annotate, and evaluate manuscripts efficiently and
+                                effectively.</p>
+                        </div>
+                        <div class="step" data-step="4">
+                            <div class="step-number">4</div>
+                            <div class="step-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
+                                    <path d="m9 11 3 3L22 4"></path>
+                                </svg>
+                            </div>
+                            <h3>Submit review along with ratings</h3>
+                            <p>Provide thoughtful feedback and ratings to help shape the future of academic and
+                                scientific research.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Enrollment Section -->
+            <section id="enrollment" class="enrollment">
+                <div class="enrollment-card">
+                    <div class="enrollment-header">
+                        <div class="alert-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" x2="12" y1="8" y2="12"></line>
+                                <line x1="12" x2="12.01" y1="16" y2="16"></line>
+                            </svg>
+                        </div>
+                        <h2>Review Our Terms</h2>
+                        <p>Before enrolling, please review these essential guidelines to ensure a smooth experience.</p>
+                    </div>
+
+                    <div class="accordion">
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel1">
+
+                                1. Acceptance of Terms
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel1" class="accordion-contentReviewFirst" role="region" aria-labelledby="header1">
+                                <p>By enrolling as a reviewer on scholar9.com, you agree to comply with and be bound by
+                                    these Terms and Conditions. If you do not agree with these terms, please do not use
+                                    our platform.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel2">
+
+                                2. Eligibility
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel2" class="accordion-contentReviewFirst" role="region" aria-labelledby="header2">
+                                <p>You must be a researcher, academician, or scholar to enroll as a reviewer on
+                                    scholar9.com. You agree to provide accurate and up-to-date information during the
+                                    enrollment process.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel3">
+
+                                3. Reviewer Responsibilities
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel3" class="accordion-contentReviewFirst" role="region" aria-labelledby="header3">
+                                <p>As a reviewer on scholar9.com, you agree to:</p>
+                                <ul>
+                                    <li> Conduct objective, thorough, and constructive peer reviews of research
+                                        articles.</li>
+                                    <li>Maintain the confidentiality of submitted manuscripts and any sensitive
+                                        information.</li>
+                                    <li>Submit your reviews within the agreed-upon timeframe.</li>
+                                    <li>Avoid any conflicts of interest and disclose any potential conflicts when
+                                        reviewing articles.</li>
+                                    <li>Use the platform responsibly and not engage in any activities that could harm
+                                        the platform or its users.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel4">
+
+                                4. Account Security
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel4" class="accordion-contentReviewFirst" role="region" aria-labelledby="header4">
+                                <p>You are responsible for maintaining the security of your account login credentials.
+                                    You agree not to share your account information with others or engage in
+                                    unauthorized access.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel5">
+
+                                5. Content Guidelines
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel5" class="accordion-contentReviewFirst" role="region" aria-labelledby="header5">
+                                <p>You agree not to upload, post, or share any content that is:</p>
+                                <ul>
+                                    <li>In violation of any intellectual property rights or copyrights.</li>
+                                    <li>Unlawful, harmful, offensive, or violates the rights of others.</li>
+                                    <li>Spam, phishing, or contains malware.</li>
+                                    <li>False, misleading, or inaccurate.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel4">
+
+                                6. Intellectual Property
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel6" class="accordion-contentReviewFirst" role="region" aria-labelledby="header4">
+                                <p>All content and materials on scholar9.com, including text, graphics, logos, and
+                                    software, are protected by intellectual property rights. You may not use, reproduce,
+                                    or distribute these materials without explicit permission.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel4">
+
+                                7. Privacy Policy
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel7" class="accordion-contentReviewFirst" role="region" aria-labelledby="header4">
+                                <p>By enrolling as a reviewer, you acknowledge and agree to our Privacy Policy, which
+                                    governs the collection and use of your personal information.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel4">
+
+                                8. Termination
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel8" class="accordion-contentReviewFirst" role="region" aria-labelledby="header4">
+                                <p>We reserve the right to terminate or suspend your account for any reason, including
+                                    violation of these Terms and Conditions.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel4">
+
+                                9. Dispute Resolution
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel9" class="accordion-contentReviewFirst" role="region" aria-labelledby="header4">
+                                <p>Any disputes or claims arising from the use of scholar9.com will be subject to
+                                    resolution through arbitration or mediation, as detailed in our separate Dispute
+                                    Resolution Policy.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel4">
+
+                                10. Limitation of Liability
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel10" class="accordion-contentReviewFirst" role="region" aria-labelledby="header4">
+                                <p>Scholar9.com is not responsible for any loss, damages, or harm resulting from your
+                                    use of the platform. We provide the platform as-is, without warranties of any kind.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel4">
+
+                                11. Changes to Terms and Conditions
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel11" class="accordion-contentReviewFirst" role="region" aria-labelledby="header4">
+                                <p>We reserve the right to update and modify these Terms and Conditions at any time. It
+                                    is your responsibility to review these terms periodically.</p>
+                            </div>
+                        </div>
+                        <div class="accordion-itemReviewFirst">
+                            <button class="accordion-headerReviewFirst" aria-expandedReviewFirst="false" aria-controls="panel4">
+
+                                12. Contact Information
+                                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                            <div id="panel12" class="accordion-contentReviewFirst" role="region" aria-labelledby="header4">
+                                <p>If you have any questions or concerns about these Terms and Conditions, please
+                                    contact us at hello@scholar9.com</p>
+                                <p>By enrolling as a reviewer on scholar9.com, you acknowledge that you have read and
+                                    agreed to these Terms and Conditions. If you do not agree with these terms, please
+                                    do not enroll as a reviewer on our platform.</p>
+                                <p>This template is a general starting point and may need to be tailored to your
+                                    specific requirements and local legal regulations. It's crucial to consult with
+                                    legal professionals to ensure that your terms and conditions are legally sound and
+                                    provide the necessary protections for your platform and its users.</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <form id="accept-reviewer-form">
+                        <div class="enrollment-form">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="reviewer" name="terms" aria-describedby="terms-desc">
+                                <label for="reviewer">
+                                    <span class="checkmark"></span>
+                                    I accept the terms and commit to upholding academic integrity and confidentiality.
+                                </label>
+                            </div>
+                            <button type="button" id="accept_reviewer" class="enroll-btn" disabled data-userid="{{$user['_id']}}"
+                                aria-label="Enroll as reviewer (disabled until terms accepted)">
+                                <span>Enroll as Reviewer</span>
+                                <svg class="success-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="m9 12 2 2 4-4"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+
+
+    <!-- Custom Reviewer Enrollment Modal -->
+    <div id="reviewer-modalReviewerFirst" style="display:none;">
+        <div class="page-containermodalReviewerFirst">
+            <div class="main-contentmodalReviewerFirst">
+                <div class="success-cardmodalReviewerFirst">
+                    <!-- Icon Section -->
+                    <div class="icon-sectionmodalReviewerFirst">
+                        <div class="icon-wrappermodalReviewerFirst">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                                class="cloud-iconmodalReviewerFirst">
+                                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                            </svg>
+                            <div class="file-badgemodalReviewerFirst">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="file-icon">
+                                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                                    <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                                    <path d="M10 9H8"></path>
+                                    <path d="M16 13H8"></path>
+                                    <path d="M16 17H8"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Text Section -->
+                    <div class="text-sectionmodalReviewerFirst">
+                        <div class="checkmarkmodalReviewerFirst">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                class="check-iconiconmodalReviewerFirst">
+                                <path d="M20 6 9 17l-5-5"></path>
+                            </svg>
+                        </div>
+                        <h1 class="ThankyouHeading-modalReviewerFirst">Thanks for enrolling as reviewer!</h1>
+                        <p>Our team will review your profile and do the needful to get it approved. It should usually get
+                            approved within 48 hours.</p>
+                    </div>
+
+                    <!-- Button -->
+                    <div class="button-sectionmodalReviewerFirst">
+                        <a href="{{ route('reviewer.profile') }}" id="close-modalmodalReviewerFirst" class="cta-buttonmodalReviewerFirst">Next</a>
+                    </div>
+
+                    <!-- Footer Note -->
+                    <div class="footer-notemodalReviewerFirst">
+                        <div class="status-indicatormodalReviewerFirst">
+                            <div class="dotmodalReviewerFirst"></div>
+                            <span>Approval typically within 48 hours</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- <form id="accept-reviewer-form">
+        <div style='display:flex; align-items: center; margin:20px 0 10px 0;'>
+            <input type="checkbox" name="reviewer" id="reviewer" style="width: 25px; height: 25px; margin: 0;">
+            <p style="margin:0 0 0 15px !important; font-size: 18px; font-weight:500;">I accept mentioned terms as reviewer</p>
+        </div>
+
+        <div style='display:flex; align-items: center; margin:10px 0 10px 0;'>
+            <button type="button" id="accept_reviewer" data-userid="{{$user['_id']}}" style="background: #092A45; border-radius: 5px; color: #fff; padding: 14px 30px; position: relative; text-decoration: none; font-weight: 500; font-size: 18px; line-height: 22px; letter-spacing: 0; display: inline-block; margin: 25px 0px 0px;">Enroll as reviewer</button> -->
+    <!-- <a href="#" style="background: #092A45; border-radius: 5px; color: #fff; padding: 14px 30px; position: relative; text-decoration: none; font-weight: 500; font-size: 18px; line-height: 22px; letter-spacing: 0; display: inline-block; margin: 25px 0px 0px;">Enroll as reviewer</a> -->
+    <!-- </div>
+    </form> -->
+
+
+</section>

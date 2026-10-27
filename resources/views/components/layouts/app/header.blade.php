@@ -10,6 +10,9 @@
     }"
     class="sticky top-0 z-50 w-full bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-xs"
 >
+    <!-- Impersonation Notice (Browsing As User) -->
+    <x-impersonation-banner />
+
     <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
         <!-- Left Section: Logo & Search -->
@@ -27,9 +30,7 @@
             <!-- Desktop Search Bar -->
             <div class="hidden md:flex relative flex-1 max-w-md">
                 <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
+                    <i class="fas fa-search text-xs"></i>
                 </span>
                 <input 
                     type="text" 
@@ -54,10 +55,7 @@
                     class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
                     :class="pubDropdownOpen || {{ request()->is('articles*') ? 'true' : 'false' }} ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : ''"
                 >
-                    <!-- Solid Document Icon -->
-                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 0 0 3 3.5v17A1.5 1.5 0 0 0 4.5 22h15a1.5 1.5 0 0 0 1.5-1.5V7.5L14.5 2H4.5ZM14 3.5V8h4.5L14 3.5ZM6 11.5a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75A.75.75 0 0 1 6 11.5Zm0 3a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75A.75.75 0 0 1 6 14.5Zm0 3a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"/>
-                    </svg>
+                    <i class="fas fa-file-alt text-[20px] leading-6"></i>
                     <span class="flex items-center gap-0.5 font-medium">
                         Publications
                         <span class="text-[9px] transition-transform inline-block ml-0.5" :class="pubDropdownOpen ? 'rotate-180' : ''">▼</span>
@@ -78,19 +76,13 @@
                 >
                     <!-- Article List -->
                     <a href="{{ url('articles') }}" @click="pubDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-sky-600 dark:hover:text-sky-400 rounded-xl transition-colors" wire:navigate>
-                        <!-- Solid Document Badge Icon -->
-                        <svg class="w-5 h-5 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15ZM6 8.25a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75A.75.75 0 0 1 6 8.25Zm0 3.75a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75a.75.75 0 0 1-.75-.75Zm0 3.75a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"/>
-                        </svg>
+                        <i class="fas fa-list text-zinc-400 w-5 text-center shrink-0"></i>
                         <span>Article List</span>
                     </a>
 
                     <!-- Deposit Article -->
                     <a href="{{ url('deposit-article') }}" @click="pubDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-sky-600 dark:hover:text-sky-400 rounded-xl transition-colors" wire:navigate>
-                        <!-- Upload Outline Icon -->
-                        <svg class="w-5 h-5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16.5v1.75A2.75 2.75 0 0 0 6.75 21h10.5A2.75 2.75 0 0 0 20 18.25V16.5m-8-12v11m0-11l-3.5 3.5M12 4.5l3.5 3.5"/>
-                        </svg>
+                        <i class="fas fa-upload text-zinc-400 w-5 text-center shrink-0"></i>
                         <span>Deposit Article</span>
                     </a>
                 </div>
@@ -108,11 +100,7 @@
                     class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
                     :class="mentorDropdownOpen || {{ request()->is('mentorship*') ? 'true' : 'false' }} ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : ''"
                 >
-                    <!-- Solid Person with Tie Icon -->
-                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                        <circle cx="12" cy="6" r="3.5"/>
-                        <path d="M12 11c-3.86 0-7 2.14-7 5v4h14v-4c0-2.86-3.14-5-7-5zm1.5 5.5l-.5 3.5h-2l-.5-3.5 1.5-1.5 1.5 1.5z"/>
-                    </svg>
+                    <i class="fas fa-user-tie text-[20px] leading-6"></i>
                     <span class="flex items-center gap-0.5 font-medium">
                         Mentorship
                         <span class="text-[9px] transition-transform inline-block ml-0.5" :class="mentorDropdownOpen ? 'rotate-180' : ''">▼</span>
@@ -132,11 +120,11 @@
                     style="display: none;"
                 >
                     <a href="{{ url('mentorship') }}" @click="mentorDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-sky-600 dark:hover:text-sky-400 rounded-xl transition-colors" wire:navigate>
-                        <svg class="w-5 h-5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        <i class="fas fa-eye text-zinc-400 w-5 text-center shrink-0"></i>
                         <span>Overview</span>
                     </a>
                     <a href="{{ url('mentor-sessions') }}" @click="mentorDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-sky-600 dark:hover:text-sky-400 rounded-xl transition-colors" wire:navigate>
-                        <svg class="w-5 h-5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <i class="fas fa-calendar-alt text-zinc-400 w-5 text-center shrink-0"></i>
                         <span>Sessions</span>
                     </a>
                 </div>
@@ -144,41 +132,61 @@
 
             <!-- 3. Q&A -->
             <a href="{{ url('questions') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('questions*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
-                <!-- Solid Question Circle -->
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-.53 14.03a.75.75 0 0 0 1.06 0l.008-.008a.75.75 0 0 0-1.06-1.06l-.008.008a.75.75 0 0 0 0 1.06Zm1.28-4.502a.75.75 0 0 0-.75-.75c-.828 0-1.5-.672-1.5-1.5 0-.828.672-1.5 1.5-1.5.828 0 1.5.672 1.5 1.5 0 .227-.04.444-.114.646-.29.791-.886 1.404-1.386 2.054V13.5a.75.75 0 0 0 1.5 0v-.354c.414-.54.912-1.08 1.196-1.785.197-.488.304-1.02.304-1.583 0-1.657-1.343-3-3-3s-3 1.343-3 3a2.25 2.25 0 0 0 2.25 2.25Z" clip-rule="evenodd"/>
-                </svg>
+                <i class="fas fa-question-circle text-[20px] leading-6"></i>
                 <span>Q&A</span>
             </a>
 
             <!-- 4. Institutions -->
             <a href="{{ url('institutions') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('institutions*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
-                <!-- Solid University/Building -->
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2L2 7v2h20V7L12 2zM4 11v8h3v-8H4zm6 0v8h4v-8h-4zm7 0v8h3v-8h-3zM2 21v2h20v-2H2z"/>
-                </svg>
+                <i class="fas fa-university text-[20px] leading-6"></i>
                 <span>Institutions</span>
             </a>
 
             <!-- 5. Scholars / Graduate Cap -->
             <a href="{{ url('network') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('network*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
-                <!-- Solid Scholar with Cap Icon -->
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2 1 7l11 5 9-4.09V15h2V7L12 2z"/>
-                    <circle cx="12" cy="11.5" r="3"/>
-                    <path d="M6 19.5c0-2 2.69-3.5 6-3.5s6 1.5 6 3.5V21H6v-1.5z"/>
-                </svg>
+                @if(auth()->check())
+                    <i class="fas fa-users text-[20px] leading-6"></i>
+                @else
+                    <i class="fas fa-user-graduate text-[20px] leading-6"></i>
+                @endif
                 <span>{{ auth()->check() ? 'Network' : 'Scholars' }}</span>
             </a>
 
             <!-- 6. Journals -->
             <a href="{{ url('journals') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('journals*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
-                <!-- Solid Book Icon -->
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4.5 3.75A2.25 2.25 0 0 0 2.25 6v12.75a2.25 2.25 0 0 0 2.25 2.25h14.25a.75.75 0 0 0 .75-.75V6a2.25 2.25 0 0 0-2.25-2.25H4.5ZM6 7.5a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75A.75.75 0 0 1 6 7.5Zm0 3.75a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75a.75.75 0 0 1-.75-.75Zm0 3.75a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"/>
-                </svg>
+                <i class="fas fa-book text-[20px] leading-6"></i>
                 <span>Journals</span>
             </a>
+
+            <!-- 7. Reviewer / Enroll as Reviewer -->
+            @auth
+                @php
+                    $navAuthUser = auth()->user();
+                    $isNavUserVerified = $navAuthUser && ($navAuthUser->verified == '1' || $navAuthUser->verified === 1 || $navAuthUser->verified === 'Active') && !empty($navAuthUser->email_verified_at);
+                    $pendingReviewsCount = $pendingReviewsCount ?? 0;
+                @endphp
+                @if ($isNavUserVerified)
+                    @if (is_null($navAuthUser->reviewer_status) || $navAuthUser->reviewer_status === '')
+                        <a href="{{ url('reviewer') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-semibold text-zinc-900 bg-[#F3C500] hover:bg-[#e0b600] rounded-lg transition-colors shadow-xs" wire:navigate>
+                            <i class="fas fa-user-check text-[22px] text-zinc-900"></i>
+                            <span class="whitespace-nowrap">Enroll as Reviewer</span>
+                        </a>
+                    @elseif ((string) $navAuthUser->reviewer_status === '0')
+                        <a href="{{ url('/reviewer/profile') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('reviewer*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+                            <i class="fas fa-clipboard-check text-[22px]"></i>
+                            <span class="whitespace-nowrap">Reviewer Panel</span>
+                        </a>
+                    @elseif ((string) $navAuthUser->reviewer_status === '1')
+                        <a href="{{ url('reviewer/profile') }}" class="relative flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('reviewer*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+                            <i class="fas fa-clipboard-check text-[22px]"></i>
+                            <span class="whitespace-nowrap">Reviewer Panel</span>
+                            @if (!empty($pendingReviewsCount) && $pendingReviewsCount > 0)
+                                <span class="absolute top-1 right-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full leading-none">{{ $pendingReviewsCount }}</span>
+                            @endif
+                        </a>
+                    @endif
+                @endif
+            @endauth
         </nav>
 
         <!-- Right Section: User Profile or Sign Up Button -->
@@ -190,9 +198,7 @@
                 class="md:hidden p-2 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                 aria-label="Search"
             >
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z" clip-rule="evenodd"/>
-                </svg>
+                <i class="fas fa-search text-base"></i>
             </button>
 
             @auth
@@ -208,7 +214,7 @@
                         class="flex items-center gap-2.5 p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer"
                     >
                         <img 
-                            src="{{ auth()->user()->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode(auth()->user()->name).'&background=0284c7&color=fff' }}" 
+                            src="{{ auth()->user()->avatar }}" 
                             alt="{{ auth()->user()->name }}" 
                             class="w-8 h-8 rounded-full object-cover ring-2 ring-sky-500/40"
                         />
@@ -238,7 +244,8 @@
                         <!-- User Card -->
                         <div class="flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-sky-50 to-indigo-50/30 dark:from-zinc-800 dark:to-zinc-800/80">
                             <img 
-                                src="{{ auth()->user()->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode(auth()->user()->name).'&background=0284c7&color=fff' }}" 
+                                src="{{ auth()->user()->avatar }}" 
+                                alt="{{ auth()->user()->name }}" 
                                 class="w-10 h-10 rounded-full object-cover ring-2 ring-sky-500" 
                             />
                             <div class="flex-1 min-w-0">
@@ -249,13 +256,19 @@
 
                         <!-- Menu Links -->
                         <div class="py-1">
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('admin.dashboard') }}" @click="userDropdownOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors" wire:navigate>
+                                    <i class="fas fa-user-shield text-purple-500 text-sm w-4 text-center shrink-0"></i>
+                                    <span>Admin Panel</span>
+                                </a>
+                            @endif
                             <a href="{{ route('dashboard') }}" @click="userDropdownOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 hover:text-sky-600 transition-colors" wire:navigate>
-                                <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-                                Dashboard
+                                <i class="fas fa-tachometer-alt text-zinc-400 text-sm w-4 text-center shrink-0"></i>
+                                <span>Dashboard</span>
                             </a>
                             <a href="{{ route('settings.profile') }}" @click="userDropdownOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 hover:text-sky-600 transition-colors" wire:navigate>
-                                <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                                Settings & Profile
+                                <i class="fas fa-user text-zinc-400 text-sm w-4 text-center shrink-0"></i>
+                                <span>Settings & Profile</span>
                             </a>
                         </div>
 
@@ -264,24 +277,22 @@
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors text-left cursor-pointer">
-                                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                                    Log Out
+                                    <i class="fas fa-sign-out-alt text-red-500 text-sm w-4 text-center shrink-0"></i>
+                                    <span>Log Out</span>
                                 </button>
                             </form>
                         </div>
                     </div>
                 </div>
             @else
-                <!-- Guest Button (Login / Sign Up) matching Image 1 -->
+                <!-- Guest Button (Login / Sign Up) -->
                 <a 
                     href="{{ route('login') }}" 
-                    class="inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white bg-gradient-to-br from-[#198BEA] to-[#1565c0] hover:from-[#1579cc] hover:to-[#0f4f99] rounded-xl shadow-md shadow-[#198BEA]/30 hover:shadow-lg hover:shadow-[#198BEA]/40 hover:-translate-y-0.5 active:translate-y-0 transition-all"
+                    class="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white bg-gradient-to-br from-[#198BEA] to-[#1565c0] hover:from-[#1579cc] hover:to-[#0f4f99] rounded-xl shadow-md shadow-[#198BEA]/30 hover:shadow-lg hover:shadow-[#198BEA]/40 hover:-translate-y-0.5 active:translate-y-0 transition-all"
                     wire:navigate
                 >
+                    <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
                     <span>Login/Sign up</span>
-                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                    </svg>
                 </a>
             @endauth
 
@@ -317,7 +328,7 @@
                 class="flex-1 px-4 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
             <button @click="searchOpen = false" class="p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <i class="fas fa-times text-base"></i>
             </button>
         </div>
     </div>
@@ -360,7 +371,7 @@
                         <span class="font-bold text-sm text-zinc-900 dark:text-white">ScholarHub</span>
                     </div>
                     <button @click="mobileMenuOpen = false" class="p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
 
@@ -373,9 +384,7 @@
                             class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl"
                         >
                             <span class="flex items-center gap-3">
-                                <svg class="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 0 0 3 3.5v17A1.5 1.5 0 0 0 4.5 22h15a1.5 1.5 0 0 0 1.5-1.5V7.5L14.5 2H4.5ZM14 3.5V8h4.5L14 3.5ZM6 11.5a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75A.75.75 0 0 1 6 11.5Zm0 3a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75A.75.75 0 0 1 6 14.5Zm0 3a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"/>
-                                </svg>
+                                <i class="fas fa-file-alt text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                                 Publications
                             </span>
                             <span class="text-[10px] text-zinc-400 transition-transform inline-block" :class="mobilePubOpen ? 'rotate-180' : ''">▼</span>
@@ -393,10 +402,7 @@
                             class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl"
                         >
                             <span class="flex items-center gap-3">
-                                <svg class="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="currentColor">
-                                    <circle cx="12" cy="6" r="3.5"/>
-                                    <path d="M12 11c-3.86 0-7 2.14-7 5v4h14v-4c0-2.86-3.14-5-7-5zm1.5 5.5l-.5 3.5h-2l-.5-3.5 1.5-1.5 1.5 1.5z"/>
-                                </svg>
+                                <i class="fas fa-user-tie text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                                 Mentorship
                             </span>
                             <span class="text-[10px] text-zinc-400 transition-transform inline-block" :class="mobileMentorOpen ? 'rotate-180' : ''">▼</span>
@@ -408,34 +414,58 @@
                     </div>
 
                     <a href="{{ url('questions') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl" wire:navigate>
-                        <svg class="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-.53 14.03a.75.75 0 0 0 1.06 0l.008-.008a.75.75 0 0 0-1.06-1.06l-.008.008a.75.75 0 0 0 0 1.06Zm1.28-4.502a.75.75 0 0 0-.75-.75c-.828 0-1.5-.672-1.5-1.5 0-.828.672-1.5 1.5-1.5.828 0 1.5.672 1.5 1.5 0 .227-.04.444-.114.646-.29.791-.886 1.404-1.386 2.054V13.5a.75.75 0 0 0 1.5 0v-.354c.414-.54.912-1.08 1.196-1.785.197-.488.304-1.02.304-1.583 0-1.657-1.343-3-3-3s-3 1.343-3 3a2.25 2.25 0 0 0 2.25 2.25Z" clip-rule="evenodd"/>
-                        </svg>
-                        Q&A
+                        <i class="fas fa-question-circle text-lg w-6 text-center text-zinc-500 shrink-0"></i>
+                        <span>Q&A</span>
                     </a>
 
                     <a href="{{ url('institutions') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl" wire:navigate>
-                        <svg class="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2L2 7v2h20V7L12 2zM4 11v8h3v-8H4zm6 0v8h4v-8h-4zm7 0v8h3v-8h-3zM2 21v2h20v-2H2z"/>
-                        </svg>
-                        Institutions
+                        <i class="fas fa-university text-lg w-6 text-center text-zinc-500 shrink-0"></i>
+                        <span>Institutions</span>
                     </a>
 
                     <a href="{{ url('network') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl" wire:navigate>
-                        <svg class="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2 1 7l11 5 9-4.09V15h2V7L12 2z"/>
-                            <circle cx="12" cy="11.5" r="3"/>
-                            <path d="M6 19.5c0-2 2.69-3.5 6-3.5s6 1.5 6 3.5V21H6v-1.5z"/>
-                        </svg>
-                        {{ auth()->check() ? 'Network' : 'Scholars' }}
+                        @if(auth()->check())
+                            <i class="fas fa-users text-lg w-6 text-center text-zinc-500 shrink-0"></i>
+                        @else
+                            <i class="fas fa-user-graduate text-lg w-6 text-center text-zinc-500 shrink-0"></i>
+                        @endif
+                        <span>{{ auth()->check() ? 'Network' : 'Scholars' }}</span>
                     </a>
 
                     <a href="{{ url('journals') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl" wire:navigate>
-                        <svg class="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4.5 3.75A2.25 2.25 0 0 0 2.25 6v12.75a2.25 2.25 0 0 0 2.25 2.25h14.25a.75.75 0 0 0 .75-.75V6a2.25 2.25 0 0 0-2.25-2.25H4.5ZM6 7.5a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75A.75.75 0 0 1 6 7.5Zm0 3.75a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75a.75.75 0 0 1-.75-.75Zm0 3.75a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"/>
-                        </svg>
-                        Journals
+                        <i class="fas fa-book text-lg w-6 text-center text-zinc-500 shrink-0"></i>
+                        <span>Journals</span>
                     </a>
+
+                    @auth
+                        @php
+                            $drawerAuthUser = auth()->user();
+                            $isDrawerUserVerified = $drawerAuthUser && ($drawerAuthUser->verified == '1' || $drawerAuthUser->verified === 1 || $drawerAuthUser->verified === 'Active') && !empty($drawerAuthUser->email_verified_at);
+                        @endphp
+                        @if ($isDrawerUserVerified)
+                            @if (is_null($drawerAuthUser->reviewer_status) || $drawerAuthUser->reviewer_status === '')
+                                <a href="{{ url('reviewer') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-900 bg-[#F3C500] hover:bg-[#e0b600] rounded-xl transition-colors" wire:navigate>
+                                    <i class="fas fa-user-check text-lg w-6 text-center text-zinc-900 shrink-0"></i>
+                                    <span>Enroll as Reviewer</span>
+                                </a>
+                            @elseif ((string) $drawerAuthUser->reviewer_status === '0')
+                                <a href="{{ url('/reviewer/profile') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('reviewer*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+                                    <i class="fas fa-clipboard-check text-lg w-6 text-center text-zinc-500 shrink-0"></i>
+                                    <span>Reviewer Panel</span>
+                                </a>
+                            @elseif ((string) $drawerAuthUser->reviewer_status === '1')
+                                <a href="{{ url('reviewer/profile') }}" class="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('reviewer*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+                                    <span class="flex items-center gap-3">
+                                        <i class="fas fa-clipboard-check text-lg w-6 text-center text-zinc-500 shrink-0"></i>
+                                        <span>Reviewer Panel</span>
+                                    </span>
+                                    @if (!empty($pendingReviewsCount) && $pendingReviewsCount > 0)
+                                        <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">{{ $pendingReviewsCount }}</span>
+                                    @endif
+                                </a>
+                            @endif
+                        @endif
+                    @endauth
                 </nav>
             </div>
 
@@ -444,7 +474,8 @@
                 @auth
                     <div class="flex items-center gap-3 mb-4">
                         <img 
-                            src="{{ auth()->user()->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode(auth()->user()->name).'&background=0284c7&color=fff' }}" 
+                            src="{{ auth()->user()->avatar }}" 
+                            alt="{{ auth()->user()->name }}" 
                             class="w-10 h-10 rounded-full object-cover ring-2 ring-sky-500" 
                         />
                         <div class="flex-1 min-w-0">
@@ -452,18 +483,23 @@
                             <p class="text-xs text-zinc-500 truncate">{{ auth()->user()->email }}</p>
                         </div>
                     </div>
+                    @if(auth()->user()->isAdmin())
+                        <a href="{{ route('admin.dashboard') }}" class="flex items-center justify-center gap-2 w-full py-2.5 px-4 mb-3 text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 rounded-xl text-center">
+                            <i class="fas fa-user-shield"></i>
+                            <span>Admin Panel</span>
+                        </a>
+                    @endif
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="w-full py-2.5 px-4 text-xs font-semibold text-red-600 bg-red-50 dark:bg-red-950/40 rounded-xl text-center">
-                            Log Out
+                        <button type="submit" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold text-red-600 bg-red-50 dark:bg-red-950/40 rounded-xl text-center">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Log Out</span>
                         </button>
                     </form>
                 @else
-                    <a href="{{ route('login') }}" class="flex items-center justify-center gap-1.5 w-full py-2.5 px-4 text-sm font-semibold text-white bg-gradient-to-br from-[#198BEA] to-[#1565c0] hover:from-[#1579cc] hover:to-[#0f4f99] rounded-xl text-center shadow-md shadow-[#198BEA]/30">
+                    <a href="{{ route('login') }}" class="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-semibold text-white bg-gradient-to-br from-[#198BEA] to-[#1565c0] hover:from-[#1579cc] hover:to-[#0f4f99] rounded-xl text-center shadow-md shadow-[#198BEA]/30">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
                         <span>Login/Sign up</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                        </svg>
                     </a>
                 @endauth
             </div>

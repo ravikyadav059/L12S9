@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\LinkPreviewController;
 use App\Models\ReviewerJournal;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -25,28 +27,21 @@ Route::get('search-journals', function (Request $request) {
     return response()->json(['journals' => $journals]);
 })->name('search-journals');
 
-Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', 'settings/profile');
+// Impersonation - Return to Admin
+Route::get('impersonate/leave', function () {
+    $adminId = session()->pull('impersonated_by');
 
-    Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
-    Volt::route('settings/password', 'settings.password')->name('settings.password');
-    Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
+    if ($adminId) {
+        $adminUser = User::find($adminId);
+        if ($adminUser && $adminUser->isAdmin()) {
+            Auth::login($adminUser);
 
-    // From below my code new route get started for scholar normal user main
-});
+            return redirect()->route('admin.users.index');
+        }
+    }
 
-// For open pages :- for scholar normal user
-Volt::route('questions', 'question.index')->name('questions.index');
-Volt::route('question/{slug}', 'question.show')->name('questions.show');
-Volt::route('articles', 'article.index')->name('articles.index');
-Volt::route('journals', 'journal.index')->name('journals.index');
-Volt::route('institutions', 'institution.index')->name('institutions.index');
-Volt::route('institution/{slug}', 'institution.show')->name('institution.show');
-Volt::route('journal/{slug}', 'journal.show')->name('journal.show');
-Volt::route('journal-certificate/{slug}', 'journal.peerReviewCertificate')->name('journal_certificate');
-Volt::route('deposit-article', 'article.deposit')->name('articles.deposit');
-Volt::route('profile/{slug}', 'userprofile')->name('userscholar');
-Volt::route('publication-detail/{slug}', 'article.detail')->name('publication.detail');
+    return redirect()->route('home');
+})->name('impersonate.leave');
 
 // Admin Panel Routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -54,6 +49,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('publications', 'admin.publications.index')->name('publications.index');
     Volt::route('publications/{publication}/edit', 'admin.publications.edit')->name('publications.edit');
     Volt::route('users', 'admin.users.index')->name('users.index');
+    Volt::route('edit_users/{user:unique_id}', 'admin.users.edit')->name('users.edit');
     Volt::route('questions', 'admin.questions.index')->name('questions.index');
     Volt::route('questions/{question}/edit', 'admin.questions.edit')->name('questions.edit');
     Volt::route('institutes', 'admin.institutes.index')->name('institutes.index');
@@ -113,3 +109,27 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 });
 
 require __DIR__.'/auth.php';
+
+Route::middleware(['auth'])->group(function () {
+    Route::redirect('settings', 'settings/profile');
+
+    Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
+    Volt::route('settings/password', 'settings.password')->name('settings.password');
+    Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
+
+    // From below my code new route get started for scholar normal user main
+    Route::view('reviewer', 'Reviewer.enroll_reviewer')->name('reviewer.enroll');
+});
+
+// For open pages :- for scholar normal user
+Volt::route('questions', 'question.index')->name('questions.index');
+Volt::route('question/{slug}', 'question.show')->name('questions.show');
+Volt::route('articles', 'article.index')->name('articles.index');
+Volt::route('journals', 'journal.index')->name('journals.index');
+Volt::route('institutions', 'institution.index')->name('institutions.index');
+Volt::route('institution/{slug}', 'institution.show')->name('institution.show');
+Volt::route('journal/{slug}', 'journal.show')->name('journal.show');
+Volt::route('journal-certificate/{slug}', 'journal.peerReviewCertificate')->name('journal_certificate');
+Volt::route('deposit-article', 'article.deposit')->name('articles.deposit');
+Volt::route('profile/{slug}', 'userprofile')->name('userscholar');
+Volt::route('publication-detail/{slug}', 'article.detail')->name('publication.detail');

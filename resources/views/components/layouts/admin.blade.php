@@ -2,26 +2,264 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     @include('partials.head', ['title' => ($title ?? 'Admin Panel') . ' - Scholar Admin'])
+
+    <style>
+        /* ==========================================================================
+           SCHOLAR ADMIN SIDEBAR - CLEAN & VISIBLE BORDER DESIGN
+           ========================================================================== */
+
+        /* Smooth background and border transitions */
+        .admin-sidebar, 
+        .admin-sidebar-header, 
+        .admin-sidebar-footer {
+            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        /* --------------------------------------------------------------------------
+           LIGHT THEME: PURE WHITE BACKGROUND + DISTINCT VISIBLE BORDER LINE
+           -------------------------------------------------------------------------- */
+        .admin-sidebar {
+            background-color: #ffffff !important;
+            border-right: 1.5px solid #cbd5e1 !important;
+            box-shadow: 2px 0 8px -2px rgba(0, 0, 0, 0.05) !important;
+        }
+        .admin-sidebar-header {
+            background-color: #ffffff !important;
+            border-bottom: 1.5px solid #e2e8f0 !important;
+        }
+        .admin-sidebar-footer {
+            background-color: #ffffff !important;
+            border-top: 1.5px solid #e2e8f0 !important;
+        }
+
+        /* Light Theme Logo */
+        .admin-logo-light {
+            display: block !important;
+        }
+        .admin-logo-dark {
+            display: none !important;
+        }
+
+        /* Navigation Links & Buttons in Light Theme */
+        .admin-sidebar a,
+        .admin-sidebar button,
+        .admin-sidebar [data-flux-navlist-item],
+        .admin-sidebar svg {
+            color: #475569;
+        }
+        .admin-sidebar a:hover,
+        .admin-sidebar button:hover,
+        .admin-sidebar [data-flux-navlist-item]:hover {
+            color: #0f172a !important;
+            background-color: #f1f5f9 !important;
+        }
+        .admin-sidebar a:hover svg,
+        .admin-sidebar button:hover svg {
+            color: #0f172a !important;
+        }
+        .admin-sidebar a[aria-current="page"],
+        .admin-sidebar [data-current="true"],
+        .admin-sidebar [data-flux-navlist-item][data-current],
+        .admin-sidebar a.bg-brand\/10 {
+            color: #0284c7 !important;
+            background-color: #f0f9ff !important;
+            font-weight: 700 !important;
+        }
+        .admin-sidebar a[aria-current="page"] svg,
+        .admin-sidebar [data-current="true"] svg,
+        .admin-sidebar a.bg-brand\/10 svg {
+            color: #0284c7 !important;
+        }
+
+        /* Expandable Parent Nav Button (Users) in Light Theme */
+        .admin-sidebar .admin-nav-parent {
+            color: #475569;
+        }
+        .admin-sidebar .admin-nav-parent:hover {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        .admin-sidebar .admin-nav-parent.is-active {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04) !important;
+        }
+        .admin-sidebar .admin-nav-parent.is-active svg {
+            color: #0284c7 !important;
+        }
+
+        /* Submenu Container & Links in Light Theme */
+        .admin-sidebar .admin-submenu-border {
+            border-left: 2px solid #cbd5e1 !important;
+        }
+        .admin-sidebar .admin-sublink {
+            color: #64748b;
+        }
+        .admin-sidebar .admin-sublink:hover {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        .admin-sidebar .admin-sublink.is-active {
+            background-color: #e0f2fe !important;
+            color: #0284c7 !important;
+            font-weight: 700 !important;
+        }
+
+        /* Headings & User Profile in Light Theme */
+        .admin-sidebar [data-flux-heading] {
+            color: #64748b !important;
+        }
+        .admin-sidebar .admin-user-name {
+            color: #0f172a !important;
+        }
+        .admin-sidebar .admin-user-email {
+            color: #64748b !important;
+        }
+
+        /* Scrollbar in Light Theme */
+        .admin-sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+        }
+        .admin-sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .admin-sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .admin-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 9999px;
+        }
+        .admin-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        /* --------------------------------------------------------------------------
+           DARK THEME: DEEP OBSIDIAN / NAVY + MUTED DARK BORDER
+           -------------------------------------------------------------------------- */
+        html.dark .admin-sidebar {
+            background-color: #111c26 !important;
+            border-right: 1px solid #1e293b !important;
+            box-shadow: none !important;
+            scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+        }
+        html.dark .admin-sidebar-header {
+            background-color: #111c26 !important;
+            border-bottom: 1px solid #1e293b !important;
+        }
+        html.dark .admin-sidebar-footer {
+            background-color: #111c26 !important;
+            border-top: 1px solid #1e293b !important;
+        }
+
+        /* Dark Theme Logo */
+        html.dark .admin-logo-light {
+            display: none !important;
+        }
+        html.dark .admin-logo-dark {
+            display: block !important;
+        }
+
+        /* Dark Theme Navigation */
+        html.dark .admin-sidebar a,
+        html.dark .admin-sidebar button,
+        html.dark .admin-sidebar [data-flux-navlist-item],
+        html.dark .admin-sidebar svg {
+            color: #94a3b8;
+        }
+        html.dark .admin-sidebar a:hover,
+        html.dark .admin-sidebar button:hover,
+        html.dark .admin-sidebar [data-flux-navlist-item]:hover {
+            color: #ffffff !important;
+            background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark .admin-sidebar a:hover svg,
+        html.dark .admin-sidebar button:hover svg {
+            color: #ffffff !important;
+        }
+        html.dark .admin-sidebar a[aria-current="page"],
+        html.dark .admin-sidebar [data-current="true"],
+        html.dark .admin-sidebar [data-flux-navlist-item][data-current],
+        html.dark .admin-sidebar a.bg-brand\/10 {
+            color: #38bdf8 !important;
+            background-color: rgba(56, 189, 248, 0.15) !important;
+            font-weight: 700 !important;
+        }
+        html.dark .admin-sidebar a[aria-current="page"] svg,
+        html.dark .admin-sidebar [data-current="true"] svg,
+        html.dark .admin-sidebar a.bg-brand\/10 svg {
+            color: #38bdf8 !important;
+        }
+
+        /* Expandable Parent Nav Button in Dark Theme */
+        html.dark .admin-sidebar .admin-nav-parent.is-active {
+            background-color: rgba(255, 255, 255, 0.09) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        }
+        html.dark .admin-sidebar .admin-nav-parent.is-active svg {
+            color: #38bdf8 !important;
+        }
+
+        /* Submenu in Dark Theme */
+        html.dark .admin-sidebar .admin-submenu-border {
+            border-left: 2px solid rgba(255, 255, 255, 0.12) !important;
+        }
+        html.dark .admin-sidebar .admin-sublink {
+            color: #94a3b8;
+        }
+        html.dark .admin-sidebar .admin-sublink:hover {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            color: #ffffff !important;
+        }
+        html.dark .admin-sidebar .admin-sublink.is-active {
+            background-color: rgba(56, 189, 248, 0.15) !important;
+            color: #38bdf8 !important;
+            font-weight: 700 !important;
+        }
+
+        /* Headings & Profile in Dark Theme */
+        html.dark .admin-sidebar [data-flux-heading] {
+            color: #64748b !important;
+        }
+        html.dark .admin-sidebar .admin-user-name {
+            color: #ffffff !important;
+        }
+        html.dark .admin-sidebar .admin-user-email {
+            color: #94a3b8 !important;
+        }
+        html.dark .admin-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.18);
+        }
+        html.dark .admin-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+    </style>
 </head>
 <body class="min-h-screen bg-zinc-50 dark:bg-[#0c131a] text-zinc-900 dark:text-zinc-100 font-sans antialiased">
     <!-- FLUX SIDEBAR -->
-    <flux:sidebar stashable sticky class="bg-white dark:bg-[#111c26] border-r border-zinc-200/90 dark:border-zinc-800/80">
-        <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
-
-        <!-- BRAND HEADER -->
-        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-2 py-1 overflow-hidden group">
-            <div class="size-9 rounded-xl bg-gradient-to-tr from-brand to-brand-600 flex items-center justify-center text-white font-bold shadow-md shadow-brand/20 shrink-0">
-                <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+    <flux:sidebar stashable sticky class="admin-sidebar bg-white dark:bg-[#111c26] border-r border-zinc-200/90 dark:border-zinc-800/80">
+        <!-- BRAND HEADER (Pinned & Non-scrollable) -->
+        <div class="admin-sidebar-header sticky -top-4 -mx-4 px-4 pt-4 pb-3 bg-white dark:bg-[#111c26] z-20 border-b border-zinc-200/80 dark:border-zinc-800/80 shrink-0">
+            <div class="flex items-center justify-between gap-2">
+                <a href="{{ route('admin.dashboard') }}" class="flex flex-col items-start group" wire:navigate title="Scholar Admin Dashboard">
+                    <div class="flex items-center gap-2">
+                        <!-- Dual theme logos for crystal-clear readability -->
+                        <img src="{{ asset('images/sitelogo/logo.webp') }}" alt="Scholar9 Logo" class="admin-logo-light h-8 w-auto" />
+                        <img src="{{ asset('images/sitelogo/logo-dark-mode.webp') }}" alt="Scholar9 Logo" class="admin-logo-dark h-8 w-auto" />
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand/10 text-brand border border-brand/20">
+                            Admin
+                        </span>
+                    </div>
+                    <span class="text-[11px] font-medium text-sky-600 dark:text-sky-400 leading-none mt-1 tracking-tight">
+                        True scholar network
+                    </span>
+                </a>
+                <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
             </div>
-            <div class="flex flex-col truncate">
-                <span class="text-sm font-bold tracking-tight text-dark-navy dark:text-white flex items-center gap-1">
-                    Scholar<span class="text-brand">Admin</span>
-                </span>
-                <span class="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Control Center</span>
-            </div>
-        </a>
+        </div>
 
         <!-- NAVLIST -->
         <flux:navlist variant="outline">
@@ -33,7 +271,7 @@
                     <button 
                         type="button" 
                         @click="open = !open" 
-                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer {{ request()->routeIs('admin.users.*') ? 'bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white' }}"
+                        class="admin-nav-parent w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer {{ request()->routeIs('admin.users.*') ? 'is-active bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white' }}"
                     >
                         <div class="flex items-center gap-2.5">
                             <flux:icon name="users" class="size-4 shrink-0 {{ request()->routeIs('admin.users.*') ? 'text-brand' : 'text-zinc-400' }}" />
@@ -46,12 +284,12 @@
                         x-show="open" 
                         x-cloak 
                         x-collapse
-                        class="pl-3 pr-1 space-y-0.5 border-l-2 border-zinc-200 dark:border-zinc-800 ml-4 my-1"
+                        class="admin-submenu-border pl-3 pr-1 space-y-0.5 border-l-2 border-zinc-200 dark:border-zinc-800 ml-4 my-1"
                     >
                         <a 
                             href="{{ route('admin.users.index') }}" 
                             wire:navigate 
-                            class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->routeIs('admin.users.*') && (!request()->has('type') || request()->query('type') === 'all') ? 'bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
+                            class="admin-sublink flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->routeIs('admin.users.*') && (!request()->has('type') || request()->query('type') === 'all') ? 'is-active bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
                         >
                             <flux:icon name="user-group" class="size-3.5 shrink-0" />
                             <span>All Users</span>
@@ -59,7 +297,7 @@
                         <a 
                             href="{{ route('admin.users.index', ['type' => 'publisher']) }}" 
                             wire:navigate 
-                            class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->query('type') === 'publisher' ? 'bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
+                            class="admin-sublink flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->query('type') === 'publisher' ? 'is-active bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
                         >
                             <flux:icon name="building-office-2" class="size-3.5 shrink-0" />
                             <span>Publisher Users</span>
@@ -67,7 +305,7 @@
                         <a 
                             href="{{ route('admin.users.index', ['type' => 'python']) }}" 
                             wire:navigate 
-                            class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->query('type') === 'python' ? 'bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
+                            class="admin-sublink flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->query('type') === 'python' ? 'is-active bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
                         >
                             <flux:icon name="code-bracket" class="size-3.5 shrink-0" />
                             <span>Python Users</span>
@@ -75,7 +313,7 @@
                         <a 
                             href="{{ route('admin.users.index', ['type' => 'notified']) }}" 
                             wire:navigate 
-                            class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->query('type') === 'notified' ? 'bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
+                            class="admin-sublink flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->query('type') === 'notified' ? 'is-active bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
                         >
                             <flux:icon name="bell" class="size-3.5 shrink-0" />
                             <span>Notified Users List</span>
@@ -83,7 +321,7 @@
                         <a 
                             href="{{ route('admin.users.index', ['type' => 'approval']) }}" 
                             wire:navigate 
-                            class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->query('type') === 'approval' ? 'bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
+                            class="admin-sublink flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition {{ request()->query('type') === 'approval' ? 'is-active bg-brand/10 text-brand font-bold dark:bg-brand/20' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60' }}"
                         >
                             <flux:icon name="shield-check" class="size-3.5 shrink-0" />
                             <span>Request For Account Approval</span>
@@ -117,17 +355,17 @@
             </flux:navlist.group>
         </flux:navlist>
 
-        <!-- FOOTER USER PROFILE & LOGOUT -->
-        <div class="pt-3 border-t border-zinc-200/80 dark:border-zinc-800">
+        <!-- FOOTER USER PROFILE & LOGOUT (Pinned) -->
+        <div class="admin-sidebar-footer sticky -bottom-4 -mx-4 px-4 pb-4 pt-3 bg-white dark:bg-[#111c26] z-20 border-t border-zinc-200/80 dark:border-zinc-800/80 shrink-0">
             <div class="flex items-center gap-3 p-1 rounded-xl">
                 <div class="size-9 rounded-full bg-brand/10 border border-brand/20 text-brand font-bold flex items-center justify-center text-xs shrink-0">
                     {{ auth()->user()?->initials() ?? 'AD' }}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-semibold text-zinc-900 dark:text-white truncate">
+                    <p class="admin-user-name text-xs font-semibold text-zinc-900 dark:text-white truncate">
                         {{ auth()->user()?->name ?? 'Administrator' }}
                     </p>
-                    <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                    <p class="admin-user-email text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
                         {{ auth()->user()?->email ?? 'admin@system.local' }}
                     </p>
                 </div>
@@ -286,6 +524,8 @@
             </div>
         </div>
     </flux:header>
+
+    <x-impersonation-banner />
 
     <!-- MAIN CONTENT -->
     <flux:main class="p-4 sm:p-6 lg:p-8">

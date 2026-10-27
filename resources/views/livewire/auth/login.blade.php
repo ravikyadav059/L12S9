@@ -54,9 +54,18 @@ new #[Layout('components.layouts.app')] class extends Component {
             TimezoneHelper::updateUserLocation($user, $tz);
         }
 
-        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+        // Admin / Simple User login handling:
+        // Users with type = 1 or "1" (even if status is 0 or "0") are treated as Admin -> Admin Dashboard
+        // Users with type = 0 or "0" are treated as Simple User -> User Dashboard
+        if ($user instanceof User && $user->isAdmin()) {
             $this->redirectIntended(default: route('admin.dashboard', absolute: false), navigate: true);
         } else {
+            // Prevent simple users from being redirected to restricted admin URLs if previously captured
+            $intended = (string) session()->get('url.intended', '');
+            if (str_contains($intended, '/admin')) {
+                session()->forget('url.intended');
+            }
+
             $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
         }
     }
