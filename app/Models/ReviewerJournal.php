@@ -465,8 +465,6 @@ class ReviewerJournal extends Model
             'serial_number' => 'integer',
             'first_publication_year' => 'integer',
             'is_credited' => 'boolean',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

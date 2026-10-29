@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Cache;
 use MongoDB\Laravel\Eloquent\Model;
-use MongoDB\Laravel\Relations\HasMany;
 
 class Country extends Model
 {
@@ -39,8 +38,6 @@ class Country extends Model
     {
         return [
             'status' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 
@@ -72,11 +69,6 @@ class Country extends Model
     public static function forgetCached(): void
     {
         Cache::forget(self::CACHE_KEY);
-    }
-
-    public function states(): HasMany
-    {
-        return $this->hasMany(State::class, 'country_id', '_id');
     }
 
     /**

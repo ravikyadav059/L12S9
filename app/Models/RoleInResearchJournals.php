@@ -43,8 +43,6 @@ class RoleInResearchJournals extends Model
         return [
             'status' => 'integer',
             'not_ended_yet' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

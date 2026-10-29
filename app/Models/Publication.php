@@ -51,8 +51,6 @@ class Publication extends Model
         return [
             'status' => 'integer',
             'serial_number' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

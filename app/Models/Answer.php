@@ -51,8 +51,6 @@ class Answer extends Model
             'downvotes_count' => 'integer',
             'is_accepted' => 'boolean',
             'status' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

@@ -40,8 +40,6 @@ class Replies extends Model
         return [
             'status' => 'integer',
             'likes_count' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

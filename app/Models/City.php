@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Cache;
 use MongoDB\Laravel\Eloquent\Model;
-use MongoDB\Laravel\Relations\BelongsTo;
 
 class City extends Model
 {
@@ -38,17 +37,7 @@ class City extends Model
     {
         return [
             'status' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
-    }
-
-    /**
-     * Get the state that owns this city.
-     */
-    public function state(): BelongsTo
-    {
-        return $this->belongsTo(State::class, 'state_id', '_id');
     }
 
     /**

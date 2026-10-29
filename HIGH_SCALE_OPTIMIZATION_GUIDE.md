@@ -16,6 +16,7 @@
    - [Mathematical Performance Comparison](#mathematical-performance-comparison)
 4. [Search Debouncing & Client-Side State Isolation](#4-search-debouncing--client-side-state-isolation)
 5. [Summary Reference Table](#5-summary-reference-table)
+6. [Profile Sub-Entity Architecture Standard (Experience, Education, etc.)](#6-profile-sub-entity-architecture-standard-experience-education-etc)
 
 ---
 
@@ -251,4 +252,105 @@ public function toggleSelectedStatus(array $ids = []): void
 │ Table Selection State        │ Alpine.js x-data="{ selectedRows: [] }"   │ 0 server round-trips for UI checkboxes   │
 │ Database Indexes             │ Compound Index: { status: 1, created_at: -1 }│ O(log N) instant B-Tree index scans   │
 └──────────────────────────────┴───────────────────────────────────────────┴──────────────────────────────────────────┘
+
+---
+
+## 6. Profile Sub-Entity Architecture Standard (Experience, Education, etc.)
+
+When building user profile sub-sections (e.g. **Work Experience**, **Education**, **Certifications**, **Awards**), all implementations must adhere to this unified, high-scale blueprint.
+
+### Rule 1: Always Sort by Latest (`_id: -1` / `created_at: -1`)
+* MongoDB ObjectIds naturally embed the generation timestamp in their first 4 bytes.
+* Always sort newest first:
+  ```php
+  $records = Education::whereIn('_id', $educationIds)
+      ->orderBy('_id', 'desc')
+      ->with(['degreeRelation', 'organization'])
+      ->get();
+  ```
+* High-scale compound index required: `{ user_id: 1, _id: -1 }` or `{ user_id: 1, status: 1, _id: -1 }`.
+
+---
+
+### Rule 2: Pure 24-character ObjectId Relations (No Legacy String Fallbacks)
+* Assume modern schema where foreign keys store valid 24-hex-char MongoDB ObjectIds.
+* **Do NOT** write bloated accessor chains or defensive fallbacks for legacy raw strings.
+* Keep models 100% standard Eloquent:
+  ```php
+  public function degreeRelation(): BelongsTo
+  {
+      return $this->belongsTo(DegreeType::class, 'degree_id', '_id');
+  }
+
+  public function organization(): BelongsTo
+  {
+      return $this->belongsTo(Organization::class, 'organization_id', '_id');
+  }
+  ```
+
+---
+
+### Rule 3: Hybrid Architecture (Blade List + Alpine Modal UI)
+To prevent creating 800+ line monolithic files, enforce the **Hybrid Pattern**:
+
+1. **Blade for Timeline/List Rendering**:
+   - Render the items directly with server-side Blade `@foreach`:
+     ```blade
+     @foreach($this->educations as $item)
+         <h3>{{ $item->degreeRelation?->name ?? 'Untitled Degree' }}</h3>
+         <p>{{ $item->organization?->organization_name ?? 'Organization' }}</p>
+     @endforeach
+     ```
+   - **Why**: Zero `@js()` data transformation overhead, zero custom accessors, instant server hydration.
+
+2. **Alpine.js for Interactive Toggles Only**:
+   - Modals, dropdowns, and client-side discard warnings live exclusively in Alpine:
+     ```html
+     <div x-data="{ isModalOpen: false, form: { ... } }">
+     ```
+   - **0 server round-trips** for opening, closing, or cancelling forms.
+
+3. **Single Shared Form Component**:
+   - Both "Add" and "Edit" use **one single form partial / modal** (`form.id === null` for Add, `form.id = item.id` for Edit).
+   - Eliminates 300+ lines of duplicate input markup.
+
+---
+
+### Rule 4: Atomic ReviewerProfile Synchronization
+In MongoDB, user sub-entity references are stored as arrays in `ReviewerProfile`:
+* **On Create**: Atomically push the new ID without re-saving the entire user profile:
+  ```php
+  ReviewerProfile::where('user_id', (string) $this->user->_id)
+      ->push('education', (string) $newEducation->_id, true);
+  ```
+* **On Delete**: Atomically pull the ID:
+  ```php
+  ReviewerProfile::where('user_id', (string) $this->user->_id)
+      ->pull('education', (string) $educationId);
+  ```
+
+---
+
+### Rule 5: Status Visibility Separation
+* **Scholar / Public Profile View**:
+  - Filter strictly for active status:
+    ```php
+    Education::whereIn('_id', $educationIds)
+        ->whereIn('status', [1, '1', true])
+        ->orderBy('_id', 'desc')
+        ->get();
+    ```
+* **Admin Edit View**:
+  - Load all records regardless of status.
+  - Provide an interactive **Active** / **Inactive** badge next to the Edit button for 1-click status toggling.
+
+---
+
+### Rule 6: Autocomplete Lookups with Redis Caching
+* For searchable fields (Organizations, Degrees, Designations):
+  - 3+ character debounce guard (`debounce.250ms`).
+  - Case-insensitive regex matching.
+  - Redis cache keys (`degrees:default:list` for empty query, `degrees:search:{md5}` for queries).
+  - Auto-promotion: `usage_count >= 3` promotes unapproved items (`status: 0`) to approved (`status: 1`).
+
 ```

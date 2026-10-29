@@ -38,19 +38,6 @@ class Seminar extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
-        ];
-    }
-
-    /**
      * The "booted" method of the model.
      * Automatically standardizes month_year to "Month Year" format (e.g. "January 2026", "August 2015").
      */

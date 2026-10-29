@@ -4,7 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use MongoDB\BSON\Regex;
 use MongoDB\Laravel\Eloquent\Model;
 
 class Organization extends Model
@@ -37,6 +39,7 @@ class Organization extends Model
         'serial_number',
         'slug',
         'description',
+        'usage_count',
     ];
 
     /**
@@ -48,9 +51,93 @@ class Organization extends Model
     {
         return [
             'serial_number' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
+            'usage_count' => 'integer',
         ];
+    }
+
+    /**
+     * Record or find an organization with case-insensitive deduplication and usage tracking:
+     * - If exists: increment usage_count. If status is 0 and usage >= 3, promote to 1.
+     * - If not exists: create with status 0 and usage_count 1.
+     */
+    public static function recordOrFind(string $name): self
+    {
+        $name = trim($name);
+        if ($name === '') {
+            throw new \InvalidArgumentException('Organization name cannot be empty.');
+        }
+
+        // Case-insensitive exact match
+        $existing = self::where('organization_name', 'regex', new Regex('^'.preg_quote($name).'$', 'i'))->first();
+
+        if ($existing) {
+            $newCount = ((int) ($existing->usage_count ?? 1)) + 1;
+            $existing->usage_count = $newCount;
+
+            $rawStatus = (string) ($existing->status ?? '0');
+            if (($rawStatus === '0' || $rawStatus === '') && $newCount >= 3) {
+                $existing->status = 1;
+            }
+
+            $existing->save();
+            Cache::forget('organizations:default:list');
+
+            return $existing;
+        }
+
+        $created = self::create([
+            'organization_name' => $name,
+            'status' => 0,
+            'usage_count' => 1,
+        ]);
+
+        Cache::forget('organizations:default:list');
+
+        return $created;
+    }
+
+    /**
+     * High-scale search for active organizations with Redis caching.
+     *
+     * @return list<array{id: string, name: string, city: ?string, country: ?string}>
+     */
+    public static function searchActive(string $query = '', int $limit = 20): array
+    {
+        $query = trim($query);
+        $cacheKey = $query === ''
+            ? 'organizations:default:list'
+            : 'organizations:search:'.md5(strtolower($query));
+        $cacheTtl = $query === '' ? 3600 : 300;
+
+        return Cache::remember($cacheKey, $cacheTtl, function () use ($query, $limit) {
+            $builder = self::query()
+                ->whereIn('status', [1, '1', true])
+                ->select(['_id', 'organization_name', 'city', 'country', 'usage_count']);
+
+            if ($query !== '') {
+                $builder->where('organization_name', 'regex', new Regex(preg_quote($query), 'i'));
+            }
+
+            $records = $builder->orderBy('usage_count', 'desc')
+                ->orderBy('organization_name', 'asc')
+                ->limit($limit)
+                ->get();
+
+            $results = [];
+            foreach ($records as $record) {
+                $name = trim((string) $record->organization_name);
+                if ($name !== '') {
+                    $results[] = [
+                        'id' => (string) $record->_id,
+                        'name' => $name,
+                        'city' => (string) ($record->city ?? ''),
+                        'country' => (string) ($record->country ?? ''),
+                    ];
+                }
+            }
+
+            return $results;
+        });
     }
 
     /**

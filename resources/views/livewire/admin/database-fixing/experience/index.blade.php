@@ -551,9 +551,18 @@ new #[Layout('components.layouts.admin')] #[Title('Experience — Date Standardi
             <span>Back to Database Fixing List</span>
         </a>
 
-        <span class="text-xs font-semibold text-zinc-400">
-            Table: <strong class="text-zinc-700 dark:text-zinc-200">Experience</strong> &bull; Field: <code class="font-mono text-rose-600 dark:text-rose-400">{{ $activeField }}</code>
-        </span>
+        <div class="flex items-center gap-2">
+            <a 
+                href="{{ route('admin.database-fixing.experience.status') }}" 
+                wire:navigate
+                class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition"
+            >
+                &larr; Switch to status Fixer
+            </a>
+            <span class="text-xs font-semibold text-zinc-400">
+                Table: <strong class="text-zinc-700 dark:text-zinc-200">Experience</strong> &bull; Field: <code class="font-mono text-rose-600 dark:text-rose-400">{{ $activeField }}</code>
+            </span>
+        </div>
     </div>
 
     <!-- TITLE HEADER -->

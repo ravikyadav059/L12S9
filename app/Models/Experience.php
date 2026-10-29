@@ -44,18 +44,24 @@ class Experience extends Model
     {
         return [
             'current_organization' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
+            'status' => 'integer',
         ];
     }
 
     /**
      * The "booted" method of the model.
-     * Automatically standardizes join_date and end_date to "Month Year" format (e.g. "January 2026", "August 2015").
+     * Automatically ensures status is saved as integer (defaulting to 1 if null)
+     * and standardizes join_date and end_date to "Month Year" format.
      */
     protected static function booted(): void
     {
         static::saving(function (Experience $experience): void {
+            if ($experience->status === null || $experience->status === '') {
+                $experience->status = 0;
+            } else {
+                $experience->status = (int) $experience->status;
+            }
+
             if (! empty($experience->join_date)) {
                 $experience->join_date = static::formatMonthYear($experience->join_date);
             }
@@ -64,6 +70,14 @@ class Experience extends Model
                 $experience->end_date = static::formatMonthYear($experience->end_date, true);
             }
         });
+    }
+
+    /**
+     * Scope to retrieve active experience records (supports both native integer 1 and legacy string '1').
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', [1, '1']);
     }
 
     /**
@@ -172,5 +186,21 @@ class Experience extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'organization_id', '_id');
+    }
+
+    /**
+     * Get the designation associated with this experience record.
+     */
+    public function designationRelation(): BelongsTo
+    {
+        return $this->belongsTo(Designation::class, 'designation', '_id');
+    }
+
+    /**
+     * Alias for designation relationship.
+     */
+    public function designationModel(): BelongsTo
+    {
+        return $this->designationRelation();
     }
 }

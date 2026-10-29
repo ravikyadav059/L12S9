@@ -123,6 +123,13 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'route' => route('admin.database-fixing.reviewer-profile.index'),
             ],
             [
+                'id' => 'exp_status',
+                'table' => 'Experience',
+                'title' => 'status (Missing / Unset Status Fixer)',
+                'description' => 'Scans all Experience records for documents where the status field is missing, null, or unset, and standardizes them by setting native integer status 1 (Active). Also supports converting legacy string statuses into native integers.',
+                'route' => route('admin.database-fixing.experience.status'),
+            ],
+            [
                 'id' => 'exp_dates',
                 'table' => 'Experience',
                 'title' => 'join_date & end_date ("Month Year")',

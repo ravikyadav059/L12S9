@@ -31,7 +31,5 @@ class Skill extends Eloquent
     protected $casts = [
         'skills_status' => 'integer',
         'serial_number' => 'integer',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
     ];
 }

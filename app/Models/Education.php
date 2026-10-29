@@ -43,8 +43,6 @@ class Education extends Model
     {
         return [
             'current_institute' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

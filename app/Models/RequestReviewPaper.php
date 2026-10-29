@@ -65,8 +65,6 @@ class RequestReviewPaper extends Model
             'paper_keywords' => 'array',
             'review_parameters' => 'array',
             'scholar_profiles' => 'array',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

@@ -11,13 +11,14 @@
 @theme {
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     --font-dmsans: 'DM Sans', sans-serif;
+    --font-space: 'Space Grotesk', sans-serif;
+    --font-space-grotesk: 'Space Grotesk', sans-serif;
 
     /* Theme Brand Colors */
     --color-brand: #198BEA;
     --color-brand-600: #1476c9;
     --color-brand-dark: #0a5f9e;
     --color-brand-50: #eaf5ff;
-    --color-brand-050: #eaf5ff;
     
     /* Theme Neutrals & Accents */
     --color-dark-navy: #172A39;
@@ -26,6 +27,7 @@
     --color-muted: #6b7280;
     --color-border-theme: #e5e7eb;
     --color-bg-theme: #f9fafb;
+    --color-form-bg: var(--color-form-bg);
     --color-sm-highlight: #f5b944;
 
     /* Semantic Status & Accents */
@@ -72,6 +74,7 @@
 }
 
 :root {
+    --color-form-bg: #f8f9fa;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -88,7 +91,12 @@
         --color-accent: var(--color-brand);
         --color-accent-content: var(--color-brand);
         --color-accent-foreground: var(--color-white);
+        --color-form-bg: #111c26;
     }
+}
+
+.dark, [data-theme="dark"], html.dark {
+    --color-form-bg: #111c26;
 }
 
 @layer base {
@@ -198,12 +206,12 @@ select:focus[data-flux-control] {
 }
 
 .swal2-styled.swal2-confirm {
-    background-color: #198BEA !important;
+    background-color: var(--color-brand) !important;
     color: #ffffff !important;
 }
 
 .swal2-styled.swal2-confirm:hover {
-    background-color: #1476c9 !important;
+    background-color: var(--color-brand-600) !important;
 }
 
 .swal2-styled.swal2-cancel {
@@ -275,7 +283,7 @@ select:focus[data-flux-control] {
     font-size: 1.125rem !important;
     font-weight: 700 !important;
     line-height: 1.4 !important;
-    color: #198BEA !important;
+    color: var(--color-brand) !important;
     margin-top: 1.25rem !important;
     margin-bottom: 0.5rem !important;
 }
@@ -317,7 +325,7 @@ select:focus[data-flux-control] {
 }
 
 .qa-rich-content a {
-    color: #198BEA !important;
+    color: var(--color-brand) !important;
     text-decoration: underline !important;
     text-underline-offset: 2px !important;
     font-weight: 500 !important;
@@ -325,7 +333,7 @@ select:focus[data-flux-control] {
 }
 
 .qa-rich-content a:hover {
-    color: #1476c9 !important;
+    color: var(--color-brand-600) !important;
 }
 
 .dark .qa-rich-content a {
@@ -364,7 +372,7 @@ select:focus[data-flux-control] {
 }
 
 .qa-rich-content blockquote {
-    border-left: 4px solid #198BEA !important;
+    border-left: 4px solid var(--color-brand) !important;
     padding: 0.5rem 1rem !important;
     margin: 1rem 0 !important;
     font-style: italic !important;
@@ -441,14 +449,14 @@ select:focus[data-flux-control] {
 }
 
 .link-preview-box:hover {
-    border-color: #198BEA !important;
+    border-color: var(--color-brand) !important;
     background-color: #f8fafc !important;
     box-shadow: 0 4px 14px -2px rgba(25, 139, 234, 0.15) !important;
     transform: translateY(-1px);
 }
 
 .dark .link-preview-box:hover {
-    border-color: #198BEA !important;
+    border-color: var(--color-brand) !important;
     background-color: #202023 !important;
     box-shadow: 0 4px 14px -2px rgba(25, 139, 234, 0.25) !important;
 }
@@ -514,7 +522,7 @@ select:focus[data-flux-control] {
 .link-preview-content span {
     font-size: 10.5px !important;
     font-weight: 700 !important;
-    color: #198BEA !important;
+    color: var(--color-brand) !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
     margin-top: 1px !important;
@@ -536,7 +544,7 @@ select:focus[data-flux-control] {
 }
 
 .quill-editor-wrapper:focus-within {
-    border-color: #198BEA;
+    border-color: var(--color-brand);
     box-shadow: 0 0 0 2px rgba(25, 139, 234, 0.15);
 }
 
@@ -546,7 +554,7 @@ select:focus[data-flux-control] {
 }
 
 .dark .quill-editor-wrapper:focus-within {
-    border-color: #198BEA;
+    border-color: var(--color-brand);
     box-shadow: 0 0 0 2px rgba(25, 139, 234, 0.25);
 }
 

@@ -34,8 +34,6 @@ class JournalRole extends Model
     {
         return [
             'status' => 'integer',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

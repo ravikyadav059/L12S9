@@ -20,8 +20,6 @@ class Article extends Model
     {
         return [
             'name' => 'string',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 }

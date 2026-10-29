@@ -2,6 +2,9 @@
 
 use App\Models\City;
 use App\Models\Country;
+use App\Models\Designation;
+use App\Models\Experience;
+use App\Models\Organization;
 use App\Models\ReviewerProfile;
 use App\Models\State;
 use App\Models\User;
@@ -21,13 +24,12 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     #[Validate('nullable|string|max:50')]
     public string $prefix = '';
 
-    #[Validate('nullable|string|max:100')]
+    #[Validate('required|string|max:100', message: 'First name is required.')]
     public string $first_name = '';
 
-    #[Validate('nullable|string|max:100')]
+    #[Validate('required|string|max:100', message: 'Last name is required.')]
     public string $last_name = '';
 
-    #[Validate('nullable|string|max:200')]
     public string $fullname = '';
 
     #[Validate('nullable|string|max:150')]
@@ -63,6 +65,21 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     #[Validate('nullable|string|max:50')]
     public string $role = '';
 
+    public string $about_us = '';
+
+    public string $skills_input = '';
+
+    public string $research_interests_input = '';
+
+    // Social & Profile Links
+    public string $github_url = '';
+    public string $google_scholar_url = '';
+    public string $linkedin_url = '';
+    public string $orcid_url = '';
+    public string $public_profile = '';
+    public string $youtube_link = '';
+    public string $employee_url = '';
+
     // Direct update status properties
     public string $profile_status = '0';
     public string $verified = '0';
@@ -87,15 +104,16 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
         $this->prefix = (string) ($this->user->prefix ?? '');
         $this->first_name = (string) ($this->user->first_name ?? '');
         $this->last_name = (string) ($this->user->last_name ?? '');
-        $this->fullname = (string) ($this->user->fullname ?: $this->user->name ?: '');
 
-        if (empty($this->first_name) && ! empty($this->fullname)) {
-            $parts = preg_split('/\s+/', trim($this->fullname), 2);
+        if (empty($this->first_name) && ! empty($this->user->fullname ?: $this->user->name)) {
+            $rawName = trim((string) ($this->user->fullname ?: $this->user->name));
+            $parts = preg_split('/\s+/', $rawName, 2);
             $this->first_name = $parts[0] ?? '';
             if (empty($this->last_name) && isset($parts[1])) {
                 $this->last_name = $parts[1];
             }
         }
+        $this->fullname = trim($this->first_name . ' ' . $this->last_name);
         $this->email = (string) ($this->user->email ?? '');
         $this->mobile = (string) ($this->user->mobile ?? '');
         $this->countrycode = (string) ($this->user->countrycode ?? '+91');
@@ -110,6 +128,31 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
         $this->city = (string) ($reviewerProfile?->city ?? '');
         $this->zipcode = (string) ($reviewerProfile?->zipcode ?? '');
         $this->role = (string) ($this->user->role ?? '');
+
+        // Load About / Bio, Skills and Research Interests
+        $this->about_us = (string) ($reviewerProfile?->about_us ?? $reviewerProfile?->aboutus ?? '');
+        $skillsData = $reviewerProfile?->skills_tags ?? $reviewerProfile?->skills ?? [];
+        if (is_array($skillsData)) {
+            $this->skills_input = implode(', ', $skillsData);
+        } else {
+            $this->skills_input = (string) $skillsData;
+        }
+
+        $researchData = $reviewerProfile?->research_tags ?? $reviewerProfile?->research ?? [];
+        if (is_array($researchData)) {
+            $this->research_interests_input = implode(', ', $researchData);
+        } else {
+            $this->research_interests_input = (string) $researchData;
+        }
+
+        // Social Links from ReviewerProfile (zero dump data)
+        $this->github_url = (string) ($reviewerProfile?->github_url ?? '');
+        $this->google_scholar_url = (string) ($reviewerProfile?->google_scholar_url ?? '');
+        $this->linkedin_url = (string) ($reviewerProfile?->linkedin_url ?? '');
+        $this->orcid_url = (string) ($reviewerProfile?->orcid_url ?? '');
+        $this->public_profile = (string) ($reviewerProfile?->public_profile ?? '');
+        $this->youtube_link = (string) ($reviewerProfile?->youtube_link ?? ($reviewerProfile?->youtube_url ?? ''));
+        $this->employee_url = (string) ($reviewerProfile?->employee_url ?? '');
 
         // Initialize status properties
         $this->profile_status = (string) $this->user->getStatusCode();
@@ -129,6 +172,16 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
         };
         $this->badge_type = (string) ($this->user->badge_type ?? '');
         $this->enable_conference = (bool) ($this->user->enable_conference ?? false);
+    }
+
+    public function updatedFirstName(): void
+    {
+        $this->fullname = trim($this->first_name . ' ' . $this->last_name);
+    }
+
+    public function updatedLastName(): void
+    {
+        $this->fullname = trim($this->first_name . ' ' . $this->last_name);
     }
 
     public function updatedCountry(): void
@@ -311,10 +364,15 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     {
         $this->validate();
 
+        $this->first_name = trim($this->first_name);
+        $this->last_name = trim($this->last_name);
+        $this->fullname = trim($this->first_name . ' ' . $this->last_name);
+
         $this->user->prefix = trim($this->prefix);
-        $this->user->first_name = trim($this->first_name);
-        $this->user->last_name = trim($this->last_name);
-        $this->user->fullname = trim($this->fullname) ?: trim($this->first_name . ' ' . $this->last_name);
+        $this->user->first_name = $this->first_name;
+        $this->user->last_name = $this->last_name;
+        $this->user->fullname = $this->fullname;
+        $this->user->name = $this->fullname;
         $this->user->email = strtolower(trim($this->email));
         $this->user->mobile = trim($this->mobile);
         $this->countrycode = trim($this->countrycode);
@@ -340,6 +398,235 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
         $reviewerProfile->save();
 
         session()->flash('message', 'User ' . ($this->profileId) . ' changes saved successfully.');
+        $this->dispatch('scroll-to-top');
+    }
+
+    public function saveAboutProfile(): void
+    {
+        $this->validate([
+            'about_us' => 'nullable|string|max:3000',
+            'skills_input' => 'nullable|string',
+            'research_interests_input' => 'nullable|string',
+            'github_url' => 'nullable|string|max:255',
+            'google_scholar_url' => 'nullable|string|max:255',
+            'linkedin_url' => 'nullable|string|max:255',
+            'orcid_url' => 'nullable|string|max:255',
+            'public_profile' => 'nullable|string|max:255',
+            'youtube_link' => 'nullable|string|max:255',
+            'employee_url' => 'nullable|string|max:255',
+        ]);
+
+        $reviewerProfile = $this->user->reviewerProfile ?? $this->user->reviewerProfile()->make([
+            'unique_id' => (string) ($this->user->unique_id ?? $this->profileId),
+            'status' => (string) $this->user->getStatusCode(),
+        ]);
+
+        $reviewerProfile->about_us = trim($this->about_us);
+        $reviewerProfile->aboutus = trim($this->about_us);
+
+        $parsedSkills = array_values(array_filter(array_map('trim', explode(',', $this->skills_input))));
+        $reviewerProfile->skills_tags = $parsedSkills;
+        $reviewerProfile->skills = $parsedSkills;
+
+        $parsedResearch = array_values(array_filter(array_map('trim', explode(',', $this->research_interests_input))));
+        $reviewerProfile->research_tags = $parsedResearch;
+        $reviewerProfile->research = $parsedResearch;
+
+        // Save Social Links in ReviewerProfile
+        $reviewerProfile->github_url = trim($this->github_url);
+        $reviewerProfile->google_scholar_url = trim($this->google_scholar_url);
+        $reviewerProfile->linkedin_url = trim($this->linkedin_url);
+        $reviewerProfile->orcid_url = trim($this->orcid_url);
+        $reviewerProfile->public_profile = trim($this->public_profile);
+        $reviewerProfile->youtube_link = trim($this->youtube_link);
+        $reviewerProfile->employee_url = trim($this->employee_url);
+
+        $reviewerProfile->save();
+
+        // Track and auto-promote research tags in Research collection
+        foreach ($parsedResearch as $interestTitle) {
+            \App\Models\Research::recordUsage($interestTitle);
+        }
+
+        session()->flash('about_message', 'About section updated successfully!');
+        $this->dispatch('scroll-to-about');
+        $this->dispatch('toast', message: 'About section updated successfully!', type: 'success', position: 'bottom');
+    }
+
+    /**
+     * Get experiences for the user being edited from ReviewerProfile.
+     * Admin view shows both active and inactive records.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getExperiencesProperty(): array
+    {
+        $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
+        $expIds = (array) ($reviewerProfile->experience ?? []);
+        if (empty($expIds)) {
+            return [];
+        }
+
+        $records = Experience::whereIn('_id', $expIds)
+            ->orderBy('_id', 'desc')
+            ->with(['designationRelation', 'organization'])
+            ->get();
+
+        $formatted = [];
+        foreach ($records as $exp) {
+            $designationTitle = $exp->designationRelation?->designation ?? 'Untitled Position';
+            $orgName = $exp->organization?->organization_name ?? 'Organization';
+            $desigVal = (string) ($exp->designationRelation?->_id ?? $exp->designation ?? '');
+            $orgVal = (string) ($exp->organization?->_id ?? $exp->organization_id ?? '');
+
+            // Generate acronym for logo sub
+            $words = preg_split('/[\s,\-\(\)]+/', $orgName, -1, PREG_SPLIT_NO_EMPTY);
+            $acronym = '';
+            foreach ($words as $w) {
+                if (ctype_alnum($w[0]) && ! in_array(strtolower($w), ['of', 'and', 'the', 'for', 'in', 'at'], true)) {
+                    $acronym .= strtoupper($w[0]);
+                }
+            }
+            if (strlen($acronym) < 2) {
+                $acronym = strtoupper(substr($orgName, 0, 3));
+            }
+
+            $formatted[] = [
+                'id' => (string) $exp->_id,
+                'designation' => $designationTitle,
+                'designation_id' => $desigVal,
+                'organization' => $orgName,
+                'organization_id' => $orgVal,
+                'start_date' => (string) ($exp->join_date ?? ''),
+                'end_date' => (string) ($exp->end_date ?? ''),
+                'is_current' => (int) ($exp->current_organization ?? 0) === 1,
+                'description' => (string) ($exp->description ?? ''),
+                'status' => ($exp->status === 0 || $exp->status === '0' || $exp->status === false) ? 0 : 1,
+                'logo_title' => strtoupper($orgName),
+                'logo_sub' => substr($acronym, 0, 4),
+            ];
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Save an experience record:
+     * - Case-insensitive deduplication and usage promotion for designation & organization.
+     * - Atomically pushes new experience ID to ReviewerProfile->experience.
+     */
+    public function saveExperience(array $payload): void
+    {
+        $designationTitle = trim((string) ($payload['designation'] ?? ''));
+        $orgName = trim((string) ($payload['organization'] ?? ''));
+        $startDate = trim((string) ($payload['start_date'] ?? ''));
+        $endDate = trim((string) ($payload['end_date'] ?? ''));
+        $isCurrent = (bool) ($payload['is_current'] ?? false);
+        $description = trim((string) ($payload['description'] ?? ''));
+        $expId = ! empty($payload['id']) ? trim((string) $payload['id']) : null;
+        $statusVal = isset($payload['status']) ? (($payload['status'] === 1 || $payload['status'] === '1' || $payload['status'] === true) ? 1 : 0) : 1;
+
+        if ($designationTitle === '') {
+            $this->dispatch('toast', message: 'Designation is required.', type: 'danger', position: 'bottom');
+
+            return;
+        }
+
+        if ($orgName === '') {
+            $this->dispatch('toast', message: 'Organization is required.', type: 'danger', position: 'bottom');
+
+            return;
+        }
+
+        if ($startDate === '') {
+            $this->dispatch('toast', message: 'Start date is required.', type: 'danger', position: 'bottom');
+
+            return;
+        }
+
+        if (! $isCurrent && $endDate === '') {
+            $this->dispatch('toast', message: 'End date is required for past roles.', type: 'danger', position: 'bottom');
+
+            return;
+        }
+
+        if (mb_strlen($description) < 50 || mb_strlen($description) > 1500) {
+            $this->dispatch('toast', message: 'Description must be between 50 and 1,500 characters.', type: 'danger', position: 'bottom');
+
+            return;
+        }
+
+        // Deduplicate and promote designation & organization
+        $designationModel = Designation::recordUsage($designationTitle);
+        $orgModel = Organization::recordOrFind($orgName);
+
+        if ($expId) {
+            $exp = Experience::findOrFail($expId);
+        } else {
+            $exp = new Experience();
+            $exp->user_id = (string) $this->user->_id;
+        }
+
+        $exp->status = $statusVal;
+        $exp->designation = (string) $designationModel->_id;
+        $exp->organization_id = (string) $orgModel->_id;
+        $exp->join_date = Experience::formatMonthYear($startDate);
+        $exp->end_date = $isCurrent ? null : Experience::formatMonthYear($endDate);
+        $exp->current_organization = $isCurrent ? 1 : 0;
+        $exp->description = $description;
+        $exp->save();
+
+        // Atomically append _id to ReviewerProfile->experience if not present
+        $strId = (string) $exp->_id;
+        $profile = ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
+        if (! $profile) {
+            $profile = ReviewerProfile::create([
+                'user_id' => (string) $this->user->_id,
+                'unique_id' => (string) ($this->user->unique_id ?? $this->profileId),
+                'status' => (string) $this->user->getStatusCode(),
+                'experience' => [$strId],
+            ]);
+        } else {
+            $currentIds = (array) ($profile->experience ?? []);
+            if (! in_array($strId, $currentIds, true)) {
+                ReviewerProfile::where('user_id', (string) $this->user->_id)->push('experience', $strId, true);
+            }
+        }
+
+        $this->dispatch('toast', message: 'Experience saved successfully!', type: 'success', position: 'bottom');
+        $this->dispatch('refresh-experiences');
+    }
+
+    /**
+     * Delete an experience record and atomically remove its ID from ReviewerProfile->experience.
+     */
+    public function deleteExperience(string $expId): void
+    {
+        $exp = Experience::find($expId);
+        if ($exp) {
+            $exp->delete();
+        }
+
+        ReviewerProfile::where('user_id', (string) $this->user->_id)->pull('experience', $expId);
+
+        $this->dispatch('toast', message: 'Experience deleted successfully!', type: 'success', position: 'bottom');
+        $this->dispatch('refresh-experiences');
+    }
+
+    /**
+     * Toggle experience status between active (1) and inactive (0).
+     */
+    public function toggleExperienceStatus(string $expId): void
+    {
+        $exp = Experience::findOrFail($expId);
+        $isActive = ($exp->status === 1 || $exp->status === '1' || $exp->status === true || (string) $exp->status === '1');
+        $newStatus = $isActive ? 0 : 1;
+        $exp->status = $newStatus;
+        $exp->save();
+
+        $label = $newStatus === 1 ? 'Active' : 'Inactive';
+        $this->dispatch('toast', message: "Experience set to {$label}.", type: 'success', position: 'bottom');
+        $this->dispatch('refresh-experiences');
     }
 }; ?>
 
@@ -347,22 +634,51 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     class="space-y-6" 
     x-data="{
         showPasswordModal: false,
+        showEmailModal: false,
         canEditEmail: false,
         showCropModal: false,
         isProcessingCrop: false,
         cropper: null,
         imageSrc: '',
+        mainInitialSnapshot: '',
+        isMainDirty: false,
+
+        init() {
+            this.$nextTick(() => {
+                this.markMainClean();
+            });
+        },
+
+        getMainSnapshot() {
+            const form = document.getElementById('main-user-edit-form');
+            if (!form) return '';
+            return Array.from(form.querySelectorAll('[wire\\:model]'))
+                .map(el => (el.getAttribute('wire:model') || '') + '=' + (el.value || '').trim())
+                .join('&');
+        },
+
+        markMainClean() {
+            this.mainInitialSnapshot = this.getMainSnapshot();
+            this.isMainDirty = false;
+        },
+
+        checkMainDirty() {
+            this.isMainDirty = (this.getMainSnapshot() !== this.mainInitialSnapshot);
+        },
 
         unlockEmail() {
             if (this.canEditEmail) return;
-            if (confirm('Want to change email? Changing email address directly affects the user\'s login credentials.')) {
-                this.canEditEmail = true;
-                this.$nextTick(() => {
-                    if (this.$refs.emailInput) {
-                        this.$refs.emailInput.focus();
-                    }
-                });
-            }
+            this.showEmailModal = true;
+        },
+
+        confirmUnlockEmail() {
+            this.canEditEmail = true;
+            this.showEmailModal = false;
+            this.$nextTick(() => {
+                if (this.$refs.emailInput) {
+                    this.$refs.emailInput.focus();
+                }
+            });
         },
 
         onPhotoSelected(event) {
@@ -475,8 +791,23 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
                 alert('An error occurred while cropping.');
             }
         }
-    }" 
+    }"
     @password-updated.window="showPasswordModal = false"
+    @scroll-to-about.window="
+        $nextTick(() => {
+            const el = document.getElementById('about-profile-card');
+            if (el) {
+                const y = el.getBoundingClientRect().top + window.pageYOffset - 80;
+                window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+            }
+        });
+    "
+    @scroll-to-top.window="
+        $nextTick(() => {
+            markMainClean();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    "
 >
     <!-- Cropper CDN  -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.0/cropper.min.css">
@@ -765,7 +1096,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     </div>
 
     <!-- MAIN EDIT FORM -->
-    <form wire:submit="save" class="bg-white dark:bg-[#111c26] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+    <form id="main-user-edit-form" wire:submit="save" @input="checkMainDirty()" @change="checkMainDirty()" class="bg-white dark:bg-[#111c26] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
         <!-- FORM HEADER WITH PROFILE PHOTO MANAGEMENT -->
         <div class="p-6 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <!-- Left: Avatar Preview + Change / Remove Photo Buttons -->
@@ -776,7 +1107,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
                     @endphp
                     <img 
                         src="{{ $photoSrc }}" 
-                        alt="{{ $fullname ?: $user->name }}" 
+                        alt="{{ trim($first_name . ' ' . $last_name) }}" 
                         class="size-20 rounded-2xl object-cover border-2 border-brand/30 shadow-md bg-white dark:bg-zinc-800"
                         onerror="this.onerror=null; this.src='{{ $user->avatar }}';"
                     />
@@ -794,7 +1125,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
                 <div class="space-y-2">
                     <div>
                         <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                            <span>{{ $fullname ?: ($first_name . ' ' . $last_name) }}</span>
+                            <span>{{ trim($first_name . ' ' . $last_name) }}</span>
                             @if(!empty($profile_title))
                                 <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                                     {{ $profile_title }}
@@ -879,28 +1210,26 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
 
                     <div class="sm:col-span-4">
                         <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                            First Name
+                            First Name <span class="text-danger">*</span>
                         </label>
                         <input 
                             type="text" 
-                            wire:model="first_name" 
-                            value="{{ $first_name }}"
+                            wire:model.live.debounce.250ms="first_name" 
                             placeholder="e.g. Chen-Fu"
-                            class="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
+                            class="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition @error('first_name') border-rose-400 @enderror"
                         />
                         @error('first_name') <p class="text-[11px] text-danger mt-1">{{ $message }}</p> @enderror
                     </div>
 
                     <div class="sm:col-span-5">
                         <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                            Last Name
+                            Last Name <span class="text-danger">*</span>
                         </label>
                         <input 
                             type="text" 
-                            wire:model="last_name" 
-                            value="{{ $last_name }}"
+                            wire:model.live.debounce.250ms="last_name" 
                             placeholder="e.g. Chien"
-                            class="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
+                            class="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition @error('last_name') border-rose-400 @enderror"
                         />
                         @error('last_name') <p class="text-[11px] text-danger mt-1">{{ $message }}</p> @enderror
                     </div>
@@ -909,17 +1238,27 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
                 <!-- Full Name, Profile Title, Email & Mobile -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                            Full Name (Display)
-                        </label>
-                        <input 
-                            type="text" 
-                            wire:model="fullname" 
-                            value="{{ $fullname }}"
-                            placeholder="Full Display Name"
-                            class="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
-                        />
-                        @error('fullname') <p class="text-[11px] text-danger mt-1">{{ $message }}</p> @enderror
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                                Full Name (Display)
+                            </label>
+                            <span class="text-[10px] text-zinc-400 font-medium">Combined from First &amp; Last Name</span>
+                        </div>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                value="{{ trim($first_name . ' ' . $last_name) }}"
+                                readonly 
+                                disabled
+                                placeholder="Full Display Name"
+                                class="w-full h-10 px-3.5 pr-10 bg-zinc-100/80 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-600 dark:text-zinc-400 cursor-not-allowed select-none transition"
+                            />
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-zinc-400">
+                                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Profile Title -->
@@ -1131,218 +1470,31 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
 
             <button 
                 type="submit" 
-                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-brand hover:bg-brand-600 active:scale-[0.98] transition shadow-md shadow-brand/20 cursor-pointer"
+                :disabled="!isMainDirty"
+                :class="!isMainDirty ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:bg-brand-600 active:scale-[0.98] shadow-md shadow-brand/20 cursor-pointer'"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-brand transition"
             >
-                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg wire:loading.remove wire:target="save" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>Save Changes</span>
+                <svg wire:loading wire:target="save" class="size-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span wire:loading.remove wire:target="save">Save Changes</span>
+                <span wire:loading wire:target="save">Saving...</span>
             </button>
         </div>
     </form>
+    <!-- ABOUT, SKILLS & RESEARCH PROFILE (PARTIAL) -->
+    @include('livewire.admin.users.partials.about')
 
-    <!-- CROP PHOTO MODAL (ALPINE.JS + CROPPER.JS - CLIENT-SIDE ONLY, ZERO NETWORK ROUNDTRIPS) -->
-    <div 
-        x-show="showCropModal" 
-        x-cloak 
-        @keydown.escape.window="closeCropModal()"
-        class="fixed inset-0 z-50 overflow-y-auto" 
-        aria-labelledby="crop-modal-title" 
-        role="dialog" 
-        aria-modal="true"
-        style="display: none;"
-    >
-        <div class="fixed inset-0 bg-zinc-900/70 backdrop-blur-xs transition-opacity" @click="closeCropModal()"></div>
+    <!-- WORK EXPERIENCE (PARTIAL) -->
+    @include('livewire.admin.users.partials.experience')
 
-        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-            <div 
-                class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-[#111c26] text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4"
-                @click.away="closeCropModal()"
-            >
-                <!-- Modal Header -->
-                <div class="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                    <div class="flex items-center gap-2.5">
-                        <div class="size-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
-                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white" id="crop-modal-title">
-                                Crop User Photo
-                            </h3>
-                            <p class="text-[11px] text-zinc-500">Position the crop box to center the user's face.</p>
-                        </div>
-                    </div>
-                    <button type="button" @click="closeCropModal()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg cursor-pointer">
-                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Cropper Image Container -->
-                <div class="w-full bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center border border-zinc-800" style="min-height: 340px; max-height: 420px;">
-                    <img 
-                        x-ref="cropImage" 
-                        :src="imageSrc" 
-                        alt="Crop Preview" 
-                        class="max-w-full block" 
-                        style="max-height: 400px;" 
-                    />
-                </div>
-
-                <!-- Controls Bar -->
-                <div class="flex flex-wrap items-center justify-center gap-2 pt-1 pb-1">
-                    <button 
-                        type="button" 
-                        @click="zoomCrop(0.1)" 
-                        title="Zoom In" 
-                        class="size-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold flex items-center justify-center text-sm transition cursor-pointer shadow-xs"
-                    >
-                        +
-                    </button>
-                    <button 
-                        type="button" 
-                        @click="zoomCrop(-0.1)" 
-                        title="Zoom Out" 
-                        class="size-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold flex items-center justify-center text-sm transition cursor-pointer shadow-xs"
-                    >
-                        -
-                    </button>
-                    <button 
-                        type="button" 
-                        @click="rotateCrop(-45)" 
-                        title="Rotate Left 45°" 
-                        class="size-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center text-xs transition cursor-pointer shadow-xs"
-                    >
-                        ↺
-                    </button>
-                    <button 
-                        type="button" 
-                        @click="rotateCrop(45)" 
-                        title="Rotate Right 45°" 
-                        class="size-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center text-xs transition cursor-pointer shadow-xs"
-                    >
-                        ↻
-                    </button>
-                    <button 
-                        type="button" 
-                        @click="resetCrop()" 
-                        title="Reset Crop Box" 
-                        class="px-3 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center justify-center transition cursor-pointer shadow-xs"
-                    >
-                        Reset
-                    </button>
-                </div>
-
-                <!-- Modal Actions -->
-                <div class="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end gap-2.5">
-                    <button 
-                        type="button" 
-                        @click="closeCropModal()" 
-                        :disabled="isProcessingCrop"
-                        class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        type="button" 
-                        @click="saveCrop()" 
-                        :disabled="isProcessingCrop"
-                        class="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-brand hover:bg-brand-600 active:scale-[0.98] transition shadow-xs cursor-pointer disabled:opacity-50"
-                    >
-                        <svg x-show="isProcessingCrop" class="animate-spin size-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span x-text="isProcessingCrop ? 'Saving...' : 'Crop & Save'">Crop & Save</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- CHANGE PASSWORD MODAL (ALPINE.JS - ZERO UNWANTED NETWORK REQUESTS) -->
-    <div 
-        x-show="showPasswordModal" 
-        x-cloak 
-        @keydown.escape.window="showPasswordModal = false"
-        class="fixed inset-0 z-50 overflow-y-auto" 
-        aria-labelledby="password-modal-title" 
-        role="dialog" 
-        aria-modal="true"
-        style="display: none;"
-    >
-        <div class="fixed inset-0 bg-zinc-900/60 backdrop-blur-xs transition-opacity" @click="showPasswordModal = false"></div>
-
-        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-            <div 
-                class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-[#111c26] text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-zinc-200 dark:border-zinc-800 p-6 space-y-4"
-                @click.away="showPasswordModal = false"
-            >
-                <div class="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                    <div class="flex items-center gap-2.5">
-                        <div class="size-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
-                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-sm font-bold text-zinc-900 dark:text-white" id="password-modal-title">
-                            Change Password
-                        </h3>
-                    </div>
-                    <button type="button" @click="showPasswordModal = false" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg cursor-pointer">
-                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                            New Password <span class="text-danger">*</span>
-                        </label>
-                        <input 
-                            type="password" 
-                            wire:model="new_password" 
-                            placeholder="Enter new password"
-                            class="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
-                        />
-                        @error('new_password') <p class="text-[11px] text-danger mt-1">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                            Confirm Password <span class="text-danger">*</span>
-                        </label>
-                        <input 
-                            type="password" 
-                            wire:model="new_password_confirmation" 
-                            placeholder="Confirm new password"
-                            class="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
-                        />
-                    </div>
-                </div>
-
-                <div class="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end gap-2.5">
-                    <button 
-                        type="button" 
-                        @click="showPasswordModal = false"
-                        class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        type="button" 
-                        wire:click="updatePassword"
-                        class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand hover:bg-brand-600 active:scale-[0.98] transition shadow-xs cursor-pointer"
-                    >
-                        Update Password
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- ADMIN USER MODALS (CROP PHOTO, CHANGE PASSWORD, CHANGE EMAIL) -->
+    <x-admin.users.crop-modal />
+    <x-admin.users.password-modal />
+    <x-admin.users.email-modal :user="$user" />
 </div>
+

@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\LinkPreviewController;
-use App\Models\ReviewerJournal;
+use App\Models\Designation;
+use App\Models\Organization;
+use App\Models\Research;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,16 +18,35 @@ Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-// Link Preview API Route
-Route::post('api/link-preview', [LinkPreviewController::class, 'preview'])->name('api.link-preview');
+// Public / Open APIs (Throttled)
+Route::prefix('api')->middleware(['throttle:60,1'])->group(function () {
+    Route::post('link-preview', [LinkPreviewController::class, 'preview'])->name('api.link-preview');
 
-// Search Journals API Route
-Route::get('search-journals', function (Request $request) {
-    $query = (string) $request->input('search', '');
-    $journals = ReviewerJournal::searchTitles($query, 30);
+    Route::get('research-tags', function (Request $request) {
+        $query = trim((string) $request->input('q', ''));
+        $exclude = array_values(array_filter(array_map('trim', (array) $request->input('exclude', []))));
+        $results = Research::searchActive($query, $exclude, 20);
 
-    return response()->json(['journals' => $journals]);
-})->name('search-journals');
+        return response()->json($results);
+    })->name('api.research-tags');
+});
+
+// Authenticated Internal APIs (Dropdowns & Autocomplete)
+Route::middleware(['auth', 'throttle:120,1'])->prefix('api')->name('api.')->group(function () {
+    Route::get('designations', function (Request $request) {
+        $query = trim((string) $request->input('q', ''));
+        $limit = min(50, max(1, (int) $request->input('limit', 20)));
+
+        return response()->json(Designation::searchActive($query, $limit));
+    })->name('designations');
+
+    Route::get('organizations', function (Request $request) {
+        $query = trim((string) $request->input('q', ''));
+        $limit = min(50, max(1, (int) $request->input('limit', 20)));
+
+        return response()->json(Organization::searchActive($query, $limit));
+    })->name('organizations');
+});
 
 // Impersonation - Return to Admin
 Route::get('impersonate/leave', function () {
@@ -96,6 +117,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('database-fixing/reviewer-profile/{field}', 'admin.database-fixing.reviewer-profile.index')->name('database-fixing.reviewer-profile.field');
 
     // Experience Database Fixers
+    Volt::route('database-fixing/experience/status', 'admin.database-fixing.experience.status')->name('database-fixing.experience.status');
     Volt::route('database-fixing/experience', 'admin.database-fixing.experience.index')->name('database-fixing.experience.index');
     Volt::route('database-fixing/experience/{field}', 'admin.database-fixing.experience.index')->name('database-fixing.experience.field');
 

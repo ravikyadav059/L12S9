@@ -92,8 +92,6 @@ class ReviewerProfile extends Model
             'publication_active_count' => 'integer',
             'publication_inactive_count' => 'integer',
             'cv_onboarding_completed' => 'boolean',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 
@@ -149,26 +147,61 @@ class ReviewerProfile extends Model
     }
 
     /**
-     * Get the country associated with this reviewer profile.
+     * Get the resolved country name using cached country list.
      */
-    public function countryRelation(): BelongsTo
+    public function getCountryNameAttribute(): ?string
     {
-        return $this->belongsTo(Country::class, 'country', '_id');
+        if (! empty($this->country)) {
+            $matched = collect(Country::getCachedAll())->firstWhere('id', (string) $this->country);
+            if ($matched && ! empty($matched['name'])) {
+                return (string) $matched['name'];
+            }
+        }
+
+        return is_string($this->country) && ! is_numeric($this->country) ? $this->country : null;
     }
 
     /**
-     * Get the state associated with this reviewer profile.
+     * Get the resolved state name using cached state list.
      */
-    public function stateRelation(): BelongsTo
+    public function getStateNameAttribute(): ?string
     {
-        return $this->belongsTo(State::class, 'state', '_id');
+        if (! empty($this->country) && ! empty($this->state)) {
+            $matched = collect(State::getCachedByCountry($this->country))->firstWhere('id', (string) $this->state);
+            if ($matched && ! empty($matched['name'])) {
+                return (string) $matched['name'];
+            }
+        }
+
+        return is_string($this->state) && ! is_numeric($this->state) ? $this->state : null;
     }
 
     /**
-     * Get the city associated with this reviewer profile.
+     * Get the resolved city name using cached city list.
      */
-    public function cityRelation(): BelongsTo
+    public function getCityNameAttribute(): ?string
     {
-        return $this->belongsTo(City::class, 'city', '_id');
+        if (! empty($this->state) && ! empty($this->city)) {
+            $matched = collect(City::getCachedByState($this->state))->firstWhere('id', (string) $this->city);
+            if ($matched && ! empty($matched['name'])) {
+                return (string) $matched['name'];
+            }
+        }
+
+        return is_string($this->city) && ! is_numeric($this->city) ? $this->city : null;
+    }
+
+    /**
+     * Get formatted location string (City, State, Country).
+     */
+    public function getFormattedLocationAttribute(): ?string
+    {
+        $parts = array_filter([
+            $this->cityName,
+            $this->stateName,
+            $this->countryName,
+        ]);
+
+        return ! empty($parts) ? implode(', ', $parts) : null;
     }
 }

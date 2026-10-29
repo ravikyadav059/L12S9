@@ -66,8 +66,6 @@ class Question extends Model
             'status' => 'integer',
             'is_closed' => 'boolean',
             'is_reported' => 'boolean',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
     }
 

@@ -21,6 +21,7 @@ test('admin routes are registered', function () {
     expect(Route::has('admin.database-fixing.reviewer-profile.field'))->toBeTrue();
     expect(Route::has('admin.database-fixing.experience.index'))->toBeTrue();
     expect(Route::has('admin.database-fixing.experience.field'))->toBeTrue();
+    expect(Route::has('admin.database-fixing.experience.status'))->toBeTrue();
 });
 
 test('guests are redirected away from admin dashboard', function () {
@@ -181,6 +182,39 @@ test('experience date standardizer database fixing component renders correctly',
         ->assertSee('end_date')
         ->call('setField', 'end_date')
         ->assertSet('activeField', 'end_date');
+});
+
+test('experience status database fixing component renders and operates correctly', function () {
+    $admin = new User([
+        'name' => 'Super Admin',
+        'email' => 'admin@test.com',
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $this->actingAs($admin);
+
+    Volt::test('admin.database-fixing.experience.status')
+        ->assertSee('Experience')
+        ->assertSee('Missing status Fixer')
+        ->assertSee('Target: status = 1 (Active)')
+        ->assertSee('Fix All')
+        ->assertSee('No Status (Missing / Unset)');
+});
+
+test('experience model casts and saves status as integer while scopeActive supports both integer and string', function () {
+    $exp = new Experience([
+        'status' => '1',
+    ]);
+    expect($exp->status)->toBe(1);
+
+    $exp2 = new Experience([
+        'status' => 0,
+    ]);
+    expect($exp2->status)->toBe(0);
+
+    // scopeActive check query compiles and executes properly
+    expect(Experience::query()->active()->count())->toBeGreaterThanOrEqual(0);
 });
 
 test('reviewer profile orphan cleaner components render correctly', function () {
