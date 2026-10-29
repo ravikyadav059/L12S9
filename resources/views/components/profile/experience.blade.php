@@ -270,6 +270,9 @@
             <h2 class="text-base font-semibold font-space text-[#111827] dark:text-white flex items-center gap-2.5 m-0 leading-snug">
                 <i class="fa-solid fa-briefcase text-base text-[#793c4e] dark:text-[#a855f7]"></i>
                 <span>Experience</span>
+                <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                    {{ count($userExperiences) }}
+                </span>
             </h2>
         </div>
 

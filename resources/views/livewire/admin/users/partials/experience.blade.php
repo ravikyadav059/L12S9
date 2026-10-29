@@ -7,6 +7,7 @@
 <div 
     id="experience-profile-card"
     x-data="{
+        statusFilter: 'all',
         isAdding: false,
         editingId: null,
         showUnsavedModal: false,
@@ -267,18 +268,36 @@
     class="bg-white dark:bg-[#111c26] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden mt-6 scroll-mt-24"
 >
     <!-- CARD HEADER -->
-    <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-[#111c26]">
+    <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-[#111c26] flex-wrap gap-3">
         <div class="flex items-center gap-3">
             <div class="size-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-brand border border-blue-100 dark:border-blue-900/40 flex items-center justify-center font-bold text-base shadow-2xs">
                 <i class="fa-solid fa-briefcase text-[15px]"></i>
             </div>
             <div>
-                <h2 class="text-sm font-bold font-space text-zinc-900 dark:text-white">
-                    Work Experience
+                <h2 class="text-sm font-bold font-space text-zinc-900 dark:text-white flex items-center gap-2">
+                    <span>Work Experience</span>
+                    <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                        {{ count($adminExperiences) }}
+                    </span>
                 </h2>
                 <p class="text-xs text-zinc-500 dark:text-zinc-400">
                     Manage user's employment history, designations, and organizational affiliations.
                 </p>
+            </div>
+        </div>
+
+        <!-- STATUS FILTER SELECT OPPOSITE TITLE -->
+        <div class="flex items-center gap-2">
+            <label class="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Status:</label>
+            <div class="relative">
+                <select 
+                    x-model="statusFilter"
+                    class="text-xs font-bold py-1.5 pl-3 pr-8 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer transition shadow-2xs"
+                >
+                    <option value="all">All ({{ count($adminExperiences) }})</option>
+                    <option value="1">Active Only ({{ count(array_filter($adminExperiences, fn($e) => ($e['status'] === 1 || $e['status'] === '1')) ) }})</option>
+                    <option value="0">Inactive Only ({{ count(array_filter($adminExperiences, fn($e) => ($e['status'] === 0 || $e['status'] === '0')) ) }})</option>
+                </select>
             </div>
         </div>
     </div>
@@ -301,7 +320,11 @@
 
             <div class="space-y-7">
                 @forelse($adminExperiences as $exp)
-                    <div class="relative pl-8" wire:key="exp-admin-{{ $exp['id'] }}">
+                    <div 
+                        class="relative pl-8" 
+                        wire:key="exp-admin-{{ $exp['id'] }}"
+                        x-show="statusFilter === 'all' || statusFilter == '{{ $exp['status'] }}'"
+                    >
                         
                         {{-- Timeline Dot --}}
                         <div 
@@ -324,8 +347,16 @@
                                 </div>
 
                                 {{-- Details --}}
-                                <div class="min-w-0 flex-1 space-y-0.5 pt-0.5">
-                                    <h3 class="text-[15px] font-bold text-[#111827] dark:text-white leading-snug truncate">{{ $exp['designation'] }}</h3>
+                                <div class="min-w-0 flex-1 space-y-1 pt-0.5">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h3 class="text-[15px] font-bold text-[#111827] dark:text-white leading-snug truncate">{{ $exp['designation'] }}</h3>
+                                        
+                                        {{-- Database ID with select-all --}}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[10.5px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 select-all" title="Database ID (Click to select)">
+                                            <span class="text-zinc-400 select-none">ID:</span>
+                                            <span>{{ $exp['id'] }}</span>
+                                        </span>
+                                    </div>
                                     
                                     <p class="text-[13px] text-zinc-600 dark:text-zinc-400 font-normal leading-snug">
                                         <span class="font-semibold text-brand">{{ $exp['organization'] }}</span>
@@ -337,39 +368,17 @@
                                 </div>
                             </div>
 
-                            {{-- Action Group: Active/Inactive Badge + Edit Icon Button --}}
+                            {{-- Action Group: Active/Inactive Toggle Badge + Edit Icon Button --}}
                             <div class="flex items-center gap-2.5 shrink-0 pt-0.5">
-                                @if($exp['status'] === 1 || $exp['status'] === '1')
-                                    <button 
-                                        type="button"
-                                        @click.stop="$wire.toggleExperienceStatus('{{ $exp['id'] }}')"
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition select-none shadow-2xs"
-                                        title="Status: Active. Click to deactivate"
-                                    >
-                                        <span class="size-1.5 rounded-full bg-emerald-500"></span>
-                                        <span>Active</span>
-                                    </button>
-                                @elseif($exp['status'] === 0 || $exp['status'] === '0')
-                                    <button 
-                                        type="button"
-                                        @click.stop="$wire.toggleExperienceStatus('{{ $exp['id'] }}')"
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700 transition select-none shadow-2xs"
-                                        title="Status: Inactive. Click to activate"
-                                    >
-                                        <span class="size-1.5 rounded-full bg-zinc-400"></span>
-                                        <span>Inactive</span>
-                                    </button>
-                                @else
-                                    <button 
-                                        type="button"
-                                        @click.stop="$wire.toggleExperienceStatus('{{ $exp['id'] }}')"
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700 transition select-none shadow-2xs"
-                                        title="Status: Inactive. Click to activate"
-                                    >
-                                        <span class="size-1.5 rounded-full bg-zinc-400"></span>
-                                        <span>Inactive</span>
-                                    </button>
-                                @endif
+                                <button 
+                                    type="button"
+                                    @click.stop="$wire.toggleExperienceStatus('{{ $exp['id'] }}')"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ ($exp['status'] === 1 || $exp['status'] === '1') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700' }} transition select-none shadow-2xs cursor-pointer"
+                                    title="Click to toggle status"
+                                >
+                                    <span class="size-1.5 rounded-full {{ ($exp['status'] === 1 || $exp['status'] === '1') ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
+                                    <span>{{ ($exp['status'] === 1 || $exp['status'] === '1') ? 'Active' : 'Inactive' }}</span>
+                                </button>
 
                                 {{-- Edit Icon Button --}}
                                 <button 

@@ -628,6 +628,21 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
         $this->dispatch('toast', message: "Experience set to {$label}.", type: 'success', position: 'bottom');
         $this->dispatch('refresh-experiences');
     }
+
+    /**
+     * Set experience status directly (from select dropdown: 1 for active, 0 for inactive).
+     */
+    public function setExperienceStatus(string $expId, int|string $status): void
+    {
+        $exp = Experience::findOrFail($expId);
+        $newStatus = ((int) $status === 1) ? 1 : 0;
+        $exp->status = $newStatus;
+        $exp->save();
+
+        $label = $newStatus === 1 ? 'Active' : 'Inactive';
+        $this->dispatch('toast', message: "Experience set to {$label}.", type: 'success', position: 'bottom');
+        $this->dispatch('refresh-experiences');
+    }
 }; ?>
 
 <div 
