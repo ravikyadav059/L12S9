@@ -123,12 +123,12 @@ new class extends Component {
      * @param  array<string, mixed>  $payload
      * @return void
      */
-    public function saveExperience(array $payload): void
+    public function saveExperience(array $payload): bool
     {
         if (! $this->isOwnProfile || ! $this->user) {
             $this->dispatch('toast', message: 'Unauthorized.', type: 'danger', position: 'bottom');
 
-            return;
+            return false;
         }
 
         $designationTitle = trim((string) ($payload['designation'] ?? ''));
@@ -142,38 +142,38 @@ new class extends Component {
         if ($designationTitle === '' || $orgName === '' || $startDate === '') {
             $this->dispatch('toast', message: 'Please fill all required fields.', type: 'danger', position: 'bottom');
 
-            return;
+            return false;
         }
 
         if (! $isCurrent && $endDate === '') {
             $this->dispatch('toast', message: 'End date is required for past roles.', type: 'danger', position: 'bottom');
 
-            return;
+            return false;
         }
 
         $now = new \DateTime('first day of this month 00:00:00');
         if ($startDate !== '') {
             $parsedStart = \DateTime::createFromFormat('F, Y', $startDate) ?: \DateTime::createFromFormat('F Y', $startDate);
             if ($parsedStart && $parsedStart->setTime(0, 0) > $now) {
-                $this->dispatch('toast', message: 'Start date cannot be in the future.', type: 'danger', position: 'bottom');
+                $this->dispatch('alert-modal', title: 'Invalid Start Date', message: 'Start date cannot be in the future.', type: 'warning');
 
-                return;
+                return false;
             }
         }
 
         if (! $isCurrent && $endDate !== '') {
             $parsedEnd = \DateTime::createFromFormat('F, Y', $endDate) ?: \DateTime::createFromFormat('F Y', $endDate);
             if ($parsedEnd && $parsedEnd->setTime(0, 0) > $now) {
-                $this->dispatch('toast', message: 'End date cannot be in the future.', type: 'danger', position: 'bottom');
+                $this->dispatch('alert-modal', title: 'Invalid End Date', message: 'End date cannot be in the future.', type: 'warning');
 
-                return;
+                return false;
             }
         }
 
         if ($description !== '' && (mb_strlen($description) < 50 || mb_strlen($description) > 1500)) {
             $this->dispatch('toast', message: 'Description must be between 50 and 1,500 characters.', type: 'danger', position: 'bottom');
 
-            return;
+            return false;
         }
 
         // Enforce: User can only have one active experience marked as currently working
@@ -197,9 +197,31 @@ new class extends Component {
             }
 
             if ($existingCurrentQuery->exists()) {
-                $this->dispatch('toast', message: 'You can only have one experience marked as currently working. Please update your existing current role first.', type: 'danger', position: 'bottom');
+                $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'You can only have one experience marked as currently working. Please update your existing current role first.', type: 'warning');
 
-                return;
+                return false;
+            }
+        }
+
+        $startMonthVal = Experience::parseMonthYearToValue($startDate);
+        $endMonthVal = $isCurrent ? PHP_INT_MAX : Experience::parseMonthYearToValue($endDate);
+
+        if (! $isCurrent && $startMonthVal && $endMonthVal && $startMonthVal > $endMonthVal) {
+            $this->dispatch('alert-modal', title: 'Invalid Date Range', message: 'Start date cannot be after end date.', type: 'warning');
+
+            return false;
+        }
+
+        // Date overlap validation (active experiences only, allowing same-month transitions)
+        if ($startMonthVal && $endMonthVal) {
+            $overlappingExp = Experience::findOverlappingActiveExperience($this->user, $startMonthVal, $endMonthVal, $expId);
+            if ($overlappingExp) {
+                $conflictOrg = $overlappingExp->organization?->organization_name ?? 'another organization';
+                $conflictDesig = $overlappingExp->designationRelation?->designation ?? 'Role';
+                $conflictRange = ($overlappingExp->join_date ?? '') . ' - ' . ($overlappingExp->isCurrent() ? 'Present' : ($overlappingExp->end_date ?? ''));
+                $this->dispatch('alert-modal', title: 'Work Experience Date Overlap', message: "This role dates overlap with your existing role: '{$conflictDesig}' at {$conflictOrg} ({$conflictRange}). A user cannot work at two places simultaneously.", type: 'warning');
+
+                return false;
             }
         }
 
@@ -240,6 +262,8 @@ new class extends Component {
 
         $this->dispatch('toast', message: 'Experience saved successfully!', type: 'success', position: 'bottom');
         $this->dispatch('refresh-experiences');
+
+        return true;
     }
 
     /**
@@ -719,7 +743,7 @@ new class extends Component {
                     const startDateObj = parseMonthYear(this.form.start_date);
                     if (startDateObj && startDateObj > curMonthStart) {
                         this.errors.start_date = true;
-                        this.triggerToast('Start date cannot be in the future', 'warning');
+                        this.triggerAlertModal('Invalid Start Date', 'Start date cannot be in the future.');
                         hasError = true;
                     }
                 }
@@ -732,13 +756,13 @@ new class extends Component {
                         const endDateObj = parseMonthYear(this.form.end_date);
                         if (endDateObj && endDateObj > curMonthStart) {
                             this.errors.end_date = true;
-                            this.triggerToast('End date cannot be in the future', 'warning');
+                            this.triggerAlertModal('Invalid End Date', 'End date cannot be in the future.');
                             hasError = true;
                         } else {
                             const startDateObj = parseMonthYear(this.form.start_date);
                             if (startDateObj && endDateObj && endDateObj < startDateObj) {
                                 this.errors.end_date = true;
-                                this.triggerToast('End date cannot be before start date', 'warning');
+                                this.triggerAlertModal('Invalid Date Range', 'End date cannot be before start date.');
                                 hasError = true;
                             }
                         }
@@ -756,12 +780,62 @@ new class extends Component {
                     hasError = true;
                 }
 
-                if (this.form.current_role) {
+                if (this.form.is_current) {
                     const existingList = @js($userExperiences);
-                    const hasOtherCurrent = existingList.some(e => String(e.id) !== String(this.form.id) && Boolean(e.is_current));
+                    const hasOtherCurrent = existingList.some(e => String(e.id) !== String(this.form.id) && Boolean(e.is_current) && (e.status == 1 || e.status === '1' || e.status === true));
                     if (hasOtherCurrent) {
-                        this.triggerToast('You can only have one experience marked as currently working. Please update your existing current role first.', 'danger');
+                        this.triggerAlertModal('Currently Working Role Conflict', 'You can only have one experience marked as currently working. Please update your existing current role first.');
                         return false;
+                    }
+                }
+
+                // Date overlap validation (active experiences only, allowing same-month transitions)
+                const monthVal = (val) => {
+                    if (!val) return null;
+                    const parts = val.replace(',', '').trim().split(/\s+/);
+                    if (parts.length >= 2) {
+                        const mIdx = ['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(parts[0].toLowerCase());
+                        const y = parseInt(parts[1], 10);
+                        if (mIdx !== -1 && !isNaN(y)) return (y * 12) + (mIdx + 1);
+                    }
+                    return null;
+                };
+
+                const startMonth = monthVal(this.form.start_date);
+                const endMonth = this.form.is_current ? 999999 : monthVal(this.form.end_date);
+
+                if (startMonth && endMonth) {
+                    const existingList = @js($userExperiences);
+                    for (const exp of existingList) {
+                        if (String(exp.id) === String(this.form.id)) continue;
+                        if (exp.status != 1 && exp.status !== '1' && exp.status !== true) continue;
+
+                        const expStart = monthVal(exp.start_date);
+                        const expEnd = exp.is_current ? 999999 : monthVal(exp.end_date);
+                        if (!expStart || !expEnd) continue;
+
+                        const startOverlap = Math.max(startMonth, expStart);
+                        const endOverlap = Math.min(endMonth, expEnd);
+
+                        if (startOverlap <= endOverlap) {
+                            if (startOverlap < endOverlap) {
+                                const conflictOrg = exp.organization || 'another organization';
+                                const conflictDesig = exp.designation || 'Role';
+                                const conflictRange = (exp.start_date || '') + ' - ' + (exp.is_current ? 'Present' : (exp.end_date || ''));
+                                this.triggerAlertModal('Work Experience Date Overlap', `This role dates overlap with your existing role: '${conflictDesig}' at ${conflictOrg} (${conflictRange}). A user cannot work in two places simultaneously.`);
+                                return false;
+                            } else {
+                                const m = startOverlap;
+                                const isValidTransition = (endMonth === m && expStart === m) || (expEnd === m && startMonth === m);
+                                if (!isValidTransition) {
+                                    const conflictOrg = exp.organization || 'another organization';
+                                    const conflictDesig = exp.designation || 'Role';
+                                    const conflictRange = (exp.start_date || '') + ' - ' + (exp.is_current ? 'Present' : (exp.end_date || ''));
+                                    this.triggerAlertModal('Work Experience Date Overlap', `This role dates overlap with your existing role: '${conflictDesig}' at ${conflictOrg} (${conflictRange}). A user cannot work in two places simultaneously.`);
+                                    return false;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -777,8 +851,10 @@ new class extends Component {
                     return;
                 }
 
-                $wire.saveExperience(this.form).then(() => {
-                    this.closeForm();
+                $wire.saveExperience(this.form).then((res) => {
+                    if (res !== false) {
+                        this.closeForm();
+                    }
                 });
             },
 
@@ -788,6 +864,18 @@ new class extends Component {
                         this.closeForm();
                     }
                 });
+            },
+
+            triggerAlertModal(title, msg, type = 'warning') {
+                window.dispatchEvent(new CustomEvent('alert-modal', { 
+                    detail: { 
+                        title: title, 
+                        message: msg, 
+                        type: type,
+                        confirmText: 'OK',
+                        cancelText: 'Cancel'
+                    } 
+                }));
             },
 
             triggerToast(msg, type = 'warning') {

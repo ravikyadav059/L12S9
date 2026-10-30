@@ -19,6 +19,7 @@
     <!-- 4. Global Modals & Notifications -->
     <x-modals.share />
     <x-toast />
+    <x-alert-modal />
 
     @fluxScripts
 </body>

@@ -213,4 +213,115 @@ class Experience extends Model
     {
         return $this->designationRelation();
     }
+
+    /**
+     * Convert any date string (e.g. "January 2025", "Jan, 2025", "2025-01") to an integer month value (year * 12 + month).
+     */
+    public static function parseMonthYearToValue(?string $dateStr): ?int
+    {
+        if (! $dateStr) {
+            return null;
+        }
+
+        $trimmed = trim($dateStr);
+        if ($trimmed === '' || strtolower($trimmed) === 'present') {
+            return null;
+        }
+
+        $dt = \DateTime::createFromFormat('!F Y', $trimmed)
+            ?: \DateTime::createFromFormat('!F, Y', $trimmed)
+            ?: \DateTime::createFromFormat('!M Y', $trimmed)
+            ?: \DateTime::createFromFormat('!M, Y', $trimmed)
+            ?: \DateTime::createFromFormat('!Y-m', $trimmed)
+            ?: \DateTime::createFromFormat('!m/Y', $trimmed);
+
+        if (! $dt) {
+            $timestamp = strtotime($trimmed);
+            if ($timestamp !== false && $timestamp > 0) {
+                $dt = (new \DateTime)->setTimestamp($timestamp);
+            }
+        }
+
+        if ($dt) {
+            $year = (int) $dt->format('Y');
+            $month = (int) $dt->format('n');
+
+            return ($year * 12) + $month;
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if two experience date ranges overlap.
+     *
+     * Rule:
+     * - Overlapping by 2 or more months is an error (cannot work at two places simultaneously).
+     * - Touching at exactly 1 month (e.g. job 1 ends Jan 2025, job 2 starts Jan 2025)
+     *   is ALLOWED as a same-month transition (e.g., left Jan 15, joined Jan 16).
+     */
+    public static function checkDateOverlap(int $startA, int $endA, int $startB, int $endB): bool
+    {
+        $startOverlap = max($startA, $startB);
+        $endOverlap = min($endA, $endB);
+
+        // No intersection
+        if ($startOverlap > $endOverlap) {
+            return false;
+        }
+
+        // Overlap of 2 or more months
+        if ($startOverlap < $endOverlap) {
+            return true;
+        }
+
+        // Exactly 1 month intersection ($startOverlap == $endOverlap == $m):
+        // Allowed ONLY if one job ends in month $m and the other starts in month $m.
+        $m = $startOverlap;
+        $isValidTransition = ($endA === $m && $startB === $m) || ($endB === $m && $startA === $m);
+
+        return ! $isValidTransition;
+    }
+
+    /**
+     * Find any existing active experience record that date-overlaps with the given range.
+     *
+     * @param  User|string  $user
+     * @param  int  $startMonthVal  (year * 12 + month)
+     * @param  int  $endMonthVal  (year * 12 + month, or PHP_INT_MAX for current role)
+     */
+    public static function findOverlappingActiveExperience($user, int $startMonthVal, int $endMonthVal, ?string $excludeExpId = null): ?self
+    {
+        $userId = is_string($user) ? $user : (string) $user->_id;
+        $reviewerProfile = is_string($user) ? ReviewerProfile::where('user_id', $userId)->first() : ($user->reviewerProfile ?? ReviewerProfile::where('user_id', $userId)->first());
+        $expIds = (array) ($reviewerProfile->experience ?? []);
+
+        $activeExperiences = self::where(function ($q) use ($userId, $expIds) {
+            $q->where('user_id', $userId);
+            if (! empty($expIds)) {
+                $q->orWhereIn('_id', $expIds);
+            }
+        })
+            ->whereIn('status', [1, '1', true])
+            ->when($excludeExpId, fn ($q) => $q->where('_id', '!=', $excludeExpId))
+            ->with(['designationRelation', 'organization'])
+            ->get();
+
+        foreach ($activeExperiences as $existingExp) {
+            $existingStart = self::parseMonthYearToValue($existingExp->join_date);
+            if (! $existingStart) {
+                continue;
+            }
+
+            $existingEnd = $existingExp->isCurrent()
+                ? PHP_INT_MAX
+                : (self::parseMonthYearToValue($existingExp->end_date) ?? PHP_INT_MAX);
+
+            if (self::checkDateOverlap($startMonthVal, $endMonthVal, $existingStart, $existingEnd)) {
+                return $existingExp;
+            }
+        }
+
+        return null;
+    }
 }

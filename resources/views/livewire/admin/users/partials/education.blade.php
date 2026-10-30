@@ -133,7 +133,7 @@ new class extends Component {
      * @param  array<string, mixed>  $payload
      * @return void
      */
-    public function saveEducation(array $payload): void
+    public function saveEducation(array $payload): bool
     {
         $instName = trim((string) ($payload['institution'] ?? ''));
         $degreeTitle = trim((string) ($payload['degree'] ?? ''));
@@ -148,13 +148,13 @@ new class extends Component {
         if ($instName === '') {
             $this->dispatch('toast', message: 'Institution is required.', type: 'danger', position: 'bottom');
 
-            return;
+            return false;
         }
 
         if ($degreeTitle === '') {
             $this->dispatch('toast', message: 'Degree is required.', type: 'danger', position: 'bottom');
 
-            return;
+            return false;
         }
 
         $currentYear = (int) date('Y');
@@ -162,24 +162,24 @@ new class extends Component {
             if ($passoutYear === '') {
                 $this->dispatch('toast', message: 'Passout year is required unless currently pursuing.', type: 'danger', position: 'bottom');
 
-                return;
+                return false;
             }
 
             if ((int) $passoutYear > $currentYear) {
-                $this->dispatch('toast', message: 'Passout year cannot be in the future. Please check Pursuing instead.', type: 'danger', position: 'bottom');
+                $this->dispatch('alert-modal', title: 'Invalid Passout Year', message: 'Passout year cannot be in the future. Please check Pursuing instead.', type: 'warning');
 
-                return;
+                return false;
             }
         }
 
         if ($description !== '' && (mb_strlen($description) < 50 || mb_strlen($description) > 1500)) {
             $this->dispatch('toast', message: 'Description must be between 50 and 1,500 characters.', type: 'danger', position: 'bottom');
 
-            return;
+            return false;
         }
 
-        // Enforce: User can only have one education marked as currently pursuing (checks both active and inactive in admin)
-        if ($isPursuing) {
+        // Enforce: User can only have one active education marked as currently pursuing
+        if ($isPursuing && $statusVal === 1) {
             $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
             $eduIds = (array) ($reviewerProfile->education ?? []);
 
@@ -188,19 +188,20 @@ new class extends Component {
                 if (! empty($eduIds)) {
                     $q->orWhereIn('_id', $eduIds);
                 }
-            })->where(function ($q) {
-                $q->whereIn('current_institute', [1, '1', true])
-                  ->orWhereIn('pursuing', [1, '1', true]);
-            });
+            })->whereIn('status', [1, '1', true])
+              ->where(function ($q) {
+                  $q->whereIn('current_institute', [1, '1', true])
+                    ->orWhereIn('pursuing', [1, '1', true]);
+              });
 
             if ($eduId) {
                 $existingPursuingQuery->where('_id', '!=', $eduId);
             }
 
             if ($existingPursuingQuery->exists()) {
-                $this->dispatch('toast', message: 'This user already has an education marked as currently pursuing. Only one education can be set as pursuing.', type: 'danger', position: 'bottom');
+                $this->dispatch('alert-modal', title: 'Currently Pursuing Conflict', message: 'This user already has an active education marked as currently pursuing. Only one active education can be set as pursuing.', type: 'warning');
 
-                return;
+                return false;
             }
         }
 
@@ -252,6 +253,8 @@ new class extends Component {
 
         $this->dispatch('toast', message: 'Education saved successfully!', type: 'success', position: 'bottom');
         $this->dispatch('refresh-educations');
+
+        return true;
     }
 
     /**
@@ -302,7 +305,7 @@ new class extends Component {
               })->exists();
 
             if ($alreadyActivePursuing) {
-                $this->dispatch('toast', message: 'Cannot activate this education because another active education is already marked as currently pursuing.', type: 'danger', position: 'bottom');
+                $this->dispatch('alert-modal', title: 'Currently Pursuing Conflict', message: 'Cannot activate this education because another active education is already marked as currently pursuing.', type: 'warning');
 
                 return;
             }
@@ -327,6 +330,30 @@ new class extends Component {
     {
         $edu = Education::findOrFail($eduId);
         $newStatus = ((int) $status === 1) ? 1 : 0;
+
+        if ($newStatus === 1 && $edu->isPursuing()) {
+            $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
+            $eduIds = (array) ($reviewerProfile->education ?? []);
+
+            $alreadyActivePursuing = Education::where(function ($q) use ($eduIds) {
+                $q->where('user_id', (string) $this->user->_id);
+                if (! empty($eduIds)) {
+                    $q->orWhereIn('_id', $eduIds);
+                }
+            })->where('_id', '!=', $eduId)
+              ->whereIn('status', [1, '1', true])
+              ->where(function ($q) {
+                  $q->whereIn('current_institute', [1, '1', true])
+                    ->orWhereIn('pursuing', [1, '1', true]);
+              })->exists();
+
+            if ($alreadyActivePursuing) {
+                $this->dispatch('alert-modal', title: 'Currently Pursuing Conflict', message: 'Cannot activate this education because another active education is already marked as currently pursuing.', type: 'warning');
+
+                return;
+            }
+        }
+
         $edu->status = $newStatus;
         $edu->save();
 
@@ -1002,6 +1029,7 @@ new class extends Component {
                             hasError = true;
                         } else if (yr > curYear) {
                             this.errors.passout_year = true;
+                            this.triggerAlertModal('Invalid Passout Year', 'Passout year cannot be in the future. Please check Pursuing instead.');
                             hasError = true;
                         }
                     }
@@ -1015,15 +1043,14 @@ new class extends Component {
 
                     if (hasError) return;
 
-                    if (this.form.pursuing) {
+                    if (this.form.pursuing && (this.form.status == 1 || this.form.status === '1' || this.form.status === true)) {
                         const existingList = @js($adminEducations);
-                        const hasOtherPursuing = existingList.some(e => String(e.id) !== String(this.form.id) && Boolean(e.pursuing));
+                        const hasOtherPursuing = existingList.some(e => String(e.id) !== String(this.form.id) && Boolean(e.pursuing) && (e.status == 1 || e.status === '1' || e.status === true));
                         if (hasOtherPursuing) {
-                            this.$dispatch('toast', {
-                                message: 'This user already has an education marked as currently pursuing. Only one education can be set as pursuing.',
-                                type: 'danger',
-                                position: 'bottom'
-                            });
+                            this.triggerAlertModal(
+                                'Currently Pursuing Conflict',
+                                'This user already has an active education marked as currently pursuing. Only one active education can be set as pursuing.'
+                            );
                             return;
                         }
                     }
@@ -1040,11 +1067,13 @@ new class extends Component {
                         status: this.form.status ? 1 : 0,
                     };
 
-                    this.$wire.saveEducation(payload).then(() => {
-                        this.isAdding = false;
-                        this.editingId = null;
-                        this.resetForm();
-                        this.originalSnapshot = '';
+                    this.$wire.saveEducation(payload).then((res) => {
+                        if (res !== false) {
+                            this.isAdding = false;
+                            this.editingId = null;
+                            this.resetForm();
+                            this.originalSnapshot = '';
+                        }
                     });
                 },
 
@@ -1052,6 +1081,18 @@ new class extends Component {
                     if (confirm('Are you sure you want to delete this education record?')) {
                         this.$wire.deleteEducation(id);
                     }
+                },
+
+                triggerAlertModal(title, msg, type = 'warning') {
+                    window.dispatchEvent(new CustomEvent('alert-modal', {
+                        detail: {
+                            title: title,
+                            message: msg,
+                            type: type,
+                            confirmText: 'OK',
+                            cancelText: 'Cancel'
+                        }
+                    }));
                 }
             }"
             class="bg-white dark:bg-[#111c26] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden mt-6"

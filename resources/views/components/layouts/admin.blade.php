@@ -533,6 +533,7 @@
     </flux:main>
 
     <x-toast />
+    <x-alert-modal />
 
     @fluxScripts
 </body>
