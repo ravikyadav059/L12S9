@@ -1,6 +1,7 @@
 {{-- resources/views/components/profile/experience-form.blade.php --}}
 @props([
     'showStatus' => false,
+    'itemId' => null,
 ])
 <div class="mt-4 border-[1.5px] border-dashed border-brand rounded-2xl p-5 sm:p-6 bg-form-bg shadow-2xs">
     <div class="space-y-4">
@@ -11,46 +12,94 @@
                 Job Title / Designation <span class="text-red-500">*</span>
             </label>
 
-            <div class="relative flex items-center">
-                <input 
-                    type="text"
-                    x-model="form.designation"
-                    @focus="showDesignationDropdown = true"
-                    @input="showDesignationDropdown = true; errors.designation = false"
-                    placeholder="Select Designation..."
-                    :class="errors.designation ? 'border-red-500 bg-red-50/20 dark:bg-red-950/10' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'"
-                    class="w-full h-10 px-3.5 text-xs font-normal text-zinc-900 dark:text-white border rounded-xl focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all placeholder:text-zinc-400 pr-14"
-                />
+            {{-- Custom Select Trigger matching Image 1 --}}
+            <div 
+                @click="openDesignationDropdown()"
+                :class="errors.designation ? 'border-red-500 bg-red-50/20 dark:bg-red-950/10' : (showDesignationDropdown ? 'border-brand ring-2 ring-brand/10' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900')"
+                class="w-full h-10 px-3.5 text-xs font-normal border rounded-xl flex items-center justify-between cursor-pointer select-none transition-all"
+            >
+                <span 
+                    x-text="form.designation || 'Select Designation...'"
+                    :class="form.designation ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-400'"
+                    class="truncate pr-2"
+                ></span>
 
-                <div class="absolute right-2.5 flex items-center gap-1.5 text-zinc-400">
+                <div class="flex items-center gap-1.5 text-zinc-400 shrink-0">
                     <button 
                         type="button" 
                         x-show="form.designation" 
-                        @click="form.designation = ''; errors.designation = false"
-                        class="hover:text-zinc-700 dark:hover:text-zinc-200 px-1"
+                        @click.stop="clearDesignation()"
+                        class="hover:text-zinc-700 dark:hover:text-zinc-200 px-1 cursor-pointer"
                         title="Clear"
                     >
                         <i class="fa-solid fa-xmark text-xs"></i>
                     </button>
-                    <button 
-                        type="button" 
-                        @click="showDesignationDropdown = !showDesignationDropdown"
-                        class="p-0.5 hover:text-zinc-700 dark:hover:text-zinc-200"
-                    >
-                        <i class="fa-solid fa-chevron-down text-[11px] transition-transform" :class="showDesignationDropdown ? 'rotate-180' : ''"></i>
-                    </button>
+                    <span class="p-0.5 hover:text-zinc-700 dark:hover:text-zinc-200">
+                        <i class="fa-solid fa-chevron-down text-[11px] transition-transform duration-200" :class="showDesignationDropdown ? 'rotate-180' : ''"></i>
+                    </span>
+                </div>
+            </div>
+
+            {{-- Autocomplete Dropdown Popup matching Image 1 & 2 --}}
+            <div 
+                x-show="showDesignationDropdown" 
+                x-cloak
+                class="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#111c26] border-2 border-blue-500 dark:border-blue-500 rounded-xl shadow-xl z-50 overflow-hidden"
+            >
+                {{-- Search Input inside Dropdown matching Image 1 --}}
+                <div class="p-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <div class="relative flex items-center">
+                        <input 
+                            type="text"
+                            x-ref="desigSearchInput"
+                            x-model="desigSearchQuery"
+                            @input="searchDesignations(desigSearchQuery)"
+                            placeholder="Search..."
+                            class="w-full h-9 px-3 text-xs font-normal text-zinc-900 dark:text-white border-2 border-blue-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white dark:bg-zinc-800 placeholder:text-zinc-400"
+                        />
+                        <button 
+                            type="button" 
+                            x-show="desigSearchQuery" 
+                            @click="desigSearchQuery = ''; fetchDesignations('')"
+                            class="absolute right-2.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                        >
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
                 </div>
 
-                {{-- Autocomplete Dropdown --}}
                 <div 
-                    x-show="showDesignationDropdown" 
-                    x-cloak
-                    class="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#111c26] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg z-50 max-h-52 overflow-y-auto"
+                    @scroll.passive="onDesignationScroll($event)"
+                    class="max-h-52 overflow-y-auto"
                 >
+                    {{-- Add New Designation (Dashed button matching Image 2) --}}
+                    <div 
+                        x-show="desigSearchQuery && desigSearchQuery.trim() !== '' && !hasExactDesignationMatch()"
+                        @click="selectDesignation(desigSearchQuery)"
+                        class="p-2 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/40 dark:bg-zinc-900/40"
+                    >
+                        <div class="border-[1.5px] border-dashed border-[#198BEA] rounded-xl px-3.5 py-2 flex items-center gap-2.5 cursor-pointer bg-blue-50/50 hover:bg-blue-100/70 dark:bg-blue-950/30 dark:hover:bg-blue-950/50 transition select-none">
+                            <span class="size-5 rounded-full bg-[#198BEA] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                                <i class="fa-solid fa-plus"></i>
+                            </span>
+                            <span class="text-xs font-medium text-zinc-800 dark:text-zinc-100">
+                                Add New Designation
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Searching state --}}
+                    <div x-show="isSearchingDesig" class="px-3.5 py-3 text-xs text-zinc-400 text-center flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Searching designations...</span>
+                    </div>
+
+                    {{-- Matching options list (Selected highlighted matching Image 2) --}}
                     <template x-for="opt in designationOptions" :key="opt">
                         <div 
-                            @click="form.designation = opt; errors.designation = false; showDesignationDropdown = false" 
-                            class="px-3.5 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-brand cursor-pointer flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0"
+                            @click="selectDesignation(opt)" 
+                            :class="form.designation === opt ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 font-medium' : 'text-zinc-700 dark:text-zinc-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-brand'"
+                            class="px-3.5 py-2.5 text-xs cursor-pointer flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0 transition-colors"
                         >
                             <span x-text="opt"></span>
                             <span x-show="form.designation === opt" class="text-brand">
@@ -58,6 +107,20 @@
                             </span>
                         </div>
                     </template>
+
+                    {{-- Empty state --}}
+                    <div 
+                        x-show="!isSearchingDesig && designationOptions.length === 0 && (!desigSearchQuery || hasExactDesignationMatch())" 
+                        class="px-3.5 py-3 text-xs text-zinc-400 text-center"
+                    >
+                        No designations found
+                    </div>
+
+                    {{-- Infinite scroll loading indicator --}}
+                    <div x-show="isLoadingMoreDesig" class="px-3.5 py-2 text-[11px] text-zinc-400 text-center flex items-center justify-center gap-2 border-t border-zinc-100 dark:border-zinc-800">
+                        <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Loading more...</span>
+                    </div>
                 </div>
             </div>
 
@@ -70,46 +133,94 @@
                 Organization <span class="text-red-500">*</span>
             </label>
 
-            <div class="relative flex items-center">
-                <input 
-                    type="text"
-                    x-model="form.organization"
-                    @focus="showOrgDropdown = true"
-                    @input="showOrgDropdown = true; errors.organization = false"
-                    placeholder="Search Organization..."
-                    :class="errors.organization ? 'border-red-500 bg-red-50/20 dark:bg-red-950/10' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'"
-                    class="w-full h-10 px-3.5 text-xs font-normal text-zinc-900 dark:text-white border rounded-xl focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all placeholder:text-zinc-400 pr-14"
-                />
+            {{-- Custom Select Trigger matching Image 1 --}}
+            <div 
+                @click="openOrgDropdown()"
+                :class="errors.organization ? 'border-red-500 bg-red-50/20 dark:bg-red-950/10' : (showOrgDropdown ? 'border-brand ring-2 ring-brand/10' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900')"
+                class="w-full h-10 px-3.5 text-xs font-normal border rounded-xl flex items-center justify-between cursor-pointer select-none transition-all"
+            >
+                <span 
+                    x-text="form.organization || 'Select Organization...'"
+                    :class="form.organization ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-400'"
+                    class="truncate pr-2"
+                ></span>
 
-                <div class="absolute right-2.5 flex items-center gap-1.5 text-zinc-400">
+                <div class="flex items-center gap-1.5 text-zinc-400 shrink-0">
                     <button 
                         type="button" 
                         x-show="form.organization" 
-                        @click="form.organization = ''; errors.organization = false"
-                        class="hover:text-zinc-700 dark:hover:text-zinc-200 px-1"
+                        @click.stop="clearOrganization()"
+                        class="hover:text-zinc-700 dark:hover:text-zinc-200 px-1 cursor-pointer"
                         title="Clear"
                     >
                         <i class="fa-solid fa-xmark text-xs"></i>
                     </button>
-                    <button 
-                        type="button" 
-                        @click="showOrgDropdown = !showOrgDropdown"
-                        class="p-0.5 hover:text-zinc-700 dark:hover:text-zinc-200"
-                    >
-                        <i class="fa-solid fa-chevron-down text-[11px] transition-transform" :class="showOrgDropdown ? 'rotate-180' : ''"></i>
-                    </button>
+                    <span class="p-0.5 hover:text-zinc-700 dark:hover:text-zinc-200">
+                        <i class="fa-solid fa-chevron-down text-[11px] transition-transform duration-200" :class="showOrgDropdown ? 'rotate-180' : ''"></i>
+                    </span>
+                </div>
+            </div>
+
+            {{-- Autocomplete Dropdown Popup matching Image 1 & 2 --}}
+            <div 
+                x-show="showOrgDropdown" 
+                x-cloak
+                class="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#111c26] border-2 border-blue-500 dark:border-blue-500 rounded-xl shadow-xl z-50 overflow-hidden"
+            >
+                {{-- Search Input inside Dropdown matching Image 1 --}}
+                <div class="p-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <div class="relative flex items-center">
+                        <input 
+                            type="text"
+                            x-ref="orgSearchInput"
+                            x-model="orgSearchQuery"
+                            @input="searchOrganizations(orgSearchQuery)"
+                            placeholder="Search..."
+                            class="w-full h-9 px-3 text-xs font-normal text-zinc-900 dark:text-white border-2 border-blue-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white dark:bg-zinc-800 placeholder:text-zinc-400"
+                        />
+                        <button 
+                            type="button" 
+                            x-show="orgSearchQuery" 
+                            @click="orgSearchQuery = ''; fetchOrganizations('')"
+                            class="absolute right-2.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                        >
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
                 </div>
 
-                {{-- Autocomplete Dropdown --}}
                 <div 
-                    x-show="showOrgDropdown" 
-                    x-cloak
-                    class="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#111c26] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg z-50 max-h-52 overflow-y-auto"
+                    @scroll.passive="onOrgScroll($event)"
+                    class="max-h-52 overflow-y-auto"
                 >
-                    <template x-for="org in filteredOrganizations()" :key="org">
+                    {{-- Add New Organization (Dashed button) --}}
+                    <div 
+                        x-show="orgSearchQuery && orgSearchQuery.trim() !== '' && !hasExactOrgMatch()"
+                        @click="selectOrganization(orgSearchQuery)"
+                        class="p-2 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/40 dark:bg-zinc-900/40"
+                    >
+                        <div class="border-[1.5px] border-dashed border-[#198BEA] rounded-xl px-3.5 py-2 flex items-center gap-2.5 cursor-pointer bg-blue-50/50 hover:bg-blue-100/70 dark:bg-blue-950/30 dark:hover:bg-blue-950/50 transition select-none">
+                            <span class="size-5 rounded-full bg-[#198BEA] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                                <i class="fa-solid fa-plus"></i>
+                            </span>
+                            <span class="text-xs font-medium text-zinc-800 dark:text-zinc-100">
+                                Add New Organization
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Searching state --}}
+                    <div x-show="isSearchingOrg" class="px-3.5 py-3 text-xs text-zinc-400 text-center flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Searching organizations...</span>
+                    </div>
+
+                    {{-- Matching options list (Selected highlighted matching Image 2) --}}
+                    <template x-for="org in organizationOptions" :key="org">
                         <div 
-                            @click="form.organization = org; errors.organization = false; showOrgDropdown = false" 
-                            class="px-3.5 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-brand cursor-pointer flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0"
+                            @click="selectOrganization(org)" 
+                            :class="form.organization === org ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 font-medium' : 'text-zinc-700 dark:text-zinc-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-brand'"
+                            class="px-3.5 py-2.5 text-xs cursor-pointer flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0 transition-colors"
                         >
                             <span x-text="org"></span>
                             <span x-show="form.organization === org" class="text-brand">
@@ -117,6 +228,20 @@
                             </span>
                         </div>
                     </template>
+
+                    {{-- Empty state --}}
+                    <div 
+                        x-show="!isSearchingOrg && organizationOptions.length === 0 && (!orgSearchQuery || hasExactOrgMatch())" 
+                        class="px-3.5 py-3 text-xs text-zinc-400 text-center"
+                    >
+                        No organizations found
+                    </div>
+
+                    {{-- Infinite scroll loading indicator --}}
+                    <div x-show="isLoadingMoreOrg" class="px-3.5 py-2 text-[11px] text-zinc-400 text-center flex items-center justify-center gap-2 border-t border-zinc-100 dark:border-zinc-800">
+                        <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Loading more...</span>
+                    </div>
                 </div>
             </div>
 
@@ -182,7 +307,7 @@
             ></textarea>
 
             <p x-show="errors.description" x-cloak class="text-[11px] text-red-500 mt-1" x-text="errors.descriptionMessage"></p>
-            <p class="text-[11px] text-zinc-400 mt-1">
+            <p x-show="!errors.description" class="text-[11px] text-zinc-400 mt-1">
                 Description (between 50 and 1500 characters)
             </p>
         </div>
@@ -197,10 +322,10 @@
                     <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-200 select-none" @click="form.status = 1">
                         <input 
                             type="radio" 
-                            :name="'form_status_' + (form.id || 'new')" 
+                            name="form_status_{{ $itemId ?? 'new' }}" 
                             value="1" 
-                            x-model="form.status"
-                            :checked="form.status == 1"
+                            :checked="form.status == 1 || form.status === '1'"
+                            @change="form.status = 1"
                             class="size-4 text-brand focus:ring-brand cursor-pointer"
                         />
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
@@ -212,10 +337,10 @@
                     <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-200 select-none" @click="form.status = 0">
                         <input 
                             type="radio" 
-                            :name="'form_status_' + (form.id || 'new')" 
+                            name="form_status_{{ $itemId ?? 'new' }}" 
                             value="0" 
-                            x-model="form.status"
-                            :checked="form.status == 0"
+                            :checked="form.status == 0 || form.status === '0'"
+                            @change="form.status = 0"
                             class="size-4 text-brand focus:ring-brand cursor-pointer"
                         />
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">

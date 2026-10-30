@@ -48,6 +48,13 @@ test('admin journals routes are registered', function () {
     expect(Route::has('admin.journals.index'))->toBeTrue();
     expect(Route::has('admin.journals.create'))->toBeTrue();
     expect(Route::has('admin.journals.edit'))->toBeTrue();
+    expect(Route::has('search-journals'))->toBeTrue();
+});
+
+test('search-journals route returns matching journals json', function () {
+    $response = $this->getJson(route('search-journals', ['search' => 'Quantum']));
+    $response->assertOk();
+    $response->assertJsonStructure(['journals']);
 });
 
 test('admin user can view add journal page with all required fields and sections', function () {

@@ -6,6 +6,7 @@
     'hasErrorExpr' => 'false',
     'placeholder' => 'Select Month, Year',
     'minDateExpr' => 'null',
+    'disableFuture' => true,
 ])
 
 <div 
@@ -16,6 +17,7 @@
         selectedMonth: '',
         months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         fullMonths: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+        disableFuture: {{ $disableFuture ? 'true' : 'false' }},
 
         initPicker() {
             const val = (typeof {{ $model }} !== 'undefined') ? ({{ $model }} || '') : '';
@@ -31,10 +33,31 @@
                         this.pickerYear = y;
                     }
                 }
+            } else {
+                const curY = new Date().getFullYear();
+                if (this.disableFuture && this.pickerYear > curY) {
+                    this.pickerYear = curY;
+                }
             }
         },
 
+        canGoNextYear() {
+            if (!this.disableFuture) return true;
+            return this.pickerYear < new Date().getFullYear();
+        },
+
+        isMonthDisabled(idx) {
+            if (!this.disableFuture) return false;
+            const now = new Date();
+            const curY = now.getFullYear();
+            const curM = now.getMonth();
+            if (this.pickerYear > curY) return true;
+            if (this.pickerYear === curY && idx > curM) return true;
+            return false;
+        },
+
         selectMonth(m, index) {
+            if (this.isMonthDisabled(index)) return;
             this.selectedMonth = m;
             const fullMonth = this.fullMonths[index];
             {{ $model }} = `${fullMonth}, ${this.pickerYear}`;
@@ -46,7 +69,9 @@
         },
 
         nextYear() {
-            this.pickerYear++;
+            if (this.canGoNextYear()) {
+                this.pickerYear++;
+            }
         },
 
         clear() {
@@ -102,7 +127,7 @@
             <i class="fa-regular fa-calendar text-zinc-400 text-sm"></i>
         </div>
 
-        {{-- Month-Year Popover (Exact match with Image media_1793188779760.png) --}}
+        {{-- Month-Year Popover --}}
         <div 
             x-show="open"
             x-transition:enter="transition ease-out duration-150"
@@ -119,7 +144,7 @@
                 <button 
                     type="button" 
                     @click.stop="prevYear()"
-                    class="p-1 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+                    class="p-1 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer"
                 >
                     <i class="fa-solid fa-chevron-left text-[10px]"></i>
                 </button>
@@ -131,7 +156,11 @@
                 <button 
                     type="button" 
                     @click.stop="nextYear()"
-                    class="p-1 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+                    :disabled="!canGoNextYear()"
+                    :class="!canGoNextYear() 
+                        ? 'opacity-25 cursor-not-allowed text-zinc-300 dark:text-zinc-600' 
+                        : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer'"
+                    class="p-1"
                 >
                     <i class="fa-solid fa-chevron-right text-[10px]"></i>
                 </button>
@@ -143,10 +172,13 @@
                     <button 
                         type="button" 
                         @click.stop="selectMonth(m, idx)"
-                        :class="isSelected(m) 
-                            ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 font-bold shadow-xs' 
-                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'"
-                        class="py-2 rounded-lg text-xs font-medium transition cursor-pointer"
+                        :disabled="isMonthDisabled(idx)"
+                        :class="isMonthDisabled(idx) 
+                            ? 'opacity-25 cursor-not-allowed pointer-events-none text-zinc-300 dark:text-zinc-600' 
+                            : (isSelected(m) 
+                                ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 font-bold shadow-xs' 
+                                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 cursor-pointer')"
+                        class="py-2 rounded-lg text-xs font-medium transition"
                         x-text="m"
                     ></button>
                 </template>

@@ -351,6 +351,6 @@ In MongoDB, user sub-entity references are stored as arrays in `ReviewerProfile`
   - 3+ character debounce guard (`debounce.250ms`).
   - Case-insensitive regex matching.
   - Redis cache keys (`degrees:default:list` for empty query, `degrees:search:{md5}` for queries).
-  - Auto-promotion: `usage_count >= 3` promotes unapproved items (`status: 0`) to approved (`status: 1`).
+  - Auto-promotion: `submission_count >= 3` promotes unapproved items (`status: 0`) to approved (`status: 1`).
 
 ```

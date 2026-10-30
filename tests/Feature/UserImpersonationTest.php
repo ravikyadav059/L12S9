@@ -225,6 +225,7 @@ test('admin can update user prefix on edit page', function () {
         'last_name' => 'Einstein',
         'email' => 'einstein@test.local',
         'unique_id' => 'S9-032026-1006999',
+        'mobile' => '1234567890',
         'status' => 1,
     ]);
     $scholar->save();

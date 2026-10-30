@@ -2,6 +2,7 @@
 
 use App\Models\DegreeType;
 use App\Models\Education;
+use App\Models\Experience;
 use App\Models\Grade;
 use App\Models\Organization;
 
@@ -36,6 +37,7 @@ test('education model formats passout_year strictly to 4-digit year and casts cu
     expect($education->passout_year)->toBe('2023');
     expect($education->current_institute)->toBe(1);
     expect($education->current_institute)->toBeInt();
+    expect($education->isPursuing())->toBeTrue();
 
     // Verify relationships
     expect($education->institution)->not->toBeNull();
@@ -64,4 +66,25 @@ test('education formatYear normalizes spaced, prefixed, and date string years co
     expect(Education::formatYear('null'))->toBeNull();
     expect(Education::formatYear(''))->toBeNull();
     expect(Education::formatYear('Pursuing', true))->toBe('Pursuing');
+});
+
+test('education isPursuing detects all pursuing variants', function () {
+    expect((new Education(['current_institute' => 1]))->isPursuing())->toBeTrue();
+    expect((new Education(['current_institute' => '1']))->isPursuing())->toBeTrue();
+    expect((new Education(['pursuing' => 1]))->isPursuing())->toBeTrue();
+    expect((new Education(['pursuing' => '1']))->isPursuing())->toBeTrue();
+    expect((new Education(['passout_year' => 'Pursuing']))->isPursuing())->toBeTrue();
+    expect((new Education(['current_institute' => 0, 'pursuing' => 0]))->isPursuing())->toBeFalse();
+});
+
+test('experience isCurrent detects all current role variants', function () {
+    $exp1 = new Experience(['current_organization' => 1]);
+    $exp2 = new Experience(['current_organization' => '1']);
+    $exp3 = new Experience(['end_date' => 'Present']);
+    $exp4 = new Experience(['current_organization' => 0, 'end_date' => 'May 2023']);
+
+    expect($exp1->isCurrent())->toBeTrue();
+    expect($exp2->isCurrent())->toBeTrue();
+    expect($exp3->isCurrent())->toBeTrue();
+    expect($exp4->isCurrent())->toBeFalse();
 });

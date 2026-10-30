@@ -415,21 +415,21 @@ down to each component:
 {{-- 2-Column Body --}}
 <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 max-w-7xl mx-auto px-4 py-6">
 
-    {{-- Main Column --}}
+    {{-- Main Column (Independent Child Volt Components with Error Boundaries) --}}
     <div class="space-y-4">
-        <x-profile.about          :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.experience     :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.education      :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.publications   :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.projects       :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.conferences    :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.certificates   :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.achievements   :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.thesis-guided  :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.memberships    :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.patents        :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.invited-position    :user="$user" :is-own-profile="$isOwnProfile" />
-        <x-profile.research-journals   :user="$user" :is-own-profile="$isOwnProfile" />
+        <livewire:profile.about          :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-about-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.experience     :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-experience-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.education      :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-education-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.publications   :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-publications-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.projects       :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-projects-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.conferences    :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-conferences-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.certificates   :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-certificates-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.achievements   :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-achievements-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.thesis-guided  :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-thesis-guided-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.memberships    :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-memberships-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.patents        :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-patents-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.invited-position    :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-invited-position-'.($user ? $user->_id : 'guest')" />
+        <livewire:profile.research-journals   :user="$user" :is-own-profile="$isOwnProfile" :key="'profile-research-journals-'.($user ? $user->_id : 'guest')" />
     </div>
 
     {{-- Sidebar Column --}}
@@ -443,43 +443,62 @@ down to each component:
 </div>
 ```
 
-### Each Section Component Skeleton
+### Standard Section Component Architecture (Volt Child Component)
 
-Every section component follows the same shell:
+To keep parent components fast and prevent whole-page crashes, **each section must be an independent Volt Single-File Component** (`resources/views/livewire/profile/{section}.blade.php`).
+
+Every section adheres to these 5 strict architectural rules:
+1. **Single Root Element**: Always wrap the template inside an outer `<div>` tag so Livewire's nesting engine can parse the root element properly.
+2. **Error Boundary Protection**: Implement `public bool $hasError = false;` and `public function exception(\Throwable $e, callable $stopPropagation) { report($e); $stopPropagation(); $this->hasError = true; }`. If an unhandled exception occurs, an in-place fallback card is shown while all other profile sections continue functioning.
+3. **Shared Form UI Component**: To eliminate code duplication, input forms live in `resources/views/components/profile/{section}-form.blade.php` and are shared between the User Profile and Admin Edit screens.
+4. **Shared Unsaved Changes Modal**: Always use the global `<x-profile.unsaved-modal />` component rather than copying modal HTML across sections.
+5. **No Monolithic Bloat in Parent**: All section-specific database queries, saves, and deletes live inside the section child component, not in `userprofile.blade.php`.
 
 ```blade
-{{-- resources/views/components/profile/experience.blade.php --}}
-@props(['user', 'isOwnProfile' => false])
+<?php
+// resources/views/livewire/profile/experience.blade.php
 
-<div id="experience" class="bg-white dark:bg-[#111c26] rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-6">
+use App\Models\Experience;
+use App\Models\User;
+use Livewire\Volt\Component;
 
-    {{-- Section Header --}}
-    <div class="flex items-center justify-between mb-4">
-        <h2 class="flex items-center gap-2 text-base font-bold text-zinc-900 dark:text-white">
-            💼 Experience ({{ $user->experiences->count() }})
-        </h2>
-        @if($isOwnProfile)
-            <button ...>+ Add</button>  {{-- triggers Alpine modal --}}
-        @endif
-    </div>
+new class extends Component {
+    public ?User $user = null;
+    public bool $isOwnProfile = false;
+    public bool $hasError = false;
 
-    {{-- Section Content --}}
-    @forelse($user->experiences as $exp)
-        ...timeline item...
-        @if($isOwnProfile)
-            <button ...>Edit</button>   {{-- triggers Alpine modal with item data --}}
-            <button ...>Delete</button>
-        @endif
-    @empty
-        <p class="text-sm text-zinc-400">No experience added yet.</p>
-    @endforelse
+    public function exception(\Throwable $e, callable $stopPropagation): void
+    {
+        report($e);
+        $stopPropagation();
+        $this->hasError = true;
+    }
 
-    {{-- Add / Edit Modal (own profile only) --}}
-    @if($isOwnProfile)
-        {{-- See Section 13 for the full modal pattern --}}
-        <x-profile.modals.experience />
+    // Section CRUD methods (isolated) ...
+}; ?>
+
+{{-- CRITICAL: Always a single root div wrapper --}}
+<div>
+    @if($hasError)
+        {{-- Graceful fallback card --}}
+        <div class="rounded-2xl p-6 bg-white dark:bg-[#111c26] border border-amber-200 text-center">
+            <h3>Unable to load this section</h3>
+            <p>Please refresh the page or contact support.</p>
+        </div>
+    @else
+        <div id="experience" class="bg-white dark:bg-[#111c26] rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs p-6">
+            {{-- Section timeline / records --}}
+            ...
+
+            {{-- Reusable form component --}}
+            <x-profile.experience-form />
+
+            {{-- Reusable unsaved changes modal --}}
+            @if($isOwnProfile)
+                <x-profile.unsaved-modal />
+            @endif
+        </div>
     @endif
-
 </div>
 ```
 
@@ -869,5 +888,4 @@ In MongoDB, user sub-entity references are stored as arrays in `ReviewerProfile`
   - 3+ character debounce guard (`debounce.250ms`).
   - Case-insensitive regex matching.
   - Redis cache keys (`degrees:default:list` for empty query, `degrees:search:{md5}` for queries).
-  - Auto-promotion: `usage_count >= 3` promotes unapproved items (`status: 0`) to approved (`status: 1`).
-
+  - Auto-promotion: `submission_count >= 3` promotes unapproved items (`status: 0`) to approved (`status: 1`).

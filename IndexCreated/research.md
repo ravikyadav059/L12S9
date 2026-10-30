@@ -13,7 +13,7 @@ This document records all MongoDB indexes designed and utilized for the **`resea
 | **`_id_`** *(Default)* | `{"_id": 1}` | Single Field | Primary Unique MongoDB Object ID key |
 | **`research_status_1_research_title_1`** | `{"research_status": 1, "research_title": 1}` | Compound | High-speed autocomplete, search, and retrieval of active research interests with zero in-memory sort |
 | **`research_title_1`** | `{"research_title": 1}` | Single Field | Rapid case-insensitive title lookups, duplicate detection, and tag suggestion lookups |
-| **`usage_count_-1`** | `{"usage_count": -1}` | Single Field | Rapid retrieval of trending and top-used research interests across the platform |
+| **`submission_count_-1`** | `{"submission_count": -1}` | Single Field | Rapid retrieval of trending and top-used research interests across the platform |
 
 ---
 
@@ -58,10 +58,10 @@ This document records all MongoDB indexes designed and utilized for the **`resea
 
 ---
 
-#### 4. `usage_count_-1` (Single Field Index)
+#### 4. `submission_count_-1` (Single Field Index)
 - **Fields**:
   ```json
-  { "usage_count": -1 }
+  { "submission_count": -1 }
   ```
 - **Options**: Background: `true`
 - **Used by**:
@@ -102,9 +102,9 @@ db.research.createIndex(
     { name: "research_title_1", background: true }
 );
 
-// 3. Single Field Index on Usage Count
+// 3. Single Field Index on Submission Count
 db.research.createIndex(
-    { "usage_count": -1 },
-    { name: "usage_count_-1", background: true }
+    { "submission_count": -1 },
+    { name: "submission_count_-1", background: true }
 );
 ```

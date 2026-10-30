@@ -19,6 +19,7 @@ This document records all MongoDB indexes created and utilized for the **`organi
 | **`status_1`** | `{"status": 1}` | Single Field | Filtering active vs inactive institutions (`status = '1'`) |
 | **`created_at_-1`** | `{"created_at": -1}` | Single Field | Default reverse-chronological sorting in admin institute lists |
 | **`org_type_status_idx`** | `{"organization_type": 1, "status": 1}` | Compound | Combined filtering by Type and Status in Admin Institutes management |
+| **`status_1_organization_name_1`** | `{"status": 1, "organization_name": 1}` | Compound | High-speed active organization search and alphabetical listing for experience autocomplete |
 
 ---
 
@@ -158,6 +159,17 @@ The Admin Institutes component (`resources/views/livewire/admin/institutes/index
 
 ---
 
+#### 10. `status_1_organization_name_1` (Compound Index)
+- **Fields**:
+  ```json
+  { "status": 1, "organization_name": 1 }
+  ```
+- **Options**: Background: `true`
+- **Used by**:
+  - Work Experience organization autocomplete and default listing with instant B-tree scan.
+
+---
+
 ### One-Click Creation via Mongosh (MongoDB Shell)
 
 ```javascript
@@ -171,4 +183,5 @@ db.organization.createIndex({ "country": 1 }, { background: true });
 db.organization.createIndex({ "status": 1 }, { background: true });
 db.organization.createIndex({ "created_at": -1 }, { background: true });
 db.organization.createIndex({ "organization_type": 1, "status": 1 }, { name: "org_type_status_idx", background: true });
+db.organization.createIndex({ "status": 1, "organization_name": 1 }, { name: "status_1_organization_name_1", background: true });
 ```

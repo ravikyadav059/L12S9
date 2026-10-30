@@ -31,6 +31,7 @@ class Education extends Model
         'grade',
         'institution_id',
         'current_institute',
+        'user_id',
         'status',
     ];
 
@@ -43,6 +44,7 @@ class Education extends Model
     {
         return [
             'current_institute' => 'integer',
+            'pursuing' => 'integer',
         ];
     }
 
@@ -114,6 +116,17 @@ class Education extends Model
     }
 
     /**
+     * Check if this education record represents an ongoing / currently pursuing education.
+     * Supports current_institute (1, "1", true), pursuing (1, "1", true), or passout_year ("Pursuing").
+     */
+    public function isPursuing(): bool
+    {
+        return in_array($this->current_institute, [1, '1', true], true)
+            || in_array($this->pursuing, [1, '1', true], true)
+            || strtolower(trim((string) ($this->passout_year ?? ''))) === 'pursuing';
+    }
+
+    /**
      * Get the institution / organization associated with this education record.
      */
     public function institution(): BelongsTo
@@ -135,5 +148,13 @@ class Education extends Model
     public function gradeRelation(): BelongsTo
     {
         return $this->belongsTo(Grade::class, 'grade', '_id');
+    }
+
+    /**
+     * Get the field of study associated with this education record.
+     */
+    public function fieldOfStudyRelation(): BelongsTo
+    {
+        return $this->belongsTo(FieldOfStudy::class, 'field_of_study', '_id');
     }
 }

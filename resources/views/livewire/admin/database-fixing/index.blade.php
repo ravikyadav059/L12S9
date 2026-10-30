@@ -137,6 +137,34 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'route' => route('admin.database-fixing.experience.index'),
             ],
             [
+                'id' => 'edu_degree_type',
+                'table' => 'Education',
+                'title' => 'degree_type (Legacy Text to DegreeType ObjectId)',
+                'description' => 'Scans all Education records for documents where degree_type stores a raw string title (e.g. "Mastars", "BE", "Diploma", "M.Tech") instead of an ObjectId, auto-matches against the degree_type collection case-insensitively, and maps them to their standardized MongoDB ObjectId.',
+                'route' => route('admin.database-fixing.education.degree-type'),
+            ],
+            [
+                'id' => 'edu_field_of_study',
+                'table' => 'Education',
+                'title' => 'field_of_study (Legacy Text to FieldOfStudy ObjectId)',
+                'description' => 'Scans all Education records for documents where field_of_study stores a raw string (e.g. "Computer Engineering", "Mechanical") instead of an ObjectId, auto-matches against the field_of_study collection case-insensitively, and standardizes them to valid FieldOfStudy ObjectIds.',
+                'route' => route('admin.database-fixing.education.field-of-study'),
+            ],
+            [
+                'id' => 'edu_grade',
+                'table' => 'Education',
+                'title' => 'grade (Legacy Text to Grade ObjectId)',
+                'description' => 'Scans all Education records for documents where grade stores a raw string (e.g. "Distinction", "First Class", "A+") instead of an ObjectId, auto-matches against the grade collection case-insensitively, and standardizes them to valid Grade ObjectIds.',
+                'route' => route('admin.database-fixing.education.grade'),
+            ],
+            [
+                'id' => 'edu_institution',
+                'table' => 'Education',
+                'title' => 'institution_id (Legacy Text to Organization ObjectId)',
+                'description' => 'Scans all Education records for documents where institution_id stores a raw text institution/college name instead of an ObjectId, matches against the organization collection case-insensitively, and standardizes them to valid Organization ObjectIds.',
+                'route' => route('admin.database-fixing.education.institution'),
+            ],
+            [
                 'id' => 'sem_month_year',
                 'table' => 'Seminar',
                 'title' => 'month_year ("Month Year")',
@@ -198,6 +226,12 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'dot' => 'bg-rose-500',
                 'title' => 'text-rose-950 dark:text-rose-100',
                 'btn' => 'text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 hover:border-rose-600',
+            ],
+            'Education' => [
+                'badge' => 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/70',
+                'dot' => 'bg-teal-500',
+                'title' => 'text-teal-950 dark:text-teal-100',
+                'btn' => 'text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-600 hover:border-teal-600',
             ],
             'Seminar' => [
                 'badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/70',

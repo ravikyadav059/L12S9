@@ -39,7 +39,7 @@ class Organization extends Model
         'serial_number',
         'slug',
         'description',
-        'usage_count',
+        'submission_count',
     ];
 
     /**
@@ -51,14 +51,14 @@ class Organization extends Model
     {
         return [
             'serial_number' => 'integer',
-            'usage_count' => 'integer',
+            'submission_count' => 'integer',
         ];
     }
 
     /**
-     * Record or find an organization with case-insensitive deduplication and usage tracking:
-     * - If exists: increment usage_count. If status is 0 and usage >= 3, promote to 1.
-     * - If not exists: create with status 0 and usage_count 1.
+     * Record or find an organization with case-insensitive deduplication and user submission tracking:
+     * - If exists: increment submission_count. If status is 0 and submissions >= 3, promote to 1.
+     * - If not exists: create with status 0 and submission_count 1.
      */
     public static function recordOrFind(string $name): self
     {
@@ -71,8 +71,8 @@ class Organization extends Model
         $existing = self::where('organization_name', 'regex', new Regex('^'.preg_quote($name).'$', 'i'))->first();
 
         if ($existing) {
-            $newCount = ((int) ($existing->usage_count ?? 1)) + 1;
-            $existing->usage_count = $newCount;
+            $newCount = ((int) ($existing->submission_count ?? 1)) + 1;
+            $existing->submission_count = $newCount;
 
             $rawStatus = (string) ($existing->status ?? '0');
             if (($rawStatus === '0' || $rawStatus === '') && $newCount >= 3) {
@@ -81,6 +81,7 @@ class Organization extends Model
 
             $existing->save();
             Cache::forget('organizations:default:list');
+            Cache::forget('organizations:default:list:p:1:l:20');
 
             return $existing;
         }
@@ -88,55 +89,77 @@ class Organization extends Model
         $created = self::create([
             'organization_name' => $name,
             'status' => 0,
-            'usage_count' => 1,
+            'submission_count' => 1,
         ]);
 
         Cache::forget('organizations:default:list');
+        Cache::forget('organizations:default:list:p:1:l:20');
 
         return $created;
     }
 
     /**
-     * High-scale search for active organizations with Redis caching.
+     * High-scale search for active organizations with Redis caching and pagination.
      *
-     * @return list<array{id: string, name: string, city: ?string, country: ?string}>
+     * @return array{data: list<array{id: string, name: string, city: ?string, country: ?string}>, has_more: bool, page: int}
      */
-    public static function searchActive(string $query = '', int $limit = 20): array
+    public static function searchActive(string $query = '', int $limit = 20, int $page = 1): array
     {
         $query = trim($query);
-        $cacheKey = $query === ''
-            ? 'organizations:default:list'
-            : 'organizations:search:'.md5(strtolower($query));
+        $page = max(1, $page);
+        $limit = min(50, max(1, $limit));
+
+        $cacheKey = ($query === '' ? 'organizations:default:list' : 'organizations:search:'.md5(strtolower($query)))
+            .':p:'.$page.':l:'.$limit;
         $cacheTtl = $query === '' ? 3600 : 300;
 
-        return Cache::remember($cacheKey, $cacheTtl, function () use ($query, $limit) {
+        return Cache::remember($cacheKey, $cacheTtl, function () use ($query, $limit, $page) {
             $builder = self::query()
-                ->whereIn('status', [1, '1', true])
-                ->select(['_id', 'organization_name', 'city', 'country', 'usage_count']);
+                ->select(['_id', 'organization_name', 'city', 'country', 'submission_count', 'status'])
+                ->whereNotNull('organization_name')
+                ->where('organization_name', '!=', '');
 
             if ($query !== '') {
                 $builder->where('organization_name', 'regex', new Regex(preg_quote($query), 'i'));
+            } else {
+                $builder->whereIn('status', [1, '1', true]);
             }
 
-            $records = $builder->orderBy('usage_count', 'desc')
+            // Fetch extra buffer to account for duplicate names across documents
+            $buffer = $limit + 10;
+            $records = $builder->orderBy('status', 'desc')
                 ->orderBy('organization_name', 'asc')
-                ->limit($limit)
+                ->skip(($page - 1) * $limit)
+                ->take($buffer)
                 ->get();
 
             $results = [];
+            $seen = [];
+            $hasMore = false;
             foreach ($records as $record) {
                 $name = trim((string) $record->organization_name);
-                if ($name !== '') {
-                    $results[] = [
-                        'id' => (string) $record->_id,
-                        'name' => $name,
-                        'city' => (string) ($record->city ?? ''),
-                        'country' => (string) ($record->country ?? ''),
-                    ];
+                $key = strtolower($name);
+                if ($name !== '' && ! isset($seen[$key])) {
+                    $seen[$key] = true;
+                    if (count($results) < $limit) {
+                        $results[] = [
+                            'id' => (string) $record->_id,
+                            'name' => $name,
+                            'city' => (string) ($record->city ?? ''),
+                            'country' => (string) ($record->country ?? ''),
+                        ];
+                    } else {
+                        $hasMore = true;
+                        break;
+                    }
                 }
             }
 
-            return $results;
+            return [
+                'data' => $results,
+                'has_more' => $hasMore,
+                'page' => $page,
+            ];
         });
     }
 

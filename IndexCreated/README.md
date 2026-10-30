@@ -17,11 +17,15 @@ This directory serves as the centralized catalog and knowledge base for all Mong
 | **`journal_role`** | [journal_role.md](./journal_role.md) | 3 Indexes | Primary `_id_`, role name lookup, and status filtering. |
 | **`request_review_paper`** | [request_review_paper.md](./request_review_paper.md) | 5 Indexes | Primary `_id_`, journal ID lookups, user ID queries, status, and created date sorting. |
 | **`country`, `state`, `city`** | [geo_locations.md](./geo_locations.md) | 6 Indexes | Hierarchical lookups (country -> state -> city) and status filtering. |
-| **`organization`** | [organization.md](./organization.md) | 9 Indexes | Primary `_id_`, slug routing (`/institution/{slug}`), serial number calculation/sorting, name search, type & country filtering, created_at sort, and compound type/status admin filtering. |
+| **`organization`** | [organization.md](./organization.md) | 10 Indexes | Primary `_id_`, slug routing (`/institution/{slug}`), serial number calculation/sorting, name search, type & country filtering, created_at sort, compound type/status admin filtering, and compound active status & name search/sort. |
+| **`designation`** | [designation.md](./designation.md) | 3 Indexes | Primary `_id_`, compound active `status` & `designation` name for instant autocomplete/sorting, and `designation` title lookup. |
 | **`experience`** | [experience.md](./experience.md) | 2 Indexes | Primary `_id_`, compound organization ID & current organization filter for scholar/alumni calculations. |
 | **`reviewer_profile`** | [reviewer_profile.md](./reviewer_profile.md) | 7 Indexes | Primary `_id_`, compound user ID & status lookup, active publication counts sorting, and multikey array indexes on publication, experience, seminar, and RoleInResearchJournal. |
 | **`skills`** | [skills.md](./skills.md) | 4 Indexes | Primary `_id_`, compound `skills_status` & `skills_title` for instant tag autocomplete/filtering, `skills_title` search, and sparse `slug` routing. |
 | **`question`** | [question.md](./question.md) | 10 Indexes | Primary `_id_`, compound active `status` & `created_at` (newest/oldest sorting in Admin & Public feed), standalone `created_at` date sort, active `status` & `votes_count` most voted sorting, active `status` & `views_count` popular sorting, compound `status` & `tags` multikey skill filtering, user author lookups, `title` search, and sparse `slug` routing. |
+| **`grade`** | [grade.md](./grade.md) | 3 Indexes | Primary `_id_`, single `grade` name lookup, and compound active `status` & `grade` sorting/dropdown list. |
+| **`degree_type`** | [degree_type.md](./degree_type.md) | 3 Indexes | Primary `_id_`, single `degree_type` name lookup, and compound active `status` & `degree_type` sorting/dropdown list. |
+| **`field_of_study`** | [field_of_study.md](./field_of_study.md) | 3 Indexes | Primary `_id_`, single `field_of_study` name lookup, and compound active `status` & `field_of_study` sorting/dropdown list. |
 
 ---
 

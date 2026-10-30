@@ -21,7 +21,7 @@ class Research extends Eloquent
     protected $fillable = [
         'research_title',
         'research_status',
-        'usage_count',
+        'submission_count',
     ];
 
     /**
@@ -31,13 +31,13 @@ class Research extends Eloquent
      */
     protected $casts = [
         'research_status' => 'integer',
-        'usage_count' => 'integer',
+        'submission_count' => 'integer',
     ];
 
     /**
      * Record usage for a research interest:
-     * - If exists: increment usage_count. If status is 0 and usage >= 3, promote status to 1.
-     * - If not exists: create with status 0 and usage_count 1.
+     * - If exists: increment submission_count. If status is 0 and submissions >= 3, promote status to 1.
+     * - If not exists: create with status 0 and submission_count 1.
      */
     public static function recordUsage(string $title): self
     {
@@ -50,10 +50,10 @@ class Research extends Eloquent
         $existing = self::where('research_title', 'regex', new Regex('^'.preg_quote($title).'$', 'i'))->first();
 
         if ($existing) {
-            $newCount = ((int) ($existing->usage_count ?? 1)) + 1;
-            $existing->usage_count = $newCount;
+            $newCount = ((int) ($existing->submission_count ?? 1)) + 1;
+            $existing->submission_count = $newCount;
 
-            // If status is 0 and used 3 or more times, auto-promote to 1
+            // If status is 0 and submitted 3 or more times, auto-promote to 1
             if ((int) ($existing->research_status ?? 0) === 0 && $newCount >= 3) {
                 $existing->research_status = 1;
             }
@@ -66,7 +66,7 @@ class Research extends Eloquent
         return self::create([
             'research_title' => $title,
             'research_status' => 0,
-            'usage_count' => 1,
+            'submission_count' => 1,
         ]);
     }
 
@@ -80,7 +80,7 @@ class Research extends Eloquent
     {
         $builder = self::query()
             ->where('research_status', 1)
-            ->select(['_id', 'research_title', 'usage_count']);
+            ->select(['_id', 'research_title', 'submission_count']);
 
         if ($query !== '') {
             $builder->where('research_title', 'regex', new Regex(preg_quote($query), 'i'));
@@ -91,7 +91,7 @@ class Research extends Eloquent
             $builder->whereNotIn('research_title', $exclude);
         }
 
-        $records = $builder->orderBy('usage_count', 'desc')
+        $records = $builder->orderBy('submission_count', 'desc')
             ->orderBy('research_title', 'asc')
             ->limit($limit)
             ->get();

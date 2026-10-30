@@ -173,6 +173,16 @@ class Experience extends Model
     }
 
     /**
+     * Check if this experience record represents a currently ongoing position.
+     * Supports current_organization (1, "1", true) or end_date ("Present").
+     */
+    public function isCurrent(): bool
+    {
+        return in_array($this->current_organization, [1, '1', true], true)
+            || strtolower(trim((string) ($this->end_date ?? ''))) === 'present';
+    }
+
+    /**
      * Get the user who owns this experience record.
      */
     public function user(): BelongsTo

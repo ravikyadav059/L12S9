@@ -1,9 +1,13 @@
 <?php
 
 use App\Http\Controllers\LinkPreviewController;
+use App\Models\DegreeType;
 use App\Models\Designation;
+use App\Models\FieldOfStudy;
+use App\Models\Grade;
 use App\Models\Organization;
 use App\Models\Research;
+use App\Models\ReviewerJournal;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,21 +35,54 @@ Route::prefix('api')->middleware(['throttle:60,1'])->group(function () {
     })->name('api.research-tags');
 });
 
+// Search Journals API Route
+Route::middleware(['throttle:120,1'])->get('search-journals', function (Request $request) {
+    $query = (string) $request->input('search', $request->input('q', ''));
+    $limit = min(50, max(1, (int) $request->input('limit', 30)));
+    $journals = ReviewerJournal::searchTitles($query, $limit);
+
+    return response()->json(['journals' => $journals]);
+})->name('search-journals');
+
 // Authenticated Internal APIs (Dropdowns & Autocomplete)
 Route::middleware(['auth', 'throttle:120,1'])->prefix('api')->name('api.')->group(function () {
     Route::get('designations', function (Request $request) {
         $query = trim((string) $request->input('q', ''));
         $limit = min(50, max(1, (int) $request->input('limit', 20)));
+        $page = max(1, (int) $request->input('page', 1));
 
-        return response()->json(Designation::searchActive($query, $limit));
+        return response()->json(Designation::searchActive($query, $limit, $page));
     })->name('designations');
 
     Route::get('organizations', function (Request $request) {
         $query = trim((string) $request->input('q', ''));
         $limit = min(50, max(1, (int) $request->input('limit', 20)));
+        $page = max(1, (int) $request->input('page', 1));
 
-        return response()->json(Organization::searchActive($query, $limit));
+        return response()->json(Organization::searchActive($query, $limit, $page));
     })->name('organizations');
+
+    Route::get('degree-types', function (Request $request) {
+        $query = trim((string) $request->input('q', ''));
+        $limit = min(50, max(1, (int) $request->input('limit', 20)));
+        $page = max(1, (int) $request->input('page', 1));
+
+        return response()->json(DegreeType::searchActive($query, $limit, $page));
+    })->name('degree-types');
+
+    Route::get('fields-of-study', function (Request $request) {
+        $query = trim((string) $request->input('q', ''));
+        $limit = min(50, max(1, (int) $request->input('limit', 20)));
+        $page = max(1, (int) $request->input('page', 1));
+
+        return response()->json(FieldOfStudy::searchActive($query, $limit, $page));
+    })->name('fields-of-study');
+
+    Route::get('grades', function (Request $request) {
+        $query = trim((string) $request->input('q', ''));
+
+        return response()->json(Grade::searchActive($query));
+    })->name('grades');
 });
 
 // Impersonation - Return to Admin
@@ -120,6 +157,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('database-fixing/experience/status', 'admin.database-fixing.experience.status')->name('database-fixing.experience.status');
     Volt::route('database-fixing/experience', 'admin.database-fixing.experience.index')->name('database-fixing.experience.index');
     Volt::route('database-fixing/experience/{field}', 'admin.database-fixing.experience.index')->name('database-fixing.experience.field');
+
+    // Education Database Fixers
+    Volt::route('database-fixing/education/degree-type', 'admin.database-fixing.education.degree-type')->name('database-fixing.education.degree-type');
+    Volt::route('database-fixing/education/field-of-study', 'admin.database-fixing.education.field-of-study')->name('database-fixing.education.field-of-study');
+    Volt::route('database-fixing/education/grade', 'admin.database-fixing.education.grade')->name('database-fixing.education.grade');
+    Volt::route('database-fixing/education/institution', 'admin.database-fixing.education.institution')->name('database-fixing.education.institution');
 
     // Seminar Database Fixers
     Volt::route('database-fixing/seminar', 'admin.database-fixing.seminar.index')->name('database-fixing.seminar.index');
