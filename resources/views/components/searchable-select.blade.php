@@ -7,7 +7,9 @@
     'noResultsText' => 'No result Found',
     'clearable' => true,
     'hasError' => false,
+    'hasErrorExpr' => null,
     'searchMethod' => null,
+    'size' => 'default',
 ])
 
 @php
@@ -133,20 +135,24 @@
         @click="toggle()"
         @keydown.enter.prevent="toggle()"
         @keydown.space.prevent="toggle()"
-        class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-900 border rounded-xl text-sm flex items-center justify-between text-left transition select-none focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 {{ $hasError ? 'border-rose-400 dark:border-rose-500' : 'border-zinc-200 dark:border-zinc-700' }}"
+        class="w-full px-3.5 {{ $size === 'sm' ? 'h-10 text-xs bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700' : 'py-2.5 text-sm bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700' }} border rounded-xl flex items-center justify-between text-left transition select-none focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 {{ $hasError ? '!border-red-500 !bg-red-50/20 dark:!bg-red-950/10' : '' }}"
         :class="{
-            'opacity-50 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800/50': disabled,
-            'cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-600': !disabled,
+            @if($hasErrorExpr)
+                '!border-red-500 !bg-red-50/20 dark:!bg-red-950/10': ({{ $hasErrorExpr }}),
+            @endif
+            'opacity-60 cursor-not-allowed !bg-zinc-100/60 dark:!bg-zinc-800/50': disabled && '{{ $size }}' !== 'sm',
+            'cursor-not-allowed': disabled && '{{ $size }}' === 'sm',
+            'cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600': !disabled,
             'ring-2 ring-brand/20 border-brand': open
         }"
     >
         <div class="flex items-center gap-2 truncate min-w-0 pr-2">
             <span 
-                class="truncate text-sm"
+                class="truncate {{ $size === 'sm' ? 'text-xs' : 'text-sm' }}"
                 :class="{
                     'text-zinc-400 dark:text-zinc-500 font-normal': !selectedItem && !disabled,
-                    'text-zinc-900 dark:text-white font-medium': selectedItem && !disabled,
-                    'text-zinc-400 dark:text-zinc-500 italic': disabled
+                    'text-zinc-900 dark:text-white font-normal': selectedItem && !disabled,
+                    'text-zinc-400 dark:text-zinc-500 font-normal': disabled
                 }"
                 x-text="displayLabel"
             ></span>
@@ -171,7 +177,7 @@
                     </svg>
                 </span>
             @endif
-            <svg class="size-4 shrink-0 transition-transform duration-200" :class="open ? 'rotate-180 text-brand' : 'text-zinc-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg class="{{ $size === 'sm' ? 'size-3.5' : 'size-4' }} shrink-0 transition-transform duration-200" :class="open ? 'rotate-180 text-brand' : 'text-zinc-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
             </svg>
         </div>
@@ -229,18 +235,20 @@
         <!-- Options List -->
         <div class="max-h-60 overflow-y-auto divide-y divide-zinc-100/80 dark:divide-zinc-800/60 p-1">
             <!-- Clear option at top if an option is selected and not searching -->
-            <template x-if="!search && value">
-                <button 
-                    type="button"
-                    @click="clear()"
-                    class="w-full text-left px-3 py-2 text-xs font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition flex items-center gap-2 cursor-pointer"
-                >
-                    <svg class="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
-                    <span>Clear Selection</span>
-                </button>
-            </template>
+            @if($clearable)
+                <template x-if="!search && value">
+                    <button 
+                        type="button"
+                        @click="clear()"
+                        class="w-full text-left px-3 py-2 text-xs font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition flex items-center gap-2 cursor-pointer"
+                    >
+                        <svg class="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                        <span>Clear Selection</span>
+                    </button>
+                </template>
+            @endif
 
             <!-- Options Loop -->
             <template x-for="item in filtered" :key="item.id">

@@ -546,49 +546,9 @@
             </p>
         </div>
 
-        @if($showStatus)
-            {{-- 5. Status (Admin Only) --}}
-            <div>
-                <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                    Status
-                </label>
-                <div class="flex items-center gap-4 pt-0.5">
-                    <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-200 select-none" @click="form.status = 1">
-                        <input 
-                            type="radio" 
-                            name="form_status_{{ $itemId ?? 'new' }}" 
-                            value="1" 
-                            :checked="form.status == 1 || form.status === '1'"
-                            @change="form.status = 1"
-                            class="size-4 text-brand focus:ring-brand cursor-pointer"
-                        />
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
-                            <span class="size-1.5 rounded-full bg-emerald-500"></span>
-                            Active
-                        </span>
-                    </label>
-
-                    <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-200 select-none" @click="form.status = 0">
-                        <input 
-                            type="radio" 
-                            name="form_status_{{ $itemId ?? 'new' }}" 
-                            value="0" 
-                            :checked="form.status == 0 || form.status === '0'"
-                            @change="form.status = 0"
-                            class="size-4 text-brand focus:ring-brand cursor-pointer"
-                        />
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                            <span class="size-1.5 rounded-full bg-zinc-400"></span>
-                            Inactive
-                        </span>
-                    </label>
-                </div>
-            </div>
-        @endif
-
-        {{-- 6. Action Buttons --}}
-        <div class="flex items-center justify-between pt-2">
-            <div class="flex items-center gap-2.5">
+        {{-- 5. Action Buttons & Status (Admin Only) --}}
+        <div class="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-zinc-800 flex-wrap gap-3">
+            <div class="flex items-center gap-2.5 flex-wrap">
                 <button 
                     type="button" 
                     @click="submitForm()" 
@@ -604,6 +564,41 @@
                 >
                     Cancel
                 </button>
+
+                @if($showStatus)
+                    <div class="flex items-center gap-3 sm:ml-2 sm:pl-3 sm:border-l sm:border-zinc-200 dark:sm:border-zinc-700">
+                        <span class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Status:</span>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-200 select-none" @click="form.status = 1">
+                            <input 
+                                type="radio" 
+                                name="form_status_edu_{{ $itemId ?? 'new' }}" 
+                                value="1" 
+                                :checked="form.status == 1 || form.status === '1'"
+                                @change="form.status = 1"
+                                class="size-4 text-brand focus:ring-brand cursor-pointer"
+                            />
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                                <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                Active
+                            </span>
+                        </label>
+
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-200 select-none" @click="form.status = 0">
+                            <input 
+                                type="radio" 
+                                name="form_status_edu_{{ $itemId ?? 'new' }}" 
+                                value="0" 
+                                :checked="form.status == 0 || form.status === '0'"
+                                @change="form.status = 0"
+                                class="size-4 text-brand focus:ring-brand cursor-pointer"
+                            />
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                <span class="size-1.5 rounded-full bg-zinc-400"></span>
+                                Inactive
+                            </span>
+                        </label>
+                    </div>
+                @endif
             </div>
 
             <template x-if="form.id">

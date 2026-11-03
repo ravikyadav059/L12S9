@@ -92,23 +92,26 @@ new #[Layout('components.layouts.app')] class extends Component {
                     <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 5</p>
                 </div>
 
-                <div id="projects" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">🚀</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Projects</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 6</p>
-                </div>
+                {{-- Section 6: Projects (Independent Child Volt Component) --}}
+                <livewire:profile.projects 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-projects-'.($user ? $user->_id : 'guest')"
+                />
 
-                <div id="conferences" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">🎤</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Conferences</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 7</p>
-                </div>
+                {{-- Section 7: Conferences & Seminars (Independent Child Volt Component) --}}
+                <livewire:profile.seminars 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-seminars-'.($user ? $user->_id : 'guest')"
+                />
 
-                <div id="certificates" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">📜</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Certificates</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 8</p>
-                </div>
+                {{-- Section 8: Certificates (Independent Child Volt Component) --}}
+                <livewire:profile.certificates 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-certificates-'.($user ? $user->_id : 'guest')"
+                />
 
                 <div id="achievements" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
                     <span class="text-2xl mb-1 inline-block">🏆</span>

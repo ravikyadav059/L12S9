@@ -185,12 +185,25 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'description' => 'Scans Question records in MongoDB for identical slugs or duplicate titles across documents, groups collisions into 3 categories (Same Title & Same Slug, Same Title Only, Same Slug Only), and resolves conflicts by assigning clean unique suffixes (e.g. "slug-1", "slug-2").',
                 'route' => route('admin.database-fixing.question.slug'),
             ],
+            [
+                'id' => 'project_registered_contributors',
+                'table' => 'Project',
+                'title' => 'registered_contributors',
+                'description' => 'This tool scans all Project records in MongoDB where registered_contributors is stored as a legacy comma-delimited string (e.g. ",645a90...,65bc12...") or plain text, cleans leading commas and empty values, and standardizes them into native MongoDB BSON arrays of User ObjectIds or null for optimal query performance.',
+                'route' => route('admin.database-fixing.project.registered-contributors'),
+            ],
         ];
     }
 
     public function getTableStyle(string $table): array
     {
         return match ($table) {
+            'Project' => [
+                'badge' => 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/70',
+                'dot' => 'bg-sky-500',
+                'title' => 'text-sky-950 dark:text-sky-100',
+                'btn' => 'text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-600 hover:border-sky-600',
+            ],
             'Question' => [
                 'badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800/70',
                 'dot' => 'bg-cyan-500',

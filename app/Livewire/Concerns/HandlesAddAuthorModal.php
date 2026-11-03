@@ -167,6 +167,15 @@ trait HandlesAddAuthorModal
             $this->resetValidation("authors.{$this->activeAuthorIndex}.email");
         }
 
+        $this->dispatch('author-added', author: [
+            'id' => (string) $user->_id,
+            'name' => $fullName,
+            'email' => $email,
+            'photo' => asset('assets/images/vector.png'),
+            'affiliation' => '',
+            'is_registered' => true,
+        ]);
+
         session()->flash('author_added_success', "Author '{$fullName}' added successfully!");
 
         $this->closeAddAuthorModal();

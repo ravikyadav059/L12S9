@@ -171,6 +171,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('database-fixing/question', 'admin.database-fixing.question.counts')->name('database-fixing.question.index');
     Volt::route('database-fixing/question/counts', 'admin.database-fixing.question.counts')->name('database-fixing.question.counts');
     Volt::route('database-fixing/question/slug', 'admin.database-fixing.question.slug')->name('database-fixing.question.slug');
+
+    // Project Database Fixers
+    Volt::route('database-fixing/project', 'admin.database-fixing.project.registered-contributors')->name('database-fixing.project.index');
+    Volt::route('database-fixing/project/registered-contributors', 'admin.database-fixing.project.registered-contributors')->name('database-fixing.project.registered-contributors');
 });
 
 require __DIR__.'/auth.php';

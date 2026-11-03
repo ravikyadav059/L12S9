@@ -35,6 +35,7 @@ class Seminar extends Model
         'description',
         'role',
         'status',
+        'user_id',
     ];
 
     /**
@@ -144,10 +145,106 @@ class Seminar extends Model
     }
 
     /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => 'integer',
+        ];
+    }
+
+    /**
      * Get the organization that hosted this seminar.
      */
     public function hostOrganization(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'host_by', '_id');
+    }
+
+    /**
+     * Get the user who owns this seminar.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', '_id');
+    }
+
+    /**
+     * Get the resolved host organization name.
+     */
+    public function getHostNameAttribute(): ?string
+    {
+        if (! empty($this->host_by)) {
+            $org = $this->hostOrganization;
+            if ($org && ! empty($org->organization_name)) {
+                return (string) $org->organization_name;
+            }
+
+            return (string) $this->host_by;
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the resolved country name using cached country list.
+     */
+    public function getCountryNameAttribute(): ?string
+    {
+        if (! empty($this->country)) {
+            $matched = collect(Country::getCachedAll())->firstWhere('id', (string) $this->country);
+            if ($matched && ! empty($matched['name'])) {
+                return (string) $matched['name'];
+            }
+        }
+
+        return is_string($this->country) && ! is_numeric($this->country) ? $this->country : null;
+    }
+
+    /**
+     * Get the resolved state name using cached state list.
+     */
+    public function getStateNameAttribute(): ?string
+    {
+        if (! empty($this->country) && ! empty($this->state)) {
+            $matched = collect(State::getCachedByCountry($this->country))->firstWhere('id', (string) $this->state);
+            if ($matched && ! empty($matched['name'])) {
+                return (string) $matched['name'];
+            }
+        }
+
+        return is_string($this->state) && ! is_numeric($this->state) ? $this->state : null;
+    }
+
+    /**
+     * Get the resolved city name using cached city list.
+     */
+    public function getCityNameAttribute(): ?string
+    {
+        if (! empty($this->state) && ! empty($this->city)) {
+            $matched = collect(City::getCachedByState($this->state))->firstWhere('id', (string) $this->city);
+            if ($matched && ! empty($matched['name'])) {
+                return (string) $matched['name'];
+            }
+        }
+
+        return is_string($this->city) && ! is_numeric($this->city) ? $this->city : null;
+    }
+
+    /**
+     * Get formatted location string (City, State, Country).
+     */
+    public function getFormattedLocationAttribute(): ?string
+    {
+        $parts = array_filter([
+            $this->cityName,
+            $this->stateName,
+            $this->countryName,
+        ]);
+
+        return ! empty($parts) ? implode(', ', $parts) : null;
     }
 }

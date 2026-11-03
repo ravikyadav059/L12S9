@@ -861,6 +861,15 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     <!-- 6. EDUCATION (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
     <livewire:admin.users.partials.education :user="$user" :key="'admin-user-education-'.$user->_id" />
 
+    <!-- 7. PROJECTS (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
+    <livewire:admin.users.partials.projects :user="$user" :key="'admin-user-projects-'.$user->_id" />
+
+    <!-- 8. CONFERENCES & SEMINARS (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
+    <livewire:admin.users.partials.seminars :user="$user" :key="'admin-user-seminars-'.$user->_id" />
+
+    <!-- 9. CERTIFICATES (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
+    <livewire:admin.users.partials.certificates :user="$user" :key="'admin-user-certificates-'.$user->_id" />
+
     <!-- ADMIN USER MODALS (CROP PHOTO, CHANGE PASSWORD, CHANGE EMAIL) -->
     <x-admin.users.crop-modal />
     <x-admin.users.password-modal />

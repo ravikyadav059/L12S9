@@ -1077,10 +1077,21 @@ new class extends Component {
                     });
                 },
 
-                deleteEducation(id) {
+                deleteItem(id) {
                     if (confirm('Are you sure you want to delete this education record?')) {
-                        this.$wire.deleteEducation(id);
+                        this.$wire.deleteEducation(id).then((res) => {
+                            if (res !== false) {
+                                if (this.editingId === id) {
+                                    this.editingId = null;
+                                    this.resetForm();
+                                }
+                            }
+                        });
                     }
+                },
+
+                deleteEducation(id) {
+                    this.deleteItem(id);
                 },
 
                 triggerAlertModal(title, msg, type = 'warning') {
@@ -1259,6 +1270,16 @@ new class extends Component {
                                             title="Edit Education"
                                         >
                                             <i class="fa-solid fa-pen-to-square text-[16px]"></i>
+                                        </button>
+
+                                        {{-- Delete Button --}}
+                                        <button 
+                                            type="button" 
+                                            @click="deleteItem('{{ $edu['id'] }}')"
+                                            class="p-1.5 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 transition-colors cursor-pointer shrink-0 rounded hover:bg-red-50 dark:hover:bg-red-950/40"
+                                            title="Delete Education"
+                                        >
+                                            <i class="fa-solid fa-trash-can text-[15px]"></i>
                                         </button>
                                     </div>
 

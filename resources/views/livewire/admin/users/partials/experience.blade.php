@@ -979,11 +979,13 @@ new class extends Component {
             },
 
             deleteItem(id) {
-                $wire.deleteExperience(id).then(() => {
-                    if (this.editingId === id) {
-                        this.closeForm();
-                    }
-                });
+                if (confirm('Are you sure you want to delete this experience record?')) {
+                    $wire.deleteExperience(id).then(() => {
+                        if (this.editingId === id) {
+                            this.closeForm();
+                        }
+                    });
+                }
             },
 
             triggerAlertModal(title, msg, type = 'warning') {
@@ -1162,6 +1164,16 @@ new class extends Component {
                                         title="Edit Experience"
                                     >
                                         <i class="fa-solid fa-pen-to-square text-[16px]"></i>
+                                    </button>
+
+                                    {{-- Delete Button --}}
+                                    <button 
+                                        type="button" 
+                                        @click="deleteItem('{{ $exp['id'] }}')"
+                                        class="p-1.5 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 transition-colors cursor-pointer shrink-0 rounded hover:bg-red-50 dark:hover:bg-red-950/40"
+                                        title="Delete Experience"
+                                    >
+                                        <i class="fa-solid fa-trash-can text-[15px]"></i>
                                     </button>
                                 </div>
 

@@ -114,7 +114,7 @@
             :class="{
                 'opacity-50 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800/60': ({{ $disabledExpr }}),
                 'cursor-pointer bg-white dark:bg-zinc-900': !({{ $disabledExpr }}),
-                'border-rose-500 ring-1 ring-rose-500': ({{ $hasErrorExpr }}),
+                'border-red-500 bg-red-50/20 dark:bg-red-950/10': ({{ $hasErrorExpr }}),
                 'border-zinc-300 dark:border-zinc-700 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20': !({{ $hasErrorExpr }})
             }"
             class="w-full h-10 px-3.5 rounded-xl border flex items-center justify-between transition text-xs select-none"
