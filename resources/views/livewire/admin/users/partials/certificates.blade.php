@@ -259,9 +259,33 @@ new class extends Component {
 
                 $ext = strtolower($this->certificateFile->getClientOriginalExtension());
                 $filename = md5(uniqid((string) microtime(true), true)) . '.' . $ext;
+                $destPath = $destDir . DIRECTORY_SEPARATOR . $filename;
+                $sourcePath = $this->certificateFile->getRealPath();
+                $saved = false;
 
-                // Move directly to public/certificate directory for dependable serving
-                $this->certificateFile->move($destDir, $filename);
+                // On Windows, Symfony's UploadedFile::move() uses rename() which fails if source has a lock.
+                // Using copy() + unlink() with fallback ensures reliable file saving across environments.
+                if ($sourcePath && file_exists($sourcePath)) {
+                    if (@copy($sourcePath, $destPath)) {
+                        @unlink($sourcePath);
+                        $saved = true;
+                    }
+                }
+
+                if (! $saved) {
+                    try {
+                        $this->certificateFile->move($destDir, $filename);
+                        $saved = true;
+                    } catch (\Throwable $moveEx) {
+                        if ($sourcePath && file_exists($sourcePath)) {
+                            file_put_contents($destPath, file_get_contents($sourcePath));
+                            @unlink($sourcePath);
+                            $saved = true;
+                        } else {
+                            throw $moveEx;
+                        }
+                    }
+                }
 
                 $cert->image = 'certificate/' . $filename;
             }
@@ -375,6 +399,28 @@ new class extends Component {
             isPdfFile: false,
             removeExistingFile: false,
 
+            // Certificate Media Preview Modal
+            showMediaModal: false,
+            modalMediaUrl: '',
+            modalIsPdf: false,
+            modalMediaTitle: '',
+
+            openMediaModal(url, isPdf = false, title = '') {
+                if (!url) return;
+                this.$dispatch('close-popovers');
+                this.modalMediaUrl = url;
+                this.modalIsPdf = Boolean(isPdf);
+                this.modalMediaTitle = title || 'Certificate Preview';
+                this.showMediaModal = true;
+            },
+
+            closeMediaModal() {
+                this.showMediaModal = false;
+                this.modalMediaUrl = '';
+                this.modalIsPdf = false;
+                this.modalMediaTitle = '';
+            },
+
             form: {
                 id: null,
                 certificate: '',
@@ -458,6 +504,7 @@ new class extends Component {
             },
 
             openAddForm() {
+                this.$dispatch('close-popovers');
                 if ((this.showAddForm || this.editingId) && this.isDirty()) {
                     this.pendingAction = 'openAdd';
                     this.showUnsavedModal = true;
@@ -485,7 +532,11 @@ new class extends Component {
 
                 this.editingId = null;
                 this.showAddForm = true;
-                this.$wire.openAdd();
+
+                const fileInput = document.getElementById('cert_file_input_new');
+                if (fileInput) {
+                    fileInput.value = '';
+                }
 
                 this.$nextTick(() => {
                     this.originalSnapshot = this.takeSnapshot();
@@ -493,6 +544,7 @@ new class extends Component {
             },
 
             openEditForm(item) {
+                this.$dispatch('close-popovers');
                 if ((this.showAddForm || this.editingId) && this.isDirty()) {
                     this.pendingAction = { type: 'edit', item };
                     this.showUnsavedModal = true;
@@ -521,7 +573,11 @@ new class extends Component {
 
                 this.showAddForm = false;
                 this.editingId = item.id;
-                this.$wire.openEdit(item.id);
+
+                const fileInput = document.getElementById('cert_file_input_' + item.id);
+                if (fileInput) {
+                    fileInput.value = '';
+                }
 
                 this.$nextTick(() => {
                     this.originalSnapshot = this.takeSnapshot();
@@ -529,6 +585,7 @@ new class extends Component {
             },
 
             closeForm(force = false) {
+                this.$dispatch('close-popovers');
                 if (!force && this.isDirty()) {
                     this.pendingAction = 'close';
                     this.showUnsavedModal = true;
@@ -687,90 +744,106 @@ new class extends Component {
                         {{-- DISPLAY MODE (Always visible in list) --}}
                         <div>
                             <div class="flex items-start justify-between gap-4">
-                                <div class="space-y-1.5 flex-1 min-w-0">
-                                    {{-- Certificate Name + DB ID Pill --}}
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <h4 class="text-sm font-bold text-zinc-900 dark:text-white leading-snug">
-                                            {{ $cert['certificate'] }}
-                                        </h4>
-
-                                        @if(!empty($cert['event_name']))
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-                                                <i class="fa-regular fa-calendar-check text-[10px] text-zinc-400"></i>
-                                                <span>{{ $cert['event_name'] }}</span>
-                                            </span>
+                                <div class="flex items-start gap-4 min-w-0 flex-1">
+                                    {{-- Certificate Media Thumbnail (Image 1 / Default Fallback) --}}
+                                    <button 
+                                        type="button" 
+                                        @click.stop="openMediaModal('{{ !empty($cert['image_url']) ? $cert['image_url'] : asset('assets/images/Peer_Review_Certificate.png') }}', {{ !empty($cert['image_url']) && $cert['is_pdf'] ? 'true' : 'false' }}, '{{ addslashes($cert['certificate']) }}')"
+                                        class="size-[74px] rounded-2xl border-[2px] border-blue-400 dark:border-blue-500/50 bg-white dark:bg-zinc-800 flex flex-col items-center justify-center p-1.5 shrink-0 shadow-2xs overflow-hidden cursor-pointer hover:border-blue-500 hover:shadow-md transition-all group select-none"
+                                        title="Click to view {{ !empty($cert['image_url']) && $cert['is_pdf'] ? 'PDF document' : 'certificate' }}"
+                                    >
+                                        @if(!empty($cert['image_url']) && $cert['is_pdf'])
+                                            <svg class="size-11 group-hover:scale-105 transition-transform" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 6C10.8954 6 10 6.89543 10 8V40C10 41.1046 10.8954 42 12 42H36C37.1046 42 38 41.1046 38 40V16L28 6H12Z" fill="#EF4444"/>
+                                                <path d="M28 6V14C28 15.1046 28.8954 16 30 16H38L28 6Z" fill="#FCA5A5"/>
+                                                <text x="24" y="33" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">PDF</text>
+                                            </svg>
+                                        @elseif(!empty($cert['image_url']))
+                                            <img 
+                                                src="{{ $cert['image_url'] }}" 
+                                                alt="{{ $cert['certificate'] }}" 
+                                                class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform" 
+                                            />
+                                        @else
+                                            <img 
+                                                src="{{ asset('assets/images/Peer_Review_Certificate.png') }}" 
+                                                alt="{{ $cert['certificate'] }}" 
+                                                class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform" 
+                                            />
                                         @endif
+                                    </button>
 
-                                        {{-- Record ID Pill --}}
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[10.5px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 select-all" title="Click to select">
-                                            <span class="text-zinc-400 select-none">ID:</span>
-                                            <span>{{ $cert['id'] }}</span>
-                                        </span>
-                                    </div>
+                                    <div class="space-y-1.5 flex-1 min-w-0">
+                                        {{-- Certificate Name + DB ID Pill --}}
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <h4 class="text-sm font-bold text-zinc-900 dark:text-white leading-snug">
+                                                {{ $cert['certificate'] }}
+                                            </h4>
 
-                                    {{-- Meta Row: Organizer, Date, Credential --}}
-                                    <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
-                                        {{-- Issuing Organization --}}
-                                        @if(!empty($cert['organizer']))
-                                            <span class="inline-flex items-center gap-1.5 font-semibold text-zinc-700 dark:text-zinc-300">
-                                                <i class="fa-solid fa-building-columns text-[11px] text-zinc-400"></i>
-                                                <span>{{ $cert['organizer'] }}</span>
-                                            </span>
-                                        @endif
-
-                                        {{-- Date --}}
-                                        @if(!empty($cert['month_year']))
-                                            @if(!empty($cert['organizer']))
-                                                <span class="text-zinc-300 dark:text-zinc-600">·</span>
-                                            @endif
-                                            <span class="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-                                                <i class="fa-regular fa-calendar text-[11px] text-zinc-400"></i>
-                                                <span>{{ $cert['month_year'] }}</span>
-                                            </span>
-                                        @endif
-
-                                        {{-- Credential ID / URL --}}
-                                        @if(!empty($cert['certificate_no']))
-                                            <span class="text-zinc-300 dark:text-zinc-600">·</span>
-                                            @if(str_starts_with($cert['certificate_no'], 'http://') || str_starts_with($cert['certificate_no'], 'https://'))
-                                                <a 
-                                                    href="{{ $cert['certificate_no'] }}" 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer" 
-                                                    class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                                                >
-                                                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                                                    <span>View Credential</span>
-                                                </a>
-                                            @else
-                                                <span class="inline-flex items-center gap-1 font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300">
-                                                    <span class="text-zinc-400">ID:</span>
-                                                    <span>{{ $cert['certificate_no'] }}</span>
+                                            @if(!empty($cert['event_name']))
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                                                    <i class="fa-regular fa-calendar-check text-[10px] text-zinc-400"></i>
+                                                    <span>{{ $cert['event_name'] }}</span>
                                                 </span>
                                             @endif
-                                        @endif
 
-                                        {{-- Attached Document / Image Link --}}
-                                        @if(!empty($cert['image_url']))
-                                            <span class="text-zinc-300 dark:text-zinc-600">·</span>
-                                            <a 
-                                                href="{{ $cert['image_url'] }}" 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                class="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-                                            >
-                                                <i class="{{ $cert['is_pdf'] ? 'fa-solid fa-file-pdf text-red-500' : 'fa-regular fa-image text-emerald-500' }} text-[11px]"></i>
-                                                <span>{{ $cert['is_pdf'] ? 'View Certificate (PDF)' : 'View Certificate' }}</span>
-                                            </a>
+                                            {{-- Record ID Pill --}}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[10.5px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 select-all" title="Click to select">
+                                                <span class="text-zinc-400 select-none">ID:</span>
+                                                <span>{{ $cert['id'] }}</span>
+                                            </span>
+                                        </div>
+
+                                        {{-- Meta Row: Organizer, Date, Credential --}}
+                                        <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
+                                            {{-- Issuing Organization --}}
+                                            @if(!empty($cert['organizer']))
+                                                <span class="inline-flex items-center gap-1.5 font-semibold text-zinc-700 dark:text-zinc-300">
+                                                    <i class="fa-solid fa-building-columns text-[11px] text-zinc-400"></i>
+                                                    <span>{{ $cert['organizer'] }}</span>
+                                                </span>
+                                            @endif
+
+                                            {{-- Date --}}
+                                            @if(!empty($cert['month_year']))
+                                                @if(!empty($cert['organizer']))
+                                                    <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                                @endif
+                                                <span class="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+                                                    <i class="fa-regular fa-calendar text-[11px] text-zinc-400"></i>
+                                                    <span>{{ $cert['month_year'] }}</span>
+                                                </span>
+                                            @endif
+
+                                            {{-- Credential ID / URL --}}
+                                            @if(!empty($cert['certificate_no']))
+                                                <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                                @if(str_starts_with($cert['certificate_no'], 'http://') || str_starts_with($cert['certificate_no'], 'https://'))
+                                                    <a 
+                                                        href="{{ $cert['certificate_no'] }}" 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                                    >
+                                                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                                        <span>View Credential</span>
+                                                    </a>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300">
+                                                        <span class="text-zinc-400">ID:</span>
+                                                        <span>{{ $cert['certificate_no'] }}</span>
+                                                    </span>
+                                                @endif
+                                            @endif
+                                        </div>
+
+                                        {{-- Description --}}
+                                        @if(!empty($cert['description']))
+                                            <p class="text-xs text-zinc-600 dark:text-zinc-300 mt-2 leading-relaxed whitespace-pre-line">
+                                                {{ $cert['description'] }}
+                                            </p>
                                         @endif
                                     </div>
-
-                                    {{-- Description --}}
-                                    @if(!empty($cert['description']))
-                                        <p class="text-xs text-zinc-600 dark:text-zinc-300 mt-2 leading-relaxed whitespace-pre-line">
-                                            {{ $cert['description'] }}
-                                        </p>
-                                    @endif
                                 </div>
 
                                 {{-- Admin Actions: Status Toggle, Edit, Delete --}}
@@ -847,5 +920,93 @@ new class extends Component {
 
         {{-- UNSAVED CHANGES CONFIRMATION MODAL --}}
         <x-profile.unsaved-modal />
+
+        {{-- CERTIFICATE MEDIA MODAL (Alpine.js - Image & PDF preview) --}}
+        <div 
+            x-show="showMediaModal" 
+            x-cloak
+            class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs"
+            @keydown.escape.window="closeMediaModal()"
+        >
+            <div 
+                @click.outside="closeMediaModal()"
+                x-show="showMediaModal"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                class="bg-white dark:bg-[#111c26] rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden"
+            >
+                {{-- Modal Header --}}
+                <div class="px-5 py-3.5 border-b border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between gap-3 bg-zinc-50/60 dark:bg-zinc-900/60 shrink-0">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="size-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 flex items-center justify-center text-brand shrink-0">
+                            <template x-if="modalIsPdf">
+                                <i class="fa-solid fa-file-pdf text-red-500 text-sm"></i>
+                            </template>
+                            <template x-if="!modalIsPdf">
+                                <i class="fa-regular fa-image text-emerald-500 text-sm"></i>
+                            </template>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white truncate" x-text="modalMediaTitle || 'Certificate Preview'"></h3>
+                            <p class="text-[11px] text-zinc-400 truncate" x-text="modalIsPdf ? 'PDF Document' : 'Image Document'"></p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        {{-- Open in new tab link --}}
+                        <template x-if="modalMediaUrl">
+                            <a 
+                                :href="modalMediaUrl" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-brand bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-zinc-300 transition"
+                                title="Open in new window"
+                            >
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                <span class="hidden sm:inline">Open in new tab</span>
+                            </a>
+                        </template>
+
+                        {{-- Close Button --}}
+                        <button 
+                            type="button" 
+                            @click="closeMediaModal()" 
+                            class="size-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                            title="Close"
+                        >
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Modal Content Body --}}
+                <div class="p-4 sm:p-6 overflow-auto flex-1 flex items-center justify-center bg-zinc-100/50 dark:bg-zinc-950/40 min-h-[350px]">
+                    {{-- PDF Viewer --}}
+                    <template x-if="modalIsPdf && modalMediaUrl">
+                        <div class="w-full h-full min-h-[65vh] flex flex-col">
+                            <iframe 
+                                :src="modalMediaUrl" 
+                                class="w-full h-full min-h-[65vh] rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-white shadow-xs"
+                            ></iframe>
+                        </div>
+                    </template>
+
+                    {{-- Image Viewer --}}
+                    <template x-if="!modalIsPdf && modalMediaUrl">
+                        <div class="flex items-center justify-center w-full h-full">
+                            <img 
+                                :src="modalMediaUrl" 
+                                :alt="modalMediaTitle" 
+                                class="max-h-[75vh] max-w-full object-contain rounded-xl shadow-md border border-zinc-200 dark:border-zinc-800" 
+                            />
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

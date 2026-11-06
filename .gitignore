@@ -3,6 +3,7 @@
 /public/build
 /public/hot
 /public/storage
+/public/certificate/
 /storage/*.key
 /storage/pail
 /vendor
@@ -26,3 +27,4 @@ yarn-error.log
 .env copy
 
 Design page
+/docs/mongodb_php_upgrade_troubleshooting.md

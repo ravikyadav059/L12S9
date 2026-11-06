@@ -100,14 +100,14 @@
 
             {{-- 6. Upload Certificate --}}
             <div>
-                <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                <label for="cert_file_input_{{ $itemId ?? 'new' }}" class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 cursor-pointer">
                     Upload Certificate
                 </label>
 
-                {{-- Custom Styled File Input Container (Entire area clickable) --}}
-                <label 
-                    for="cert_file_input_{{ $itemId ?? 'new' }}" 
-                    class="relative flex items-center h-10 px-1 border border-zinc-300 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 overflow-hidden shadow-2xs cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 focus-within:ring-2 focus-within:ring-brand/20 transition-all select-none"
+                {{-- Custom Styled File Input Container (Entire area directly clickable) --}}
+                <div 
+                    wire:key="cert_file_container_{{ $itemId ?? 'new' }}"
+                    class="relative flex items-center h-10 px-1 border border-zinc-300 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 overflow-hidden shadow-2xs hover:border-zinc-400 dark:hover:border-zinc-600 focus-within:ring-2 focus-within:ring-brand/20 transition-all cursor-pointer"
                 >
                     <input 
                         type="file" 
@@ -115,20 +115,20 @@
                         wire:model="certificateFile" 
                         @change="handleFileChange($event)" 
                         accept=".jpg,.jpeg,.png,.pdf" 
-                        class="hidden" 
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                     />
                     <span 
-                        class="h-8 px-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs shrink-0 flex items-center justify-center"
+                        class="h-8 px-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs shrink-0 flex items-center justify-center pointer-events-none select-none"
                     >
                         Choose file
                     </span>
                     <span 
-                        class="ml-3 text-xs text-zinc-600 dark:text-zinc-300 truncate flex-1" 
+                        class="ml-3 text-xs text-zinc-600 dark:text-zinc-300 truncate flex-1 pointer-events-none select-none" 
                         x-text="currentFileName || 'No file chosen'"
                     ></span>
-                </label>
+                </div>
 
-                <p class="text-[11px] text-zinc-400 mt-1">Supports .jpg, .png, .pdf (Max 5MB)</p>
+                <p class="text-[11px] text-zinc-400 mt-1 select-none">Supports .jpg, .png, .pdf (Max 5MB)</p>
 
                 {{-- Livewire Upload Loading Indicator --}}
                 <div wire:loading wire:target="certificateFile" class="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1.5">
@@ -164,28 +164,50 @@
                     </div>
 
                     {{-- Preview Body --}}
-                    <div class="overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900/60 flex items-center justify-center p-2 min-h-[140px]">
+                    <div class="overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900/60 flex items-center justify-center p-3 min-h-[140px]">
                         {{-- PDF Preview --}}
                         <template x-if="isPdfFile">
-                            <div class="flex flex-col items-center justify-center py-4 text-center">
-                                <i class="fa-solid fa-file-pdf text-red-500 text-4xl mb-2"></i>
-                                <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200" x-text="currentFileName || 'PDF Certificate'"></span>
+                            <div class="flex flex-col items-center justify-center py-3 text-center">
+                                <button 
+                                    type="button" 
+                                    @click.prevent.stop="$dispatch('close-popovers'); openMediaModal(previewUrl || form.image_url, true, form.certificate || 'Certificate (PDF)')" 
+                                    class="size-[74px] rounded-2xl border-[2px] border-blue-400 dark:border-blue-500/50 bg-white dark:bg-zinc-800 flex flex-col items-center justify-center p-1.5 shadow-2xs hover:border-blue-500 hover:shadow-md transition-all group cursor-pointer mb-2.5"
+                                    title="Click to view PDF in modal"
+                                >
+                                    <svg class="size-11 group-hover:scale-105 transition-transform" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 6C10.8954 6 10 6.89543 10 8V40C10 41.1046 10.8954 42 12 42H36C37.1046 42 38 41.1046 38 40V16L28 6H12Z" fill="#EF4444"/>
+                                        <path d="M28 6V14C28 15.1046 28.8954 16 30 16H38L28 6Z" fill="#FCA5A5"/>
+                                        <text x="24" y="33" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">PDF</text>
+                                    </svg>
+                                </button>
+                                <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate max-w-[260px]" x-text="currentFileName || 'PDF Certificate'"></span>
                                 <template x-if="previewUrl || form.image_url">
-                                    <a :href="previewUrl || form.image_url" target="_blank" class="mt-2 text-[11px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-1">
+                                    <button 
+                                        type="button" 
+                                        @click.prevent.stop="$dispatch('close-popovers'); openMediaModal(previewUrl || form.image_url, true, form.certificate || 'Certificate (PDF)')" 
+                                        class="mt-2 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
                                         <span>View Document</span>
                                         <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                                    </a>
+                                    </button>
                                 </template>
                             </div>
                         </template>
 
                         {{-- Image Preview --}}
                         <template x-if="!isPdfFile && (previewUrl || form.image_url)">
-                            <img 
-                                :src="previewUrl || form.image_url" 
-                                alt="Certificate Preview" 
-                                class="max-h-56 w-full object-contain rounded-lg shadow-xs" 
-                            />
+                            <button 
+                                type="button" 
+                                @click.prevent.stop="$dispatch('close-popovers'); openMediaModal(previewUrl || form.image_url, false, form.certificate || 'Certificate Image')" 
+                                class="group cursor-pointer max-w-full flex items-center justify-center"
+                                title="Click to view full image in modal"
+                            >
+                                <img 
+                                    :src="previewUrl || form.image_url" 
+                                    alt="Certificate Preview" 
+                                    class="max-h-56 w-full object-contain rounded-lg shadow-xs group-hover:opacity-95 transition" 
+                                />
+                            </button>
                         </template>
                     </div>
 
@@ -218,25 +240,27 @@
             <p x-show="errors.description" x-cloak class="text-[11px] text-red-500 mt-1">Description cannot exceed 1,500 characters</p>
         </div>
 
-        {{-- Row 5: Share this with your network --}}
-        <div wire:ignore.self>
-            <label class="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer select-none">
-                <input 
-                    type="checkbox" 
-                    x-model="form.share_network" 
-                    class="mt-0.5 size-4 text-brand rounded border-zinc-300 dark:border-zinc-700 focus:ring-brand cursor-pointer shrink-0" 
-                />
-                <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-sm">📢</span>
-                        <span class="text-xs font-bold text-zinc-900 dark:text-white">Share this with your network</span>
+        {{-- Row 5: Share this with your network (Only shown when adding new certificate, not editing) --}}
+        @if(! $itemId)
+            <div x-show="!form.id" wire:ignore.self>
+                <label class="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer select-none">
+                    <input 
+                        type="checkbox" 
+                        x-model="form.share_network" 
+                        class="mt-0.5 size-4 text-brand rounded border-zinc-300 dark:border-zinc-700 focus:ring-brand cursor-pointer shrink-0" 
+                    />
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-sm">📢</span>
+                            <span class="text-xs font-bold text-zinc-900 dark:text-white">Share this with your network</span>
+                        </div>
+                        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                            Create a post to share this new certificate with your professional network
+                        </p>
                     </div>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        Create a post to share this new certificate with your professional network
-                    </p>
-                </div>
-            </label>
-        </div>
+                </label>
+            </div>
+        @endif
 
         {{-- Row 6: Form Actions & Status (Admin Only) --}}
         <div wire:ignore.self class="pt-3 border-t border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3">

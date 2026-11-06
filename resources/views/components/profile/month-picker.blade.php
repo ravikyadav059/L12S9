@@ -97,6 +97,8 @@
     }"
     x-init="initPicker(); $watch(() => (typeof {{ $model }} !== 'undefined' ? {{ $model }} : ''), () => initPicker())"
     @click.outside="open = false"
+    @close-popovers.window="open = false"
+    @keydown.escape.window="open = false"
 >
     @if($label)
         <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300">

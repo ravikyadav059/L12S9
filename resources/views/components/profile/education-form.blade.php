@@ -450,7 +450,7 @@
                             :disabled="form.pursuing"
                             @click="if(!form.pursuing) { showYearDropdown = !showYearDropdown; if (showYearDropdown) $nextTick(() => $refs.yearSearchInput?.focus()); }"
                             :class="[
-                                errors.passout_year ? 'border-red-500 bg-red-50/20 dark:bg-red-950/10' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900',
+                                (errors.passout_year && !form.pursuing) ? 'border-red-500 bg-red-50/20 dark:bg-red-950/10' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900',
                                 form.pursuing ? 'opacity-50 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800' : 'cursor-pointer'
                             ]"
                             class="w-full h-10 px-3.5 text-xs font-normal text-left border rounded-xl focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all flex items-center justify-between"
@@ -552,9 +552,12 @@
                 <button 
                     type="button" 
                     @click="submitForm()" 
-                    class="px-5 py-2 rounded-xl bg-brand hover:bg-brand-600 text-white text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
-                    x-text="form.id ? 'Update' : 'Save'"
+                    :disabled="isSaving"
+                    :class="isSaving ? 'opacity-70 cursor-not-allowed' : 'active:scale-95 cursor-pointer'"
+                    class="px-5 py-2 rounded-xl bg-brand hover:bg-brand-600 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-2"
                 >
+                    <span x-show="isSaving" x-cloak class="inline-flex"><i class="fa-solid fa-circle-notch fa-spin text-xs"></i></span>
+                    <span x-text="isSaving ? (form.id ? 'Updating...' : 'Saving...') : (form.id ? 'Update' : 'Save')"></span>
                 </button>
 
                 <button 

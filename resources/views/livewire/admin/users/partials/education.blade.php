@@ -253,6 +253,7 @@ new class extends Component {
 
         $this->dispatch('toast', message: 'Education saved successfully!', type: 'success', position: 'bottom');
         $this->dispatch('refresh-educations');
+        unset($this->educations);
 
         return true;
     }
@@ -274,6 +275,7 @@ new class extends Component {
 
         $this->dispatch('toast', message: 'Education deleted successfully!', type: 'success', position: 'bottom');
         $this->dispatch('refresh-educations');
+        unset($this->educations);
     }
 
     /**
@@ -386,6 +388,7 @@ new class extends Component {
                 statusFilter: 'all',
                 isAdding: false,
                 editingId: null,
+                isSaving: false,
                 showUnsavedModal: false,
                 originalSnapshot: '',
 
@@ -931,6 +934,7 @@ new class extends Component {
                             this.showUnsavedModal = true;
                         } else {
                             this.editingId = null;
+                            this.resetErrors();
                         }
                         return;
                     }
@@ -940,20 +944,31 @@ new class extends Component {
                         return;
                     }
 
+                    this.resetErrors();
                     this.isAdding = false;
                     this.editingId = item.id;
                     const isPursuing = Boolean(item.pursuing || item.current_institute == 1 || item.current_institute === '1');
                     this.form = {
-                        id: item.id,
-                        institution: item.institution || '',
-                        degree: item.degree || '',
-                        field_of_study: item.field_of_study || '',
-                        grade: item.grade || '',
+                        id: item.id ? String(item.id) : null,
+                        institution: String(item.institution || '').trim(),
+                        degree: String(item.degree || '').trim(),
+                        field_of_study: String(item.field_of_study || '').trim(),
+                        grade: String(item.grade || '').trim(),
                         passout_year: isPursuing ? '' : (item.passout_year ? String(item.passout_year) : ''),
                         pursuing: isPursuing,
-                        description: item.description || '',
+                        description: String(item.description || ''),
                         status: item.status ?? 1,
                     };
+                    this.showOrgDropdown = false;
+                    this.showDegreeDropdown = false;
+                    this.showFieldDropdown = false;
+                    this.showGradeDropdown = false;
+                    this.showYearDropdown = false;
+                    this.orgSearchQuery = '';
+                    this.degreeSearchQuery = '';
+                    this.fieldSearchQuery = '';
+                    this.gradeSearchQuery = '';
+                    this.yearSearchQuery = '';
                     this.originalSnapshot = this.takeSnapshot();
                 },
 
@@ -963,6 +978,7 @@ new class extends Component {
                     } else {
                         this.isAdding = false;
                         this.editingId = null;
+                        this.resetErrors();
                     }
                 },
 
@@ -977,6 +993,16 @@ new class extends Component {
                     this.showUnsavedModal = false;
                 },
 
+                resetErrors() {
+                    this.errors = {
+                        institution: false,
+                        degree: false,
+                        passout_year: false,
+                        description: false,
+                        descriptionMessage: '',
+                    };
+                },
+
                 resetForm() {
                     this.form = {
                         id: null,
@@ -989,25 +1015,23 @@ new class extends Component {
                         description: '',
                         status: 1,
                     };
-                    this.errors = {
-                        institution: false,
-                        degree: false,
-                        passout_year: false,
-                        description: false,
-                        descriptionMessage: '',
-                    };
+                    this.resetErrors();
                     this.yearSearchQuery = '';
                     this.gradeSearchQuery = '';
+                    this.orgSearchQuery = '';
+                    this.degreeSearchQuery = '';
+                    this.fieldSearchQuery = '';
+                    this.showOrgDropdown = false;
+                    this.showDegreeDropdown = false;
+                    this.showFieldDropdown = false;
+                    this.showGradeDropdown = false;
+                    this.showYearDropdown = false;
                 },
 
                 submitForm() {
-                    this.errors = {
-                        institution: false,
-                        degree: false,
-                        passout_year: false,
-                        description: false,
-                        descriptionMessage: '',
-                    };
+                    if (this.isSaving) return;
+
+                    this.resetErrors();
 
                     let hasError = false;
 
@@ -1067,13 +1091,17 @@ new class extends Component {
                         status: this.form.status ? 1 : 0,
                     };
 
+                    this.isSaving = true;
                     this.$wire.saveEducation(payload).then((res) => {
+                        this.isSaving = false;
                         if (res !== false) {
                             this.isAdding = false;
                             this.editingId = null;
                             this.resetForm();
                             this.originalSnapshot = '';
                         }
+                    }).catch(() => {
+                        this.isSaving = false;
                     });
                 },
 
