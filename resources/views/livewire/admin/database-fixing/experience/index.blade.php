@@ -551,7 +551,14 @@ new #[Layout('components.layouts.admin')] #[Title('Experience — Date Standardi
             <span>Back to Database Fixing List</span>
         </a>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+            <a 
+                href="{{ route('admin.database-fixing.experience.reviewer-profile') }}" 
+                wire:navigate
+                class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition"
+            >
+                Reviewer Profile & User Sync
+            </a>
             <a 
                 href="{{ route('admin.database-fixing.experience.status') }}" 
                 wire:navigate

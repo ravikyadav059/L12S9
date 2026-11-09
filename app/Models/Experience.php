@@ -296,12 +296,11 @@ class Experience extends Model
         $reviewerProfile = is_string($user) ? ReviewerProfile::where('user_id', $userId)->first() : ($user->reviewerProfile ?? ReviewerProfile::where('user_id', $userId)->first());
         $expIds = (array) ($reviewerProfile->experience ?? []);
 
-        $activeExperiences = self::where(function ($q) use ($userId, $expIds) {
-            $q->where('user_id', $userId);
-            if (! empty($expIds)) {
-                $q->orWhereIn('_id', $expIds);
-            }
-        })
+        if (empty($expIds)) {
+            return null;
+        }
+
+        $activeExperiences = self::whereIn('_id', $expIds)
             ->whereIn('status', [1, '1', true])
             ->when($excludeExpId, fn ($q) => $q->where('_id', '!=', $excludeExpId))
             ->with(['designationRelation', 'organization'])

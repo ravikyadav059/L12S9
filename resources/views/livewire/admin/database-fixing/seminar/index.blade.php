@@ -299,9 +299,17 @@ new #[Layout('components.layouts.admin')] #[Title('Seminar — Month Year Date S
             <span>Back to Database Fixing List</span>
         </a>
 
-        <span class="text-xs font-semibold text-zinc-400">
-            Table: <strong class="text-zinc-700 dark:text-zinc-200">Seminar</strong> &bull; Field: <code class="font-mono text-indigo-600 dark:text-indigo-400">month_year</code>
-        </span>
+        <!-- Tool Switcher Pills -->
+        <div class="inline-flex rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 shadow-xs">
+                <flux:icon.calendar class="size-3.5" />
+                <span>Date Standardizer</span>
+            </span>
+            <a href="{{ route('admin.database-fixing.seminar.reviewer-profile') }}" wire:navigate class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200">
+                <flux:icon.user-group class="size-3.5" />
+                <span>Reviewer Profile & User Sync</span>
+            </a>
+        </div>
     </div>
 
     <!-- TITLE HEADER -->

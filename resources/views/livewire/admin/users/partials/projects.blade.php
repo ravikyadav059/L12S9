@@ -1056,7 +1056,7 @@ new class extends Component {
                                             @endif
                                         </div>
 
-                                        {{-- Action Buttons: Edit & Delete --}}
+                                        {{-- Action Buttons: Edit --}}
                                         <div class="flex items-center gap-1.5 shrink-0 self-start">
                                             <button 
                                                 type="button" 
@@ -1066,15 +1066,6 @@ new class extends Component {
                                                 title="Edit Project"
                                             >
                                                 <i class="fa-solid fa-pen-to-square text-[16px]"></i>
-                                            </button>
-
-                                            <button 
-                                                type="button" 
-                                                @click="deleteItem('{{ $project['id'] }}')"
-                                                class="p-1.5 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 transition-colors cursor-pointer shrink-0 rounded hover:bg-red-50 dark:hover:bg-red-950/40"
-                                                title="Delete Project"
-                                            >
-                                                <i class="fa-solid fa-trash-can text-[15px]"></i>
                                             </button>
                                         </div>
                                     </div>

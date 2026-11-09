@@ -176,25 +176,23 @@ new class extends Component {
             $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
             $expIds = (array) ($reviewerProfile->experience ?? []);
 
-            $existingCurrentQuery = Experience::where(function ($q) use ($expIds) {
-                $q->where('user_id', (string) $this->user->_id);
-                if (! empty($expIds)) {
-                    $q->orWhereIn('_id', $expIds);
+            if (! empty($expIds)) {
+                $existingCurrentQuery = Experience::whereIn('_id', $expIds)
+                    ->whereIn('status', [1, '1', true])
+                    ->where(function ($q) {
+                        $q->whereIn('current_organization', [1, '1', true])
+                            ->orWhere('end_date', 'regex', new \MongoDB\BSON\Regex('^present$', 'i'));
+                    });
+
+                if ($expId) {
+                    $existingCurrentQuery->where('_id', '!=', $expId);
                 }
-            })->whereIn('status', [1, '1', true])
-              ->where(function ($q) {
-                  $q->whereIn('current_organization', [1, '1', true])
-                    ->orWhere('end_date', 'regex', new \MongoDB\BSON\Regex('^present$', 'i'));
-              });
 
-            if ($expId) {
-                $existingCurrentQuery->where('_id', '!=', $expId);
-            }
+                if ($existingCurrentQuery->exists()) {
+                    $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'This user already has an active experience marked as currently working. Only one active experience can be set as current.', type: 'warning');
 
-            if ($existingCurrentQuery->exists()) {
-                $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'This user already has an active experience marked as currently working. Only one active experience can be set as current.', type: 'warning');
-
-                return false;
+                    return false;
+                }
             }
         }
 
@@ -257,6 +255,7 @@ new class extends Component {
             }
         }
 
+        unset($this->experiences);
         $this->dispatch('toast', message: 'Experience saved successfully!', type: 'success', position: 'bottom');
         $this->dispatch('refresh-experiences');
 
@@ -278,6 +277,7 @@ new class extends Component {
 
         ReviewerProfile::where('user_id', (string) $this->user->_id)->pull('experience', $expId);
 
+        unset($this->experiences);
         $this->dispatch('toast', message: 'Experience deleted successfully!', type: 'success', position: 'bottom');
         $this->dispatch('refresh-experiences');
     }
@@ -299,22 +299,20 @@ new class extends Component {
                 $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
                 $expIds = (array) ($reviewerProfile->experience ?? []);
 
-                $alreadyActiveCurrent = Experience::where(function ($q) use ($expIds) {
-                    $q->where('user_id', (string) $this->user->_id);
-                    if (! empty($expIds)) {
-                        $q->orWhereIn('_id', $expIds);
+                if (! empty($expIds)) {
+                    $alreadyActiveCurrent = Experience::whereIn('_id', $expIds)
+                        ->where('_id', '!=', $expId)
+                        ->whereIn('status', [1, '1', true])
+                        ->where(function ($q) {
+                            $q->whereIn('current_organization', [1, '1', true])
+                                ->orWhere('end_date', 'regex', new \MongoDB\BSON\Regex('^present$', 'i'));
+                        })->exists();
+
+                    if ($alreadyActiveCurrent) {
+                        $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'Cannot activate this experience because another active role is already marked as currently working.', type: 'warning');
+
+                        return;
                     }
-                })->where('_id', '!=', $expId)
-                  ->whereIn('status', [1, '1', true])
-                  ->where(function ($q) {
-                      $q->whereIn('current_organization', [1, '1', true])
-                        ->orWhere('end_date', 'regex', new \MongoDB\BSON\Regex('^present$', 'i'));
-                  })->exists();
-
-                if ($alreadyActiveCurrent) {
-                    $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'Cannot activate this experience because another active role is already marked as currently working.', type: 'warning');
-
-                    return;
                 }
             }
 
@@ -336,6 +334,7 @@ new class extends Component {
         $exp->status = $newStatus;
         $exp->save();
 
+        unset($this->experiences);
         $label = $newStatus === 1 ? 'Active' : 'Inactive';
         $this->dispatch('toast', message: "Experience set to {$label}.", type: 'success', position: 'bottom');
         $this->dispatch('refresh-experiences');
@@ -358,22 +357,20 @@ new class extends Component {
                 $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
                 $expIds = (array) ($reviewerProfile->experience ?? []);
 
-                $alreadyActiveCurrent = Experience::where(function ($q) use ($expIds) {
-                    $q->where('user_id', (string) $this->user->_id);
-                    if (! empty($expIds)) {
-                        $q->orWhereIn('_id', $expIds);
+                if (! empty($expIds)) {
+                    $alreadyActiveCurrent = Experience::whereIn('_id', $expIds)
+                        ->where('_id', '!=', $expId)
+                        ->whereIn('status', [1, '1', true])
+                        ->where(function ($q) {
+                            $q->whereIn('current_organization', [1, '1', true])
+                                ->orWhere('end_date', 'regex', new \MongoDB\BSON\Regex('^present$', 'i'));
+                        })->exists();
+
+                    if ($alreadyActiveCurrent) {
+                        $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'Cannot activate this experience because another active role is already marked as currently working.', type: 'warning');
+
+                        return;
                     }
-                })->where('_id', '!=', $expId)
-                  ->whereIn('status', [1, '1', true])
-                  ->where(function ($q) {
-                      $q->whereIn('current_organization', [1, '1', true])
-                        ->orWhere('end_date', 'regex', new \MongoDB\BSON\Regex('^present$', 'i'));
-                  })->exists();
-
-                if ($alreadyActiveCurrent) {
-                    $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'Cannot activate this experience because another active role is already marked as currently working.', type: 'warning');
-
-                    return;
                 }
             }
 
@@ -395,6 +392,7 @@ new class extends Component {
         $exp->status = $newStatus;
         $exp->save();
 
+        unset($this->experiences);
         $label = $newStatus === 1 ? 'Active' : 'Inactive';
         $this->dispatch('toast', message: "Experience set to {$label}.", type: 'success', position: 'bottom');
         $this->dispatch('refresh-experiences');
@@ -1164,16 +1162,6 @@ new class extends Component {
                                         title="Edit Experience"
                                     >
                                         <i class="fa-solid fa-pen-to-square text-[16px]"></i>
-                                    </button>
-
-                                    {{-- Delete Button --}}
-                                    <button 
-                                        type="button" 
-                                        @click="deleteItem('{{ $exp['id'] }}')"
-                                        class="p-1.5 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 transition-colors cursor-pointer shrink-0 rounded hover:bg-red-50 dark:hover:bg-red-950/40"
-                                        title="Delete Experience"
-                                    >
-                                        <i class="fa-solid fa-trash-can text-[15px]"></i>
                                     </button>
                                 </div>
 

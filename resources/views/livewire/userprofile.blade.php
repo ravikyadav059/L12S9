@@ -113,29 +113,32 @@ new #[Layout('components.layouts.app')] class extends Component {
                     :key="'profile-certificates-'.($user ? $user->_id : 'guest')"
                 />
 
-                <div id="achievements" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">🏆</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Awards &amp; Achievements</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 9</p>
-                </div>
+                {{-- Section 9: Awards & Achievements (Independent Child Volt Component) --}}
+                <livewire:profile.awards 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-awards-'.($user ? $user->_id : 'guest')"
+                />
 
-                <div id="thesis" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">📑</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Thesis Guided</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 10</p>
-                </div>
+                {{-- Section 10: Thesis Guided (Independent Child Volt Component) --}}
+                <livewire:profile.thesis 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-thesis-'.($user ? $user->_id : 'guest')"
+                />
 
-                <div id="memberships" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">👥</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Memberships</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 11</p>
-                </div>
+                <livewire:profile.memberships 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-memberships-'.($user ? $user->_id : 'guest')"
+                />
 
-                <div id="patents" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">💡</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Patents</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 12</p>
-                </div>
+                {{-- Section 12: Patents (Independent Child Volt Component) --}}
+                <livewire:profile.patents 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-patents-'.($user ? $user->_id : 'guest')"
+                />
 
                 <div id="invited-positions" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
                     <span class="text-2xl mb-1 inline-block">🏛️</span>

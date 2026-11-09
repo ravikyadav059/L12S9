@@ -675,6 +675,10 @@ new class extends Component {
                 });
             },
 
+            deleteItem(id) {
+                this.promptDelete(id);
+            },
+
             promptDelete(id) {
                 if (confirm('Are you sure you want to permanently delete this certificate record?')) {
                     this.$wire.deleteCertificate(id).then((res) => {
@@ -837,11 +841,40 @@ new class extends Component {
                                             @endif
                                         </div>
 
-                                        {{-- Description --}}
+                                        {{-- Description: 2 lines with View More / View Less --}}
                                         @if(!empty($cert['description']))
-                                            <p class="text-xs text-zinc-600 dark:text-zinc-300 mt-2 leading-relaxed whitespace-pre-line">
-                                                {{ $cert['description'] }}
-                                            </p>
+                                            <div 
+                                                x-data="{ 
+                                                    expanded: false, 
+                                                    isClamped: {{ mb_strlen(trim($cert['description'])) > 140 ? 'true' : 'false' }},
+                                                    checkClamped() {
+                                                        if (this.$refs.descContainer) {
+                                                            this.isClamped = this.$refs.descContainer.scrollHeight > this.$refs.descContainer.clientHeight + 2;
+                                                        }
+                                                    }
+                                                }" 
+                                                x-init="
+                                                    $nextTick(() => checkClamped());
+                                                    window.addEventListener('resize', () => { if (!expanded) checkClamped(); });
+                                                " 
+                                                class="pt-1"
+                                            >
+                                                <div 
+                                                    x-ref="descContainer" 
+                                                    :class="{ 'line-clamp-2': !expanded, 'whitespace-pre-line': expanded }" 
+                                                    class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed break-words"
+                                                ><strong class="font-semibold text-zinc-800 dark:text-zinc-200">Description:</strong> {{ trim($cert['description']) }}</div>
+                                                <button 
+                                                    type="button" 
+                                                    x-show="isClamped || expanded" 
+                                                    x-cloak 
+                                                    @click="expanded = !expanded; if (!expanded) $nextTick(() => checkClamped())" 
+                                                    class="text-xs font-semibold text-brand hover:underline mt-0.5 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                                >
+                                                    <span x-text="expanded ? 'View Less' : 'View More'"></span>
+                                                    <i class="fa-solid text-[9px]" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                                </button>
+                                            </div>
                                         @endif
                                     </div>
                                 </div>
@@ -862,21 +895,12 @@ new class extends Component {
                                     {{-- Edit Button --}}
                                     <button 
                                         type="button" 
+                                        x-show="editingId !== '{{ $cert['id'] }}'"
                                         @click="openEditForm({{ json_encode($cert) }})"
-                                        class="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                                        class="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer shrink-0 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                         title="Edit certificate"
                                     >
-                                        <i class="fa-solid fa-pen text-xs"></i>
-                                    </button>
-
-                                    {{-- Delete Button --}}
-                                    <button 
-                                        type="button" 
-                                        @click="promptDelete('{{ $cert['id'] }}')"
-                                        class="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer"
-                                        title="Delete certificate"
-                                    >
-                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                        <i class="fa-solid fa-pen-to-square text-[16px]"></i>
                                     </button>
                                 </div>
                             </div>

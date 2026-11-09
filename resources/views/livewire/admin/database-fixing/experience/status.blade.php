@@ -251,7 +251,14 @@ new #[Layout('components.layouts.admin')] #[Title('Experience — Missing status
         </a>
 
         <!-- TOOL SWITCHER PILLS -->
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 flex-wrap">
+            <a 
+                href="{{ route('admin.database-fixing.experience.reviewer-profile') }}" 
+                wire:navigate
+                class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+            >
+                Reviewer Profile & User Sync
+            </a>
             <span class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60">
                 status (Missing Status Fixer)
             </span>

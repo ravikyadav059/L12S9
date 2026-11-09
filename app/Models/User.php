@@ -298,6 +298,46 @@ class User extends Authenticatable // implements MustVerifyEmail
     }
 
     /**
+     * Get the award records associated with the user.
+     */
+    public function awards(): HasMany
+    {
+        return $this->hasMany(Award::class, 'user_id', '_id');
+    }
+
+    /**
+     * Get the PhD / Thesis records associated with the user.
+     */
+    public function phds(): HasMany
+    {
+        return $this->hasMany(Phd::class, 'user_id', '_id');
+    }
+
+    /**
+     * Get the professional membership records associated with the user.
+     */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(Membership::class, 'user_id', '_id');
+    }
+
+    /**
+     * Get the patent records associated with the user.
+     */
+    public function patents(): HasMany
+    {
+        return $this->hasMany(Patent::class, 'user_id', '_id');
+    }
+
+    /**
+     * Get the invited position records associated with the user.
+     */
+    public function invitedPositions(): HasMany
+    {
+        return $this->hasMany(InvitedPosition::class, 'user_id', '_id');
+    }
+
+    /**
      * Check if this user is following another user.
      */
     public function isFollowing(string|User|null $user): bool

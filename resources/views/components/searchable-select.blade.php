@@ -10,6 +10,7 @@
     'hasErrorExpr' => null,
     'searchMethod' => null,
     'size' => 'default',
+    'alpineModel' => null,
 ])
 
 @php
@@ -22,7 +23,7 @@
     x-data="{
         open: false,
         search: '',
-        value: @if($wireProp) @entangle($wireProp){{ $isLive ? '.live' : '' }} @else null @endif,
+        value: @if($alpineModel) {{ $alpineModel }} @elseif($wireProp) @entangle($wireProp){{ $isLive ? '.live' : '' }} @else null @endif,
         options: {{ \Illuminate\Support\Js::from($options) }},
         disabled: {{ $disabled ? 'true' : 'false' }},
         placeholder: '{{ addslashes($placeholder) }}',
@@ -33,6 +34,14 @@
         searchTimer: null,
         
         init() {
+            @if($alpineModel)
+                this.$watch('{{ $alpineModel }}', (val) => {
+                    this.value = val;
+                });
+                this.$watch('value', (val) => {
+                    {{ $alpineModel }} = val;
+                });
+            @endif
             if (this.searchMethod) {
                 this.$watch('search', (query) => {
                     clearTimeout(this.searchTimer);
@@ -61,7 +70,7 @@
 
         get selectedItem() {
             if (!this.value) return null;
-            return this.options.find(o => String(o.id) === String(this.value)) || null;
+            return this.options.find(o => String(o.id) === String(this.value) || (o.name && o.name.toLowerCase() === String(this.value).toLowerCase())) || null;
         },
 
         get displayLabel() {
@@ -110,6 +119,9 @@
 
         select(item) {
             this.value = item ? item.id : '';
+            @if($alpineModel)
+                {{ $alpineModel }} = this.value;
+            @endif
             this.open = false;
             this.search = '';
         },
@@ -117,6 +129,9 @@
         clear() {
             if (this.disabled) return;
             this.value = '';
+            @if($alpineModel)
+                {{ $alpineModel }} = '';
+            @endif
             this.search = '';
             this.open = false;
         }

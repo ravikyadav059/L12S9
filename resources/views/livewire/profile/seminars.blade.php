@@ -825,6 +825,17 @@ new class extends Component {
                     }).catch(() => {
                         this.isSaving = false;
                     });
+                },
+
+                deleteItem(id) {
+                    if (confirm('Are you sure you want to delete this seminar/conference?')) {
+                        this.$wire.deleteSeminar(id).then((res) => {
+                            if (res !== false) {
+                                this.originalSnapshot = '';
+                                this.closeForm(true);
+                            }
+                        });
+                    }
                 }
             }"
             x-init="

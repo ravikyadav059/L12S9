@@ -361,6 +361,17 @@
                     </div>
                 @endif
             </div>
+
+            <template x-if="form.id">
+                <button 
+                    type="button" 
+                    @click="deleteItem(form.id)" 
+                    class="px-3.5 py-2 rounded-xl bg-[#ef4444] hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                    <i class="fa-regular fa-trash-can text-sm"></i>
+                    <span>Delete</span>
+                </button>
+            </template>
         </div>
 
     </div>

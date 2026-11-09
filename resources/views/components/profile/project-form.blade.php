@@ -380,11 +380,10 @@
             <template x-if="form.id">
                 <button 
                     type="button" 
-                    @click="deleteItem(form.id)"
-                    class="px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-xs hover:shadow-md transition cursor-pointer flex items-center gap-1.5 active:scale-95"
-                    title="Delete Project"
+                    @click="deleteItem(form.id)" 
+                    class="px-3.5 py-2 rounded-xl bg-[#ef4444] hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                 >
-                    <i class="fa-solid fa-trash-can text-xs"></i>
+                    <i class="fa-regular fa-trash-can text-sm"></i>
                     <span>Delete</span>
                 </button>
             </template>

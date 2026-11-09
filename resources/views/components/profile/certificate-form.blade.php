@@ -319,18 +319,16 @@
                 @endif
             </div>
 
-            @if($showStatus)
-                <template x-if="form.id">
-                    <button 
-                        type="button" 
-                        @click="promptDelete(form.id)"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-600 dark:bg-red-950/40 dark:hover:bg-red-600 border border-red-200 dark:border-red-900/60 rounded-xl transition cursor-pointer shadow-2xs"
-                    >
-                        <i class="fa-solid fa-trash-can text-xs"></i>
-                        <span>Delete</span>
-                    </button>
-                </template>
-            @endif
+            <template x-if="form.id">
+                <button 
+                    type="button" 
+                    @click="deleteItem ? deleteItem(form.id) : (promptDelete ? promptDelete(form.id) : confirmDelete(form.id))" 
+                    class="px-3.5 py-2 rounded-xl bg-[#ef4444] hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                    <i class="fa-regular fa-trash-can text-sm"></i>
+                    <span>Delete</span>
+                </button>
+            </template>
         </div>
 
     </div>

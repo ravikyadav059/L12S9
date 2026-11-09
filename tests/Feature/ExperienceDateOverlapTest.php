@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Experience;
+use App\Models\ReviewerProfile;
 use App\Models\User;
 
 test('parseMonthYearToValue correctly converts valid month year formats to integers', function () {
@@ -60,7 +61,7 @@ test('checkDateOverlap rejects multi-month overlap and ongoing current role over
     expect(Experience::checkDateOverlap($startA, $endA, $startB, $endB))->toBeFalse();
 });
 
-test('findOverlappingActiveExperience checks only active records (status 1) and ignores inactive records (status 0)', function () {
+test('findOverlappingActiveExperience checks only active records (status 1) linked in reviewer_profile.experience', function () {
     $user = User::factory()->create();
 
     // Create an inactive experience (status 0) overlapping with Jan 2025 - Dec 2025
@@ -72,15 +73,8 @@ test('findOverlappingActiveExperience checks only active records (status 1) and 
         'status' => 0,
     ]);
 
-    $startMonth = Experience::parseMonthYearToValue('March 2025');
-    $endMonth = Experience::parseMonthYearToValue('September 2025');
-
-    // Should NOT flag inactive experience
-    $found = Experience::findOverlappingActiveExperience($user, $startMonth, $endMonth);
-    expect($found)->toBeNull();
-
-    // Now create an active experience (status 1)
-    $activeExp = Experience::create([
+    // Create an active experience that is an orphan (NOT in reviewer_profile.experience)
+    $orphanActiveExp = Experience::create([
         'user_id' => (string) $user->_id,
         'join_date' => 'January 2025',
         'end_date' => 'December 2025',
@@ -88,7 +82,32 @@ test('findOverlappingActiveExperience checks only active records (status 1) and 
         'status' => 1,
     ]);
 
-    // Should flag the active experience
+    $startMonth = Experience::parseMonthYearToValue('March 2025');
+    $endMonth = Experience::parseMonthYearToValue('September 2025');
+
+    // Should NOT flag inactive experience or orphan experience not in reviewer_profile
+    $profile = ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'experience' => [(string) $inactiveExp->_id],
+    ]);
+
+    $found = Experience::findOverlappingActiveExperience($user, $startMonth, $endMonth);
+    expect($found)->toBeNull();
+
+    // Now create a linked active experience (status 1) in reviewer_profile.experience
+    $activeExp = Experience::create([
+        'user_id' => (string) $user->_id,
+        'join_date' => 'January 2025',
+        'end_date' => 'December 2025',
+        'current_organization' => 0,
+        'status' => 1,
+    ]);
+    $profile->push('experience', (string) $activeExp->_id);
+
+    // Refresh profile cache on user
+    unset($user->reviewerProfile);
+
+    // Should flag the active experience linked in reviewer_profile
     $foundActive = Experience::findOverlappingActiveExperience($user, $startMonth, $endMonth);
     expect($foundActive)->not->toBeNull();
     expect((string) $foundActive->_id)->toBe((string) $activeExp->_id);
@@ -99,6 +118,8 @@ test('findOverlappingActiveExperience checks only active records (status 1) and 
 
     // Clean up
     $inactiveExp->delete();
+    $orphanActiveExp->delete();
     $activeExp->delete();
+    $profile->delete();
     $user->delete();
 });

@@ -19,6 +19,11 @@ This document records all MongoDB indexes created and recommended for the **`rev
 | **`experience_1`** | `{"experience": 1}` | Multikey (Array) | High-speed lookup of scholar profiles that reference an experience record |
 | **`seminar_1`** | `{"seminar": 1}` | Multikey (Array) | Fast lookup of scholar profiles referencing a seminar/conference |
 | **`RoleInResearchJournal_1`** | `{"RoleInResearchJournal": 1}` | Multikey (Array) | Fast lookup of scholar profiles referencing a journal editorial role |
+| **`award_1`** | `{"award": 1}` | Multikey (Array) | Fast reverse lookup: find scholar profiles referencing an award ID |
+| **`education_1`** | `{"education": 1}` | Multikey (Array) | Fast reverse lookup: find scholar profiles referencing an education record |
+| **`projects_1`** | `{"projects": 1}` | Multikey (Array) | Fast reverse lookup: find scholar profiles referencing a project ID |
+| **`certificate_1`** | `{"certificate": 1}` | Multikey (Array) | Fast reverse lookup: find scholar profiles referencing a certificate ID |
+| **`phd_1`** | `{"phd": 1}` | Multikey (Array) | Fast reverse lookup: find scholar profiles referencing a PhD ID |
 
 ---
 
@@ -57,6 +62,26 @@ This document records all MongoDB indexes created and recommended for the **`rev
 - **Fields**: `{ "RoleInResearchJournal": 1 }`
 - **Used by**: Reverse relational lookup for editors and reviewers linked to journals.
 
+#### 8. `award_1` (Multikey Array Index)
+- **Fields**: `{ "award": 1 }`
+- **Used by**: Reverse relational lookup for scholar profiles that reference an award record.
+
+#### 9. `education_1` (Multikey Array Index)
+- **Fields**: `{ "education": 1 }`
+- **Used by**: Reverse relational lookup for scholar profiles that reference an education record.
+
+#### 10. `projects_1` (Multikey Array Index)
+- **Fields**: `{ "projects": 1 }`
+- **Used by**: Reverse relational lookup for scholar profiles that reference a project record.
+
+#### 11. `certificate_1` (Multikey Array Index)
+- **Fields**: `{ "certificate": 1 }`
+- **Used by**: Reverse relational lookup for scholar profiles that reference a certificate record.
+
+#### 12. `phd_1` (Multikey Array Index)
+- **Fields**: `{ "phd": 1 }`
+- **Used by**: Reverse relational lookup for scholar profiles that reference a PhD / thesis record.
+
 ---
 
 ### One-Click Creation via Mongosh (MongoDB Shell)
@@ -78,6 +103,11 @@ db.reviewer_profile.createIndex({ "publication": 1 }, { background: true });
 db.reviewer_profile.createIndex({ "experience": 1 }, { background: true });
 db.reviewer_profile.createIndex({ "seminar": 1 }, { background: true });
 db.reviewer_profile.createIndex({ "RoleInResearchJournal": 1 }, { background: true });
+db.reviewer_profile.createIndex({ "award": 1 }, { background: true });
+db.reviewer_profile.createIndex({ "education": 1 }, { background: true });
+db.reviewer_profile.createIndex({ "projects": 1 }, { background: true });
+db.reviewer_profile.createIndex({ "certificate": 1 }, { background: true });
+db.reviewer_profile.createIndex({ "phd": 1 }, { background: true });
 ```
 
 ---
@@ -95,3 +125,8 @@ db.reviewer_profile.createIndex({ "RoleInResearchJournal": 1 }, { background: tr
    - `{ "experience": 1 }`
    - `{ "seminar": 1 }`
    - `{ "RoleInResearchJournal": 1 }`
+   - `{ "award": 1 }`
+   - `{ "education": 1 }`
+   - `{ "projects": 1 }`
+   - `{ "certificate": 1 }`
+   - `{ "phd": 1 }`

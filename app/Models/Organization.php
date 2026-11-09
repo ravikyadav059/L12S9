@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use MongoDB\BSON\Regex;
 use MongoDB\Laravel\Eloquent\Model;
+use MongoDB\Laravel\Relations\HasMany;
 
 class Organization extends Model
 {
@@ -204,5 +205,29 @@ class Organization extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereIn('status', [1, '1', true]);
+    }
+
+    /**
+     * Get the PhD / Thesis records affiliated with this organization.
+     */
+    public function phds(): HasMany
+    {
+        return $this->hasMany(Phd::class, 'institution_id', '_id');
+    }
+
+    /**
+     * Get the professional membership records affiliated with this organization.
+     */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(Membership::class, 'organization_id', '_id');
+    }
+
+    /**
+     * Get the invited position records affiliated with this organization.
+     */
+    public function invitedPositions(): HasMany
+    {
+        return $this->hasMany(InvitedPosition::class, 'organization_id', '_id');
     }
 }

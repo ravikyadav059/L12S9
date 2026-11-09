@@ -181,25 +181,23 @@ new class extends Component {
             $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
             $expIds = (array) ($reviewerProfile->experience ?? []);
 
-            $existingCurrentQuery = Experience::where(function ($q) use ($expIds) {
-                $q->where('user_id', (string) $this->user->_id);
-                if (! empty($expIds)) {
-                    $q->orWhereIn('_id', $expIds);
+            if (! empty($expIds)) {
+                $existingCurrentQuery = Experience::whereIn('_id', $expIds)
+                    ->whereIn('status', [1, '1', true])
+                    ->where(function ($q) {
+                        $q->whereIn('current_organization', [1, '1', true])
+                            ->orWhere('end_date', 'regex', new \MongoDB\BSON\Regex('^present$', 'i'));
+                    });
+
+                if ($expId) {
+                    $existingCurrentQuery->where('_id', '!=', $expId);
                 }
-            })->whereIn('status', [1, '1', true])
-              ->where(function ($q) {
-                  $q->whereIn('current_organization', [1, '1', true])
-                    ->orWhere('end_date', 'regex', new \MongoDB\BSON\Regex('^present$', 'i'));
-              });
 
-            if ($expId) {
-                $existingCurrentQuery->where('_id', '!=', $expId);
-            }
+                if ($existingCurrentQuery->exists()) {
+                    $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'You can only have one experience marked as currently working. Please update your existing current role first.', type: 'warning');
 
-            if ($existingCurrentQuery->exists()) {
-                $this->dispatch('alert-modal', title: 'Currently Working Role Conflict', message: 'You can only have one experience marked as currently working. Please update your existing current role first.', type: 'warning');
-
-                return false;
+                    return false;
+                }
             }
         }
 
@@ -260,6 +258,7 @@ new class extends Component {
             }
         }
 
+        unset($this->experiences);
         $this->dispatch('toast', message: 'Experience saved successfully!', type: 'success', position: 'bottom');
         $this->dispatch('refresh-experiences');
 
@@ -287,6 +286,7 @@ new class extends Component {
 
         ReviewerProfile::where('user_id', (string) $this->user->_id)->pull('experience', $expId);
 
+        unset($this->experiences);
         $this->dispatch('toast', message: 'Experience deleted successfully!', type: 'success', position: 'bottom');
         $this->dispatch('refresh-experiences');
     }

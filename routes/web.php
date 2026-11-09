@@ -154,17 +154,21 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('database-fixing/reviewer-profile/{field}', 'admin.database-fixing.reviewer-profile.index')->name('database-fixing.reviewer-profile.field');
 
     // Experience Database Fixers
+    Volt::route('database-fixing/experience/reviewer-profile', 'admin.database-fixing.experience.reviewer-profile')->name('database-fixing.experience.reviewer-profile');
     Volt::route('database-fixing/experience/status', 'admin.database-fixing.experience.status')->name('database-fixing.experience.status');
     Volt::route('database-fixing/experience', 'admin.database-fixing.experience.index')->name('database-fixing.experience.index');
     Volt::route('database-fixing/experience/{field}', 'admin.database-fixing.experience.index')->name('database-fixing.experience.field');
 
     // Education Database Fixers
+    Volt::route('database-fixing/education/reviewer-profile', 'admin.database-fixing.education.reviewer-profile')->name('database-fixing.education.reviewer-profile');
     Volt::route('database-fixing/education/degree-type', 'admin.database-fixing.education.degree-type')->name('database-fixing.education.degree-type');
     Volt::route('database-fixing/education/field-of-study', 'admin.database-fixing.education.field-of-study')->name('database-fixing.education.field-of-study');
     Volt::route('database-fixing/education/grade', 'admin.database-fixing.education.grade')->name('database-fixing.education.grade');
     Volt::route('database-fixing/education/institution', 'admin.database-fixing.education.institution')->name('database-fixing.education.institution');
+    Volt::route('database-fixing/education', 'admin.database-fixing.education.reviewer-profile')->name('database-fixing.education.index');
 
     // Seminar Database Fixers
+    Volt::route('database-fixing/seminar/reviewer-profile', 'admin.database-fixing.seminar.reviewer-profile')->name('database-fixing.seminar.reviewer-profile');
     Volt::route('database-fixing/seminar', 'admin.database-fixing.seminar.index')->name('database-fixing.seminar.index');
 
     // Question Database Fixers
@@ -175,6 +179,24 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Project Database Fixers
     Volt::route('database-fixing/project', 'admin.database-fixing.project.registered-contributors')->name('database-fixing.project.index');
     Volt::route('database-fixing/project/registered-contributors', 'admin.database-fixing.project.registered-contributors')->name('database-fixing.project.registered-contributors');
+
+    // Award Database Fixers
+    Volt::route('database-fixing/award/reviewer-profile', 'admin.database-fixing.award.reviewer-profile')->name('database-fixing.award.reviewer-profile');
+    Volt::route('database-fixing/award', 'admin.database-fixing.award.reviewer-profile')->name('database-fixing.award.index');
+
+    // PhD Database Fixers
+    Volt::route('database-fixing/phd/reviewer-profile', 'admin.database-fixing.phd.reviewer-profile')->name('database-fixing.phd.reviewer-profile');
+    Volt::route('database-fixing/phd', 'admin.database-fixing.phd.reviewer-profile')->name('database-fixing.phd.index');
+
+    // Membership Database Fixers
+    Volt::route('database-fixing/membership/organization', 'admin.database-fixing.membership.organization')->name('database-fixing.membership.organization');
+    Volt::route('database-fixing/membership/reviewer-profile', 'admin.database-fixing.membership.reviewer-profile')->name('database-fixing.membership.reviewer-profile');
+    Volt::route('database-fixing/membership', 'admin.database-fixing.membership.organization')->name('database-fixing.membership.index');
+
+    // Patent Database Fixers
+    Volt::route('database-fixing/patent/category', 'admin.database-fixing.patent.category')->name('database-fixing.patent.category');
+    Volt::route('database-fixing/patent/reviewer-profile', 'admin.database-fixing.patent.reviewer-profile')->name('database-fixing.patent.reviewer-profile');
+    Volt::route('database-fixing/patent', 'admin.database-fixing.patent.category')->name('database-fixing.patent.index');
 });
 
 require __DIR__.'/auth.php';
