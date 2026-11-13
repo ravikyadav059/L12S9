@@ -39,7 +39,14 @@ new class extends Component
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Component mount lifecycle hook.
@@ -258,7 +265,6 @@ new class extends Component
             orgSearchSeq: 0,
 
             init() {
-                this.fetchOrganizations('');
             },
 
             fetchOrganizations(query = '', page = 1) {
@@ -358,6 +364,9 @@ new class extends Component
 
             openOrgDropdown() {
                 this.showOrgDropdown = true;
+                if (!this.organizationOptions.length) {
+                    this.fetchOrganizations('');
+                }
                 this.$nextTick(() => {
                     if (this.$refs.orgSearchInput) {
                         this.$refs.orgSearchInput.focus();
@@ -589,16 +598,11 @@ new class extends Component
     >
         {{-- Section Header --}}
         <div class="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap">
-            <div class="flex items-center gap-3">
-                <div class="size-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm">
-                    <i class="fa-solid fa-id-card"></i>
-                </div>
+            <div class="flex items-center gap-2.5">
+                <span class="text-lg">&#x1F465;</span>
                 <div>
-                    <h2 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                        <span>Professional Memberships</span>
-                        <span class="inline-flex items-center justify-center size-5 text-xs font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-full">
-                            {{ count($this->memberships) }}
-                        </span>
+                    <h2 class="text-base font-bold font-space text-zinc-900 dark:text-white">
+                        Professional Memberships ({{ count($this->memberships) }})
                     </h2>
                     <p class="text-[11px] text-zinc-400 mt-0.5">Professional associations, scholarly societies, and memberships</p>
                 </div>
@@ -626,7 +630,7 @@ new class extends Component
                 </div>
             @else
                 <div class="space-y-4">
-                    @foreach($membershipList as $item)
+                    @foreach(array_slice($membershipList, 0, $limit) as $item)
                         <div 
                             wire:key="profile-membership-item-{{ $item['id'] }}" 
                             class="p-4 sm:p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-brand dark:hover:border-brand hover:border-l-4 hover:border-l-brand hover:pl-[13px] bg-zinc-50/40 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-800/50 hover:shadow-xs transition-all duration-200"
@@ -653,7 +657,7 @@ new class extends Component
                                             @elseif(!empty($item['end_date']))
                                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                                                     <i class="fa-regular fa-clock text-[10px] text-zinc-400"></i>
-                                                    <span>{{ $item['join_date'] }} – {{ $item['end_date'] }}</span>
+                                                    <span>{{ $item['join_date'] }} â€“ {{ $item['end_date'] }}</span>
                                                 </span>
                                             @endif
                                         </div>
@@ -668,7 +672,7 @@ new class extends Component
 
                                             {{-- Country --}}
                                             @if(!empty($item['country_name']) || !empty($item['country']))
-                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                                                     <i class="fa-solid fa-earth-americas text-[11px] text-zinc-400"></i>
                                                     <span><strong class="font-semibold text-zinc-700 dark:text-zinc-300">Country:</strong> {{ $item['country_name'] ?: $item['country'] }}</span>
@@ -681,12 +685,12 @@ new class extends Component
                                             {{-- Period --}}
                                             <span class="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
                                                 <i class="fa-regular fa-calendar text-[11px] text-zinc-400"></i>
-                                                <span><strong class="font-semibold text-zinc-700 dark:text-zinc-300">Period:</strong> {{ $item['join_date'] }} – {{ $item['is_continuing'] ? 'Present' : $item['end_date'] }}</span>
+                                                <span><strong class="font-semibold text-zinc-700 dark:text-zinc-300">Period:</strong> {{ $item['join_date'] }} â€“ {{ $item['is_continuing'] ? 'Present' : $item['end_date'] }}</span>
                                             </span>
 
                                             {{-- Website URL Link --}}
                                             @if(!empty($item['website_url']))
-                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 @php
                                                     $url = $item['website_url'];
                                                     if (!str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
@@ -739,17 +743,34 @@ new class extends Component
                 <x-profile.membership-form :show-status="false" :countries="$countries" />
             </div>
 
-            {{-- BOTTOM ADD MEMBERSHIP BUTTON (Always At Bottom) --}}
-            @if($isOwnProfile)
-                <div class="mt-6 pt-2" x-show="!showAddForm">
-                    <button 
-                        type="button" 
-                        @click="openAddForm()" 
-                        class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-600 hover:underline cursor-pointer transition-colors"
-                    >
-                        <i class="fa-solid fa-plus text-xs"></i>
-                        <span>Add Membership</span>
-                    </button>
+            {{-- BOTTOM ADD MEMBERSHIP BUTTON + LOAD MORE --}}
+            @if($isOwnProfile || count($membershipList) > $limit)
+                <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!showAddForm">
+                    @if($isOwnProfile)
+                        <button 
+                            type="button" 
+                            @click="openAddForm()" 
+                            class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-600 hover:underline cursor-pointer transition-colors"
+                        >
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            <span>Add Membership</span>
+                        </button>
+                    @else
+                        <span></span>
+                    @endif
+                    @if(count($membershipList) > $limit)
+                        <button 
+                            type="button" 
+                            wire:click="loadMore"
+                            wire:loading.attr="disabled"
+                            class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                        >
+                            <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                            <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                            <span>Load More ({{ count($membershipList) - $limit }})</span>
+                        </button>
+                    @endif
+                    <span class="hidden md:block"></span>
                 </div>
             @endif
         </div>

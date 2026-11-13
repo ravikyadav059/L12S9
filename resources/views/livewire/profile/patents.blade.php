@@ -32,7 +32,14 @@ new class extends Component
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Component mount lifecycle hook.
@@ -447,16 +454,11 @@ new class extends Component
     >
         {{-- Section Header (NO Add button here; only bottom button as requested) --}}
         <div class="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="size-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 dark:text-amber-400 flex items-center justify-center text-lg shadow-2xs">
-                    <i class="fa-solid fa-lightbulb"></i>
-                </div>
+            <div class="flex items-center gap-2.5">
+                <span class="text-lg">&#x1F4A1;</span>
                 <div>
-                    <h2 class="font-bold text-base text-zinc-900 dark:text-white flex items-center gap-2">
-                        <span>Patents</span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/60">
-                            {{ count($this->patents) }}
-                        </span>
+                    <h2 class="text-base font-bold font-space text-zinc-900 dark:text-white">
+                        Patents ({{ count($this->patents) }})
                     </h2>
                     <p class="text-[11px] text-zinc-400 mt-0.5">Registered patents, intellectual property disclosures, and innovations</p>
                 </div>
@@ -484,7 +486,7 @@ new class extends Component
                 </div>
             @else
                 <div class="space-y-4">
-                    @foreach($patentList as $item)
+                    @foreach(array_slice($patentList, 0, $limit) as $item)
                         <div 
                             wire:key="profile-patent-item-{{ $item['id'] }}" 
                             class="p-4 sm:py-3.5 sm:px-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-amber-400 dark:hover:border-amber-500 hover:border-l-4 hover:border-l-amber-500 hover:pl-[13px] bg-zinc-50/40 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-800/50 hover:shadow-xs transition-all duration-200"
@@ -516,7 +518,7 @@ new class extends Component
                                             {{-- Category with Label --}}
                                             @if(!empty($item['category_name']))
                                                 @if(!empty($item['patent_no']))
-                                                    <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                    <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 @endif
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                                                     <i class="fa-solid fa-layer-group text-[11px] text-zinc-400"></i>
@@ -526,7 +528,7 @@ new class extends Component
 
                                             {{-- Inventors --}}
                                             @if(!empty($item['patent_no']) || !empty($item['category_name']))
-                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                             @endif
                                             <span class="inline-flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                                                 <i class="fa-solid fa-user-group text-[11px] text-zinc-400"></i>
@@ -535,7 +537,7 @@ new class extends Component
 
                                             {{-- Assignee --}}
                                             @if(!empty($item['assignee']))
-                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                                                     <i class="fa-solid fa-building text-[11px] text-zinc-400"></i>
                                                     <span><strong class="font-semibold text-zinc-700 dark:text-zinc-300">Assignee:</strong> {{ $item['assignee'] }}</span>
@@ -544,7 +546,7 @@ new class extends Component
 
                                             {{-- Application Number --}}
                                             @if(!empty($item['application_no']))
-                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                                                     <i class="fa-solid fa-hashtag text-[11px] text-zinc-400"></i>
                                                     <span><strong class="font-semibold text-zinc-700 dark:text-zinc-300">App No:</strong> <span class="font-mono">{{ $item['application_no'] }}</span></span>
@@ -563,7 +565,7 @@ new class extends Component
 
                                             @if(!empty($item['filing_date']))
                                                 @if(!empty($item['country_name']) || !empty($item['country']))
-                                                    <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                    <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 @endif
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                                                     <i class="fa-regular fa-calendar text-[11px] text-zinc-400"></i>
@@ -572,7 +574,7 @@ new class extends Component
                                             @endif
 
                                             @if(!empty($item['publication_date']))
-                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                                                     <i class="fa-regular fa-calendar-check text-[11px] text-zinc-400"></i>
                                                     <span><strong class="font-semibold text-zinc-700 dark:text-zinc-300">Published:</strong> {{ $item['publication_date'] }}</span>
@@ -647,6 +649,7 @@ new class extends Component
                         </div>
                     @endforeach
                 </div>
+
             @endif
 
             {{-- Inline Add Form at Bottom --}}
@@ -659,9 +662,10 @@ new class extends Component
             </div>
 
             {{-- BOTTOM ADD PATENT BUTTON (Always At Bottom) --}}
-            @if($isOwnProfile)
-                <div class="mt-6 pt-2" x-show="!showAddForm">
-                    <button 
+            @if($isOwnProfile || count($patentList) > $limit)
+                <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!showAddForm">
+                    @if($isOwnProfile)
+                        <button 
                         type="button" 
                         @click="openAddForm()" 
                         class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-600 hover:underline cursor-pointer transition-colors"
@@ -669,8 +673,24 @@ new class extends Component
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add Patent</span>
                     </button>
+                    @else
+                        <span></span>
+                    @endif
+                    @if(count($patentList) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($patentList) - $limit }})</span>
+                    </button>
+                @endif
+                    <span class="hidden md:block"></span>
                 </div>
-            @endif
+                @endif
         </div>
 
         {{-- UNSAVED CHANGES CONFIRMATION MODAL --}}

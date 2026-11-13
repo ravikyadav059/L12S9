@@ -12,6 +12,11 @@ use MongoDB\BSON\Regex;
 trait HandlesAddJournalModal
 {
     /**
+     * Allow opt-in official API verification inside automated tests.
+     */
+    public static bool $verifyInTesting = false;
+
+    /**
      * Controls the visibility of the Add New Journal Popup Modal.
      */
     public bool $showAddJournalModal = false;
@@ -178,28 +183,62 @@ trait HandlesAddJournalModal
             'verified_at' => now(),
         ];
 
-        if (! app()->environment('testing')) {
+        $verifiedPublisher = null;
+        $verifiedShortName = null;
+        $verifiedWebsite = null;
+
+        if (! app()->environment('testing') || HandlesAddJournalModal::$verifyInTesting) {
             /** @var JournalVerificationService $verificationService */
             $verificationService = app(JournalVerificationService::class);
-            $issnToVerify = $eClean ?: $pClean;
-            $verResult = $verificationService->verify($issnToVerify, 'auto', $titleClean);
+            $eResult = null;
+            $pResult = null;
 
-            if (! $verResult->isValid && ! empty($pClean) && $issnToVerify !== $pClean) {
-                $secondCheck = $verificationService->verify($pClean, 'auto', $titleClean);
-                if ($secondCheck->isValid) {
-                    $verResult = $secondCheck;
+            // Verify e-ISSN if provided
+            if ($eClean !== '') {
+                $eResult = $verificationService->verify($eClean, 'auto', $titleClean);
+                if (! $eResult->isValid) {
+                    $this->addError('newJournalEIssn', $eResult->message);
+
+                    return null;
                 }
             }
 
-            if (! $verResult->isValid) {
-                $errField = ! empty($eClean) ? 'newJournalEIssn' : 'newJournalPIssn';
-                $this->addError($errField, $verResult->message);
+            // Verify p-ISSN if provided
+            if ($pClean !== '') {
+                $pResult = $verificationService->verify($pClean, 'auto', $titleClean);
+                if (! $pResult->isValid) {
+                    $this->addError('newJournalPIssn', $pResult->message);
+
+                    return null;
+                }
+            }
+
+            // Ensure both e-ISSN and p-ISSN belong to the same journal if both provided
+            if ($eResult && $pResult && ! empty($eResult->title) && ! empty($pResult->title)) {
+                if (! $this->isJournalTitleMatchingOfficial($eResult->title, $pResult->title)) {
+                    $this->addError('newJournalPIssn', "The p-ISSN belongs to '{$pResult->title}', which does not match the e-ISSN journal '{$eResult->title}'.");
+
+                    return null;
+                }
+            }
+
+            $primaryResult = $eResult ?? $pResult;
+            $officialTitle = trim((string) ($primaryResult?->title ?? ''));
+
+            // Verify entered Journal Name matches official registry title
+            if ($officialTitle !== '' && ! $this->isJournalTitleMatchingOfficial($titleClean, $officialTitle)) {
+                $this->addError('newJournalTitle', "Journal name does not match the official registry record ('{$officialTitle}') for this ISSN.");
 
                 return null;
             }
 
-            $verificationData['verification_source'] = $verResult->source ?? 'auto';
-            $verificationData['verification_details'] = $verResult->toArray();
+            if ($primaryResult) {
+                $verificationData['verification_source'] = $primaryResult->source ?? 'auto';
+                $verificationData['verification_details'] = $primaryResult->toArray();
+                $verifiedPublisher = $primaryResult->publisher ?: null;
+                $verifiedShortName = $primaryResult->journalShortName ?: null;
+                $verifiedWebsite = $primaryResult->websiteUrl ?: null;
+            }
         }
 
         // Calculate next auto-incrementing serial_number
@@ -215,10 +254,14 @@ trait HandlesAddJournalModal
 
         $journal = ReviewerJournal::create(array_merge([
             'journal_title' => $titleClean,
+            'journal_short_name' => $verifiedShortName,
+            'organization_name' => $verifiedPublisher,
+            'journal_webiste_url' => $verifiedWebsite,
             'serial_number' => $nextSerialNumber,
             'slug' => $journalSlug,
             'e_issn' => $eClean ?: null,
             'p_issn' => $pClean ?: null,
+            'issn' => $eClean ?: ($pClean ?: null),
             'status' => 1,
             'user_id' => Auth::id(),
         ], $verificationData));
@@ -272,6 +315,7 @@ trait HandlesAddJournalModal
 
         $this->showAddJournalModal = false;
         $this->resetValidation();
+        $this->dispatch('close-add-journal-modal');
 
         // Allow component-specific hook
         if (method_exists($this, 'afterJournalSaved')) {
@@ -284,5 +328,37 @@ trait HandlesAddJournalModal
         session()->flash('journal_added_success', 'Journal added successfully.');
 
         return $journal;
+    }
+
+    /**
+     * Check whether an entered journal title matches the official registry title.
+     */
+    protected function isJournalTitleMatchingOfficial(string $enteredTitle, string $officialTitle): bool
+    {
+        $normalize = static function (string $text): string {
+            $t = mb_strtolower(trim($text));
+            $t = str_replace('&', ' and ', $t);
+            $t = (string) preg_replace('/^the\s+/i', '', $t);
+            $t = (string) preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $t);
+            $t = (string) preg_replace('/\s+/', ' ', trim($t));
+
+            return $t;
+        };
+
+        $normEntered = $normalize($enteredTitle);
+        $normOfficial = $normalize($officialTitle);
+
+        if ($normEntered === '' || $normOfficial === '') {
+            return false;
+        }
+
+        if ($normEntered === $normOfficial) {
+            return true;
+        }
+
+        $percent = 0.0;
+        similar_text($normEntered, $normOfficial, $percent);
+
+        return $percent >= 75.0;
     }
 }

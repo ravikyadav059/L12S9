@@ -152,17 +152,13 @@ class Phd extends Model
 
         return Cache::remember($cacheKey, 86400, function () use ($userId, $activeOnly) {
             $reviewerProfile = ReviewerProfile::where('user_id', $userId)->first();
-            $phdIds = (array) ($reviewerProfile->phd ?? []);
+            $phdIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->phd ?? [])))));
 
-            $query = static::query();
-            if (! empty($phdIds)) {
-                $query->where(function ($q) use ($phdIds, $userId) {
-                    $q->whereIn('_id', $phdIds)
-                        ->orWhere('user_id', $userId);
-                });
-            } else {
-                $query->where('user_id', $userId);
+            if (empty($phdIds)) {
+                return [];
             }
+
+            $query = static::query()->whereIn('_id', $phdIds);
 
             if ($activeOnly) {
                 $query->whereIn('status', [1, '1', true]);

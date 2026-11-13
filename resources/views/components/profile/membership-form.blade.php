@@ -308,8 +308,8 @@
                                 @change="form.status = 0"
                                 class="size-4 text-brand focus:ring-brand cursor-pointer"
                             />
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                                <span class="size-1.5 rounded-full bg-zinc-400"></span>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-800/60">
+                                <span class="size-1.5 rounded-full bg-red-500"></span>
                                 Inactive
                             </span>
                         </label>

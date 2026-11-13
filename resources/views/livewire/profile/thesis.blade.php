@@ -36,7 +36,14 @@ new class extends Component {
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Component mount lifecycle hook.
@@ -239,7 +246,6 @@ new class extends Component {
             orgSearchSeq: 0,
 
             init() {
-                this.fetchOrganizations('');
             },
 
             fetchOrganizations(query = '', page = 1) {
@@ -563,21 +569,14 @@ new class extends Component {
     >
         {{-- Section Header --}}
         <div class="p-6 pb-4 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 flex-wrap gap-3">
-            <div class="flex items-center gap-3">
-                <span class="size-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 flex items-center justify-center text-sm shadow-2xs">
-                    📑
-                </span>
+            <div class="flex items-center gap-2.5">
+                <span class="text-lg">&#x1F4D1;</span>
                 <div>
-                    <div class="flex items-center gap-2">
-                        <h3 class="font-bold font-space text-base text-zinc-900 dark:text-zinc-100">
-                            Thesis Guided
-                        </h3>
-                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono">
-                            {{ count($this->theses) }}
-                        </span>
-                    </div>
+                    <h2 class="text-base font-bold font-space text-zinc-900 dark:text-white">
+                        Thesis Guided ({{ count($this->theses) }})
+                    </h2>
                     <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-                        Doctoral & research thesis supervision, guidance, and academic mentorship
+                        Doctoral &amp; research thesis supervision, guidance, and academic mentorship
                     </p>
                 </div>
             </div>
@@ -604,7 +603,7 @@ new class extends Component {
                 </div>
             @else
                 <div class="space-y-4">
-                    @foreach($thesisList as $item)
+                    @foreach(array_slice($thesisList, 0, $limit) as $item)
                         <div 
                             wire:key="profile-thesis-item-{{ $item['id'] }}" 
                             class="p-4 sm:p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-brand dark:hover:border-brand hover:border-l-4 hover:border-l-brand hover:pl-[13px] bg-zinc-50/40 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-800/50 hover:shadow-xs transition-all duration-200"
@@ -633,7 +632,7 @@ new class extends Component {
 
                                             {{-- Type --}}
                                             @if(!empty($item['thesis_type']))
-                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                                                     <strong class="font-semibold text-zinc-700 dark:text-zinc-300">Type:</strong>
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60">
@@ -643,7 +642,7 @@ new class extends Component {
                                             @endif
 
                                             {{-- Status --}}
-                                            <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                            <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                             <span class="inline-flex items-center gap-1.5">
                                                 <strong class="font-semibold text-zinc-700 dark:text-zinc-300">Status:</strong>
                                                 @if($item['phd_status'] === 'Completed')
@@ -670,7 +669,7 @@ new class extends Component {
 
                                             {{-- Major Area of Research --}}
                                             @if(!empty($item['research_area']))
-                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600 select-none">Â·</span>
                                                 <span class="inline-flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
                                                     <i class="fa-solid fa-microscope text-[10px] text-zinc-400"></i>
                                                     <span class="font-medium text-zinc-600 dark:text-zinc-300">Area:</span>
@@ -706,6 +705,7 @@ new class extends Component {
                         </div>
                     @endforeach
                 </div>
+
             @endif
 
             {{-- Inline Add Form at Bottom --}}
@@ -714,9 +714,10 @@ new class extends Component {
             </div>
 
             {{-- BOTTOM ADD THESIS BUTTON (Always At Bottom) --}}
-            @if($isOwnProfile)
-                <div class="mt-6 pt-2" x-show="!showAddForm">
-                    <button 
+            @if($isOwnProfile || count($thesisList) > $limit)
+                <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!showAddForm">
+                    @if($isOwnProfile)
+                        <button 
                         type="button" 
                         @click="openAddForm()" 
                         class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-600 hover:underline cursor-pointer transition-colors"
@@ -724,8 +725,24 @@ new class extends Component {
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add Thesis</span>
                     </button>
+                    @else
+                        <span></span>
+                    @endif
+                    @if(count($thesisList) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($thesisList) - $limit }})</span>
+                    </button>
+                @endif
+                    <span class="hidden md:block"></span>
                 </div>
-            @endif
+                @endif
         </div>
 
         {{-- UNSAVED CHANGES MODAL --}}

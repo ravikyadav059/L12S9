@@ -29,7 +29,14 @@ new class extends Component {
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Catch and stop propagation of unhandled exceptions in the education section.
@@ -403,11 +410,6 @@ new class extends Component {
                     for (let y = startYear; y >= endYear; y--) {
                         this.allYears.push(String(y));
                     }
-
-                    // Initial fetch for top options
-                    this.fetchOrganizations('');
-                    this.fetchDegrees('');
-                    this.fetchFields('');
                 },
 
                 // Filtered years based on internal search
@@ -1046,12 +1048,9 @@ new class extends Component {
                 
                 <!-- CARD HEADER -->
                 <div class="flex items-center justify-between pb-3 mb-5 border-b-2 border-[#f9fafb] dark:border-zinc-800">
-                    <h2 class="text-base font-semibold font-space text-[#111827] dark:text-white flex items-center gap-2.5 m-0 leading-snug">
-                        <i class="fa-solid fa-graduation-cap text-base text-[#793c4e] dark:text-[#a855f7]"></i>
-                        <span>Education</span>
-                        <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                            {{ count($userEducations) }}
-                        </span>
+                    <h2 class="text-base font-bold font-space text-zinc-900 dark:text-white flex items-center gap-2.5 m-0 leading-snug">
+                        <span class="text-lg">&#x1F393;</span>
+                        <span>Education ({{ count($userEducations) }})</span>
                     </h2>
                 </div>
 
@@ -1066,7 +1065,7 @@ new class extends Component {
                     @endif
 
                     <div class="space-y-7">
-                        @forelse($userEducations as $edu)
+                        @forelse(array_slice($userEducations, 0, $limit) as $edu)
                             <div class="relative pl-8" wire:key="edu-user-{{ $edu['id'] }}">
                                 
                                 {{-- Timeline Dot --}}
@@ -1105,13 +1104,13 @@ new class extends Component {
                                                     <span>in {{ $edu['field_of_study'] }}</span>
                                                 @endif
                                                 @if($edu['pursuing'] || !empty($edu['passout_year']))
-                                                    <span class="mx-1">·</span>
+                                                    <span class="mx-1">Â·</span>
                                                     <span class="font-medium text-zinc-700 dark:text-zinc-300">
                                                         {{ $edu['pursuing'] ? 'Pursuing' : $edu['passout_year'] }}
                                                     </span>
                                                 @endif
                                                 @if(!empty($edu['grade']))
-                                                    <span class="mx-1">·</span>
+                                                    <span class="mx-1">Â·</span>
                                                     <span class="text-zinc-500">Grade: {{ $edu['grade'] }}</span>
                                                 @endif
                                             </p>
@@ -1190,6 +1189,7 @@ new class extends Component {
                     </div>
                 </div>
 
+
                 {{-- Add Education Form --}}
                 @if($isOwnProfile)
                     <div 
@@ -1205,9 +1205,10 @@ new class extends Component {
                 @endif
 
                 {{-- Bottom + Add Education Button --}}
-                @if($isOwnProfile)
-                    <div class="mt-6 pt-2" x-show="!isAdding">
-                        <button 
+                @if($isOwnProfile || count($userEducations) > $limit)
+                    <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!isAdding">
+                        @if($isOwnProfile)
+                            <button 
                             type="button" 
                             @click="openAddForm()" 
                             class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-600 hover:underline transition-colors cursor-pointer select-none"
@@ -1215,8 +1216,24 @@ new class extends Component {
                             <i class="fa-solid fa-plus text-xs"></i>
                             <span>Add Education</span>
                         </button>
-                    </div>
+                        @else
+                            <span></span>
+                        @endif
+                        @if(count($userEducations) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($userEducations) - $limit }})</span>
+                    </button>
                 @endif
+                        <span class="hidden md:block"></span>
+                    </div>
+                    @endif
 
             </section>
 

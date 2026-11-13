@@ -4,9 +4,10 @@
  * @param {Event|HTMLInputElement|string} target - The input event, element, or raw string
  * @param {string|null} field - Optional Livewire property name to update
  * @param {object|null} wire - Optional Livewire component instance ($wire)
+ * @param {boolean} live - Whether to immediately sync with the Livewire server (default: false)
  * @returns {string} The formatted ISSN string
  */
-export function formatIssn(target, field = null, wire = null) {
+export function formatIssn(target, field = null, wire = null, live = false) {
     let raw = '';
     let inputEl = null;
 
@@ -41,13 +42,13 @@ export function formatIssn(target, field = null, wire = null) {
 
     if (field) {
         if (wire && typeof wire.set === 'function') {
-            wire.set(field, clean);
+            wire.set(field, clean, live);
         } else if (typeof window !== 'undefined' && window.Livewire && inputEl) {
             const lwEl = inputEl.closest('[wire\\:id]');
             if (lwEl) {
                 const component = window.Livewire.find(lwEl.getAttribute('wire:id'));
                 if (component && typeof component.set === 'function') {
-                    component.set(field, clean);
+                    component.set(field, clean, live);
                 }
             }
         }

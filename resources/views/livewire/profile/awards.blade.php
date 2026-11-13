@@ -35,7 +35,14 @@ new class extends Component {
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Component mount lifecycle hook.
@@ -430,18 +437,11 @@ new class extends Component {
         {{-- SECTION HEADER --}}
         <div class="p-6 border-b border-zinc-100 dark:border-zinc-800">
             <div class="flex items-center justify-between flex-wrap gap-4">
-                <div class="flex items-center gap-3">
-                    <div class="size-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/80 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                        <i class="fa-solid fa-trophy text-lg"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                            <span>Awards &amp; Achievements</span>
-                            <span class="inline-flex items-center justify-center size-5 text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-full">
-                                {{ count($this->awards) }}
-                            </span>
-                        </h2>
-                    </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="text-lg">&#x1F3C6;</span>
+                    <h2 class="text-base font-bold font-space text-zinc-900 dark:text-white">
+                        Awards &amp; Achievements ({{ count($this->awards) }})
+                    </h2>
                 </div>
             </div>
         </div>
@@ -449,7 +449,7 @@ new class extends Component {
         <div class="p-6">
             {{-- AWARDS LIST --}}
             <div class="space-y-4">
-                @forelse($this->awards as $award)
+                @forelse(collect($this->awards)->take($limit) as $award)
                     <div 
                         wire:key="profile-award-card-{{ $award['id'] }}" 
                         class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-brand dark:hover:border-brand hover:border-l-4 hover:border-l-brand hover:pl-[13px] bg-zinc-50/40 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-800/50 hover:shadow-xs transition-all duration-200"
@@ -480,7 +480,7 @@ new class extends Component {
 
                                             @if(!empty($award['award_year']))
                                                 @if(!empty($award['award_by']))
-                                                    <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                                    <span class="text-zinc-300 dark:text-zinc-600">Â·</span>
                                                 @endif
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
                                                     <i class="fa-regular fa-calendar text-[11px] text-zinc-400"></i>
@@ -564,15 +564,17 @@ new class extends Component {
                 @endforelse
             </div>
 
+
             {{-- BOTTOM ADD FORM CONTAINER --}}
             <div x-show="showAddForm" x-cloak class="mt-4">
                 <x-profile.award-form />
             </div>
 
             {{-- BOTTOM ADD BUTTON (Own Profile Only) --}}
-            @if($isOwnProfile)
-                <div class="mt-6 pt-2" x-show="!showAddForm">
-                    <button 
+            @if($isOwnProfile || count($this->awards) > $limit)
+                <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!showAddForm">
+                    @if($isOwnProfile)
+                        <button 
                         type="button" 
                         @click="openAddForm()" 
                         class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-600 hover:underline cursor-pointer transition-colors"
@@ -580,8 +582,24 @@ new class extends Component {
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add Award</span>
                     </button>
+                    @else
+                        <span></span>
+                    @endif
+                    @if(count($this->awards) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($this->awards) - $limit }})</span>
+                    </button>
+                @endif
+                    <span class="hidden md:block"></span>
                 </div>
-            @endif
+                @endif
         </div>
 
         {{-- UNSAVED CHANGES CONFIRMATION MODAL --}}

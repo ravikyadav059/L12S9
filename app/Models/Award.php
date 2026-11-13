@@ -119,17 +119,13 @@ class Award extends Model
 
         return Cache::remember($cacheKey, 86400, function () use ($userId, $activeOnly) {
             $reviewerProfile = ReviewerProfile::where('user_id', $userId)->first();
-            $awardIds = (array) ($reviewerProfile->award ?? []);
+            $awardIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->award ?? [])))));
 
-            $query = static::query();
-            if (! empty($awardIds)) {
-                $query->where(function ($q) use ($awardIds, $userId) {
-                    $q->whereIn('_id', $awardIds)
-                        ->orWhere('user_id', $userId);
-                });
-            } else {
-                $query->where('user_id', $userId);
+            if (empty($awardIds)) {
+                return [];
             }
+
+            $query = static::query()->whereIn('_id', $awardIds);
 
             if ($activeOnly) {
                 $query->whereIn('status', [1, '1', true]);

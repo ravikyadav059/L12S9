@@ -106,4 +106,3 @@ test('invited position model detects spam via detects spam trait', function () {
 
     expect($spam->isSpam())->toBeTrue();
 });
-

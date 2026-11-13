@@ -67,6 +67,17 @@
             if (e.deltaY !== 0) {
                 e.currentTarget.scrollLeft += e.deltaY * 1.5;
             }
+        },
+
+        scrollToSection(id) {
+            this.activeSection = id;
+            const el = document.getElementById(id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            if (window.location.hash) {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
         }
     }" 
     x-cloak
@@ -88,7 +99,7 @@
             @foreach($navItems as $item)
                 <a 
                     href="#{{ $item['id'] }}" 
-                    @click="activeSection = '{{ $item['id'] }}'"
+                    @click.prevent="scrollToSection('{{ $item['id'] }}')"
                     :class="activeSection === '{{ $item['id'] }}' 
                         ? 'text-brand font-bold border-b-2 border-brand pb-0.5' 
                         : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white pb-0.5'"

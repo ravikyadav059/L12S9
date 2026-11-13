@@ -23,8 +23,8 @@ Sections that already have full Admin and User profile editing forms are schedul
 | **`education`** | 17,693 | 55 *(6 recoverable)* | 0 | **Yes** | **Ready for Phase 2B** | Next Immediate Candidate (55 orphans) |
 | **`project`** | 3,753 | 11 | 0 | **Yes** | **Ready for Phase 2** | Phase 2B (Contributor fixer done, sync next) |
 | **`certificate`** | 4,953 | 5 | 0 | **Yes** | **Ready for Phase 2** | Phase 2B (Clean array, ready for sync) |
-| **`RoleInResearchJournals`** | 319 | 80 | 86 | **No** (Separate module) | **Pending / Deferred** | Deferred until Admin/User profile form exists |
-| **`invited_position`** | 376 | 373 *(372 recoverable)* | 0 | **No** (No form) | **Pending / Deferred** | Deferred until Admin/User profile form exists |
+| **`RoleInResearchJournals`** | 319 | 80 *(75 recoverable)* | 86 | **Yes** | **Completed** | Production (`role-in-research-journals/role` & `role-in-research-journals/reviewer-profile`) |
+| **`invited_position`** | 376 | 373 *(372 recoverable)* | 0 | **No** (Direct DB module) | **Completed** | Production (`invited-position/organization` & `invited-position/reviewer-profile`) |
 | **`publication`** | 27,056 | 26,954 | 0 | **No** (Dedicated module) | **Pending / Deferred** | Managed via dedicated Publications module |
 
 ---
@@ -86,6 +86,22 @@ Sections that already have full Admin and User profile editing forms are schedul
 
 ---
 
+### C. Invited Position (Completed in Production)
+1. **Invited Position Organization Fixer** (`invited-position/organization.blade.php`)
+   - Route: `/admin/database-fixing/invited-position/organization`
+   - Scans 376 records for 8 ghost `organization_id` values and 43 missing/null values.
+   - Auto-matches organization from `website_url` against `organization.website_url` / domain names.
+   - Live interactive search and 1-click modal assignment across 37,000+ organizations.
+   - 1-click batch and individual cleaning of ghost IDs to `null`.
+2. **Invited Position ↔ Reviewer Profile Sync** (`invited-position/reviewer-profile.blade.php`)
+   - Route: `/admin/database-fixing/invited-position/reviewer-profile`
+   - Recovers missing `user_id` on 372 records from `reviewer_profile.invited_position` arrays (status set to 1).
+   - Marks 1 true unlinked orphan as `status = 0` (Inactive orphan).
+   - Removes ghost position IDs from reviewer profiles and adds missing records.
+   - Dual status support (`1`, `'1'` for active; `0`, `'0'` for inactive).
+
+---
+
 ### C. Phase 2: Sections with Completed Admin & User Profile Forms
 
 These collections have live profile management forms for both Admin and User in the application, and are scheduled for Phase 2B:
@@ -116,11 +132,7 @@ These collections have live profile management forms for both Admin and User in 
 
 These collections do NOT have an active inline profile management form in `resources/views/livewire/profile/` or `resources/views/livewire/admin/users/partials/`:
 
-1. **RoleInResearchJournals**
-   - **Reason**: Handled through a distinct journal-reviewing workflow rather than user profile editing. Currently has 86 ghost IDs and 80 unlinked records. Will be addressed once a unified journal management form is added.
-2. **Invited Position** (`invited_position` collection)
-   - **Reason**: No editing form exists in Admin or User profile yet. Sync tool deferred until profile form is developed.
-3. **Publication** (`publication` collection)
+1. **Publication** (`publication` collection)
    - **Reason**: Handled by dedicated Publications management module (`resources/views/livewire/admin/publications`). Requires chunked batching due to 27,056 records.
 
 ---

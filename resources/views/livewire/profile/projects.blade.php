@@ -32,7 +32,14 @@ new class extends Component {
     /**
      * Error boundary flag: Set to true if an unexpected error occurs.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Catch and stop propagation of any unexpected runtime errors
@@ -55,20 +62,13 @@ new class extends Component {
     {
         try {
             $reviewerProfile = $this->user?->reviewerProfile ?? ($this->user ? ReviewerProfile::where('user_id', (string) $this->user->_id)->first() : null);
-            $projectIds = (array) ($reviewerProfile->projects ?? []);
+            $projectIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->projects ?? [])))));
 
-            $query = Project::query();
-            if (! empty($projectIds)) {
-                $query->where(function ($q) use ($projectIds) {
-                    $q->where('user_id', (string) $this->user->_id)
-                      ->orWhereIn('_id', $projectIds);
-                });
-            } else {
-                if (! $this->user) {
-                    return [];
-                }
-                $query->where('user_id', (string) $this->user->_id);
+            if (empty($projectIds)) {
+                return [];
             }
+
+            $query = Project::whereIn('_id', $projectIds);
 
             // ONLY active records (status = 1 or '1' or true), ordered latest first
             $records = $query->whereIn('status', [1, '1', true])
@@ -854,20 +854,17 @@ new class extends Component {
         
         {{-- CARD HEADER --}}
         <div class="flex items-center justify-between pb-3 mb-5 border-b-2 border-[#f9fafb] dark:border-zinc-800">
-            <div class="flex items-center gap-3">
-                <span class="text-xl">🚀</span>
-                <h3 class="font-bold text-sm text-zinc-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                    <span>Projects</span>
-                    <span class="inline-flex items-center justify-center size-5 text-xs font-bold bg-[#eff6ff] dark:bg-blue-950/60 text-brand rounded-full">
-                        {{ count($this->projects) }}
-                    </span>
-                </h3>
+            <div class="flex items-center gap-2.5">
+                <span class="text-lg">&#x1F680;</span>
+                <h2 class="text-base font-bold font-space text-zinc-900 dark:text-white">
+                    Projects ({{ count($this->projects) }})
+                </h2>
             </div>
         </div>
 
         {{-- PROJECTS LIST / EMPTY STATE --}}
         <div class="space-y-4">
-            @forelse($this->projects as $project)
+            @forelse(collect($this->projects)->take($limit) as $project)
                 <div 
                     wire:key="project-card-{{ $project['id'] }}" 
                     class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-brand dark:hover:border-brand hover:border-l-4 hover:border-l-brand hover:pl-[13px] bg-zinc-50/40 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-800/50 hover:shadow-xs transition-all duration-200"
@@ -888,7 +885,7 @@ new class extends Component {
                                         {{-- Agency Name --}}
                                         @if(!empty($project['agency_name']))
                                             <span>Agency: <strong class="text-zinc-700 dark:text-zinc-300 font-semibold">{{ $project['agency_name'] }}</strong></span>
-                                            <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                            <span class="text-zinc-300 dark:text-zinc-600">Â·</span>
                                         @endif
 
                                         {{-- Date Range --}}
@@ -898,7 +895,7 @@ new class extends Component {
                                         </span>
 
                                         {{-- Funded Status & Amount --}}
-                                        <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                        <span class="text-zinc-300 dark:text-zinc-600">Â·</span>
                                         <span class="inline-flex items-center gap-1">
                                             <span>Funded:</span>
                                             @if($project['is_funded'])
@@ -1029,6 +1026,7 @@ new class extends Component {
                 @endforelse
             </div>
 
+
             {{-- Add Project Form --}}
             @if($isOwnProfile)
                 <div 
@@ -1045,9 +1043,10 @@ new class extends Component {
             @endif
 
             {{-- Bottom + Add Project Button --}}
-            @if($isOwnProfile)
-                <div class="mt-6 pt-2" x-show="!isAdding">
-                    <button 
+            @if($isOwnProfile || count($this->projects) > $limit)
+                <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!isAdding">
+                    @if($isOwnProfile)
+                        <button 
                         type="button" 
                         @click="openAddForm()" 
                         class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-600 hover:underline transition-colors cursor-pointer select-none"
@@ -1055,8 +1054,24 @@ new class extends Component {
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add Project</span>
                     </button>
+                    @else
+                        <span></span>
+                    @endif
+                    @if(count($this->projects) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($this->projects) - $limit }})</span>
+                    </button>
+                @endif
+                    <span class="hidden md:block"></span>
                 </div>
-            @endif
+                @endif
         </section>
 
         {{-- Add Author Modal --}}

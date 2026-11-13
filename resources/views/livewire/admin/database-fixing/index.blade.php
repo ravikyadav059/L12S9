@@ -40,6 +40,13 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'description' => 'Scans Publication records where journal_title contains a reference to a ReviewerJournal that does not exist in the database (deleted/orphan references), displaying detailed diagnostics, fallback journal_name presence, and full document inspectability.',
                 'route' => route('admin.database-fixing.publication.orphan-journal'),
             ],
+            [
+                'id' => 'pub_reviewer_profile_sync',
+                'table' => 'Publication',
+                'title' => 'reviewer_profile & Co-Author Sync (Missing IDs, Ghost IDs & Counts)',
+                'description' => 'Synchronizes reviewer_profile.publication arrays for user_id and all registered_co_author users in high-speed batches, purges ghost IDs, and recalculates publication_active_count & publication_inactive_count without modifying existing publications records.',
+                'route' => route('admin.database-fixing.publication.reviewer-profile'),
+            ],
 
             // RoleInResearchJournals Tools
             [
@@ -48,6 +55,13 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'title' => 'role',
                 'description' => 'This tool finds RoleInResearchJournals records where the role field stores legacy raw string names (e.g. "Assistant Editor", "Reviewer", "Editor-in-Chief") and maps them to the corresponding standardized JournalRole MongoDB ObjectId for structured relationships and fast lookups.',
                 'route' => route('admin.database-fixing.role-in-research-journals.role'),
+            ],
+            [
+                'id' => 'role_journal_reviewer_profile_sync',
+                'table' => 'RoleInResearchJournals',
+                'title' => 'reviewer_profile & user_id Sync (Missing IDs, Ghost IDs & Status Fixer)',
+                'description' => 'Fixes connection problems between role_in_research_journals and reviewer_profile.RoleInResearchJournal: recovers missing user IDs from profiles (75 recoverable records), marks true orphans as status 0, adds unlinked records to user profiles, removes deleted ghost IDs (86 ghosts), and standardizes missing statuses.',
+                'route' => route('admin.database-fixing.role-in-research-journals.reviewer-profile'),
             ],
 
             // RequestReviewPaper Tools
@@ -288,6 +302,22 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'description' => 'This tool scans all Project records in MongoDB where registered_contributors is stored as a legacy comma-delimited string (e.g. ",645a90...,65bc12...") or plain text, cleans leading commas and empty values, and standardizes them into native MongoDB BSON arrays of User ObjectIds or null for optimal query performance.',
                 'route' => route('admin.database-fixing.project.registered-contributors'),
             ],
+
+            // InvitedPosition Tools
+            [
+                'id' => 'invited_position_org_fixer',
+                'table' => 'InvitedPosition',
+                'title' => 'organization_id (Ghost IDs & Missing Organization Fixer)',
+                'description' => 'Scans all Invited Position records in MongoDB for organization_id anomalies. Detects ghost references pointing to non-existent organizations and records with null/empty organization IDs, auto-matches suggestions from website URLs, and allows 1-click cleaning or interactive assignment from 37,000+ organizations.',
+                'route' => route('admin.database-fixing.invited-position.organization'),
+            ],
+            [
+                'id' => 'invited_position_reviewer_profile_sync',
+                'table' => 'InvitedPosition',
+                'title' => 'reviewer_profile & user_id Sync (Missing IDs, Ghost IDs & Status Fixer)',
+                'description' => 'Fixes connection problems between invited positions and reviewer profiles: recovers missing user IDs on invited positions from reviewer profiles (372 recoverable records), marks true orphans as status 0, removes deleted ghost position IDs, and standardizes statuses.',
+                'route' => route('admin.database-fixing.invited-position.reviewer-profile'),
+            ],
         ];
     }
 
@@ -437,6 +467,15 @@ new #[Layout('components.layouts.admin')] #[Title('Database Fixing - Admin')] cl
                 'header_bg' => 'bg-pink-50/70 dark:bg-pink-950/30 border-pink-200/80 dark:border-pink-800/60',
                 'border' => 'border-pink-200 dark:border-pink-800/70',
                 'hover_ring' => 'focus:ring-pink-400',
+            ],
+            'InvitedPosition' => [
+                'badge' => 'bg-yellow-50 text-yellow-800 border-yellow-300 dark:bg-yellow-950/50 dark:text-yellow-200 dark:border-yellow-700',
+                'dot' => 'bg-yellow-500',
+                'title' => 'text-yellow-950 dark:text-yellow-100',
+                'btn' => 'text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700 hover:bg-yellow-600 hover:text-white dark:hover:bg-yellow-600 hover:border-yellow-600',
+                'header_bg' => 'bg-yellow-50/70 dark:bg-yellow-950/30 border-yellow-300/80 dark:border-yellow-700/60',
+                'border' => 'border-yellow-300 dark:border-yellow-700',
+                'hover_ring' => 'focus:ring-yellow-400',
             ],
             default => [
                 'badge' => 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700',

@@ -36,7 +36,14 @@ new class extends Component {
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Catch and stop propagation of any unexpected runtime errors.
@@ -76,17 +83,13 @@ new class extends Component {
 
             // Inactive filter (status = 0)
             $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
-            $awardIds = (array) ($reviewerProfile->award ?? []);
+            $awardIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->award ?? [])))));
 
-            $query = Award::query();
-            if (! empty($awardIds)) {
-                $query->where(function ($q) use ($awardIds) {
-                    $q->whereIn('_id', $awardIds)
-                        ->orWhere('user_id', (string) $this->user->_id);
-                });
-            } else {
-                $query->where('user_id', (string) $this->user->_id);
+            if (empty($awardIds)) {
+                return [];
             }
+
+            $query = Award::whereIn('_id', $awardIds);
 
             $records = $query->whereIn('status', [0, '0', false, null])
                 ->orderBy('award_year', 'desc')
@@ -506,7 +509,7 @@ new class extends Component {
                         <button 
                             type="button" 
                             wire:click="$set('statusFilter', '0')"
-                            class="px-2.5 py-1 rounded-lg transition-all {{ $statusFilter === '0' ? 'bg-zinc-600 text-white font-bold shadow-2xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white' }}"
+                            class="px-2.5 py-1 rounded-lg transition-all {{ $statusFilter === '0' ? 'bg-red-500 text-white font-bold shadow-2xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-red-600' }}"
                         >
                             Inactive
                         </button>
@@ -518,7 +521,7 @@ new class extends Component {
         <div class="p-6">
             {{-- AWARDS LIST --}}
             <div class="space-y-4">
-                @forelse($this->awards as $award)
+                @forelse(collect($this->awards)->take($limit) as $award)
                     <div 
                         wire:key="admin-award-card-{{ $award['id'] }}" 
                         class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-brand dark:hover:border-brand hover:border-l-4 hover:border-l-brand hover:pl-[13px] bg-zinc-50/40 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-800/50 hover:shadow-xs transition-all duration-200"
@@ -555,7 +558,7 @@ new class extends Component {
 
                                             @if(!empty($award['award_year']))
                                                 @if(!empty($award['award_by']))
-                                                    <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                                    <span class="text-zinc-300 dark:text-zinc-600">Â·</span>
                                                 @endif
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
                                                     <i class="fa-regular fa-calendar text-[11px] text-zinc-400"></i>
@@ -608,10 +611,10 @@ new class extends Component {
                                     <button 
                                         type="button" 
                                         wire:click="toggleAwardStatus('{{ $award['id'] }}')" 
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition cursor-pointer select-none {{ $award['status'] === 1 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200' }}"
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition cursor-pointer select-none {{ $award['status'] === 1 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-800/60 hover:bg-red-100' }}"
                                         title="Click to toggle status"
                                     >
-                                        <span class="size-1.5 rounded-full {{ $award['status'] === 1 ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
+                                        <span class="size-1.5 rounded-full {{ $award['status'] === 1 ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
                                         <span>{{ $award['status'] === 1 ? 'Active' : 'Inactive' }}</span>
                                     </button>
 
@@ -646,13 +649,14 @@ new class extends Component {
                 @endforelse
             </div>
 
+
             {{-- BOTTOM ADD FORM CONTAINER --}}
             <div x-show="showAddForm" x-cloak class="mt-4">
                 <x-profile.award-form :show-status="true" />
             </div>
 
             {{-- BOTTOM ADD BUTTON --}}
-            <div class="mt-6 pt-2" x-show="!showAddForm">
+            <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!showAddForm">
                 <button 
                     type="button" 
                     @click="openAddForm()" 
@@ -661,6 +665,19 @@ new class extends Component {
                     <i class="fa-solid fa-plus text-xs"></i>
                     <span>Add Award</span>
                 </button>
+                @if(count($this->awards) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($this->awards) - $limit }})</span>
+                    </button>
+                @endif
+                <span class="hidden md:block"></span>
             </div>
         </div>
 

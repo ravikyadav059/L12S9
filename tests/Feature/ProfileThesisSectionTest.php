@@ -26,6 +26,11 @@ test('profile thesis component renders thesis guided records', function () {
         'status' => 1,
     ]);
 
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'phd' => [(string) $phd->_id],
+    ]);
+
     $component = Volt::test('profile.thesis', [
         'user' => $user,
         'isOwnProfile' => true,
@@ -128,6 +133,11 @@ test('admin thesis partial renders and allows toggling status', function () {
         'status' => 1,
     ]);
 
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'phd' => [(string) $phd->_id],
+    ]);
+
     $adminComponent = Volt::test('admin.users.partials.thesis', [
         'user' => $user,
     ]);
@@ -166,6 +176,11 @@ test('redis caching correctly caches and invalidates thesis guided records', fun
         'research_area' => 'Renewable Energy',
         'phd_status' => 'Completed',
         'status' => 1,
+    ]);
+
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'phd' => [(string) $phd->_id],
     ]);
 
     // Initial cached retrieval

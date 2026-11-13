@@ -86,12 +86,6 @@ new #[Layout('components.layouts.app')] class extends Component {
                     :key="'profile-education-'.($user ? $user->_id : 'guest')"
                 />
 
-                <div id="publications" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">📚</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Publications</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 5</p>
-                </div>
-
                 {{-- Section 6: Projects (Independent Child Volt Component) --}}
                 <livewire:profile.projects 
                     :user="$user" 
@@ -140,17 +134,26 @@ new #[Layout('components.layouts.app')] class extends Component {
                     :key="'profile-patents-'.($user ? $user->_id : 'guest')"
                 />
 
-                <div id="invited-positions" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">🏛️</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Invited Position</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 13</p>
-                </div>
+                {{-- Section 13: Invited Positions (Independent Child Volt Component) --}}
+                <livewire:profile.invited-positions 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-invited-positions-'.($user ? $user->_id : 'guest')" 
+                />
 
-                <div id="editorial-roles" class="bg-white dark:bg-[#111c26] border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-6 text-center text-zinc-400 dark:text-zinc-500 scroll-mt-28">
-                    <span class="text-2xl mb-1 inline-block">📖</span>
-                    <h3 class="font-bold font-space text-sm text-zinc-700 dark:text-zinc-300">Role in Research Journals</h3>
-                    <p class="text-xs text-zinc-400 mt-1">Ready to build as Section 14</p>
-                </div>
+                {{-- Section 14: Role in Research Journals (Independent Child Volt Component) --}}
+                <livewire:profile.journal-roles 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'profile-journal-roles-'.($user ? $user->_id : 'guest')" 
+                />
+
+                {{-- Publications (Independent Child Volt Component) --}}
+                <livewire:profile.publications 
+                    :user="$user" 
+                    :is-own-profile="$isOwnProfile" 
+                    :key="'publications-'.($user ? $user->_id : 'guest')" 
+                />
             </main>
 
             {{-- Sidebar Column (approx 30%) --}}

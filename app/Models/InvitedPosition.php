@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\DetectsSpam;
 use Database\Factories\InvitedPositionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Cache;
 use MongoDB\Laravel\Eloquent\Model;
 use MongoDB\Laravel\Relations\BelongsTo;
 
@@ -103,10 +104,115 @@ class InvitedPosition extends Model
     }
 
     /**
+     * Alias for organization relationship.
+     */
+    public function institution(): BelongsTo
+    {
+        return $this->organization();
+    }
+
+    /**
      * Get the user that owns the invited position record.
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', '_id');
+    }
+
+    /**
+     * Bootstrap model events to manage Redis cache invalidation.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (InvitedPosition $position) {
+            if (! empty($position->user_id)) {
+                static::forgetUserCache((string) $position->user_id);
+            }
+        });
+
+        static::deleted(function (InvitedPosition $position) {
+            if (! empty($position->user_id)) {
+                static::forgetUserCache((string) $position->user_id);
+            }
+        });
+    }
+
+    /**
+     * Invalidate Redis cache for a user's invited position records.
+     */
+    public static function forgetUserCache(string|int|null $userId): void
+    {
+        if (! $userId) {
+            return;
+        }
+
+        Cache::forget("invited_position:user:{$userId}:active");
+        Cache::forget("invited_position:user:{$userId}:all");
+    }
+
+    /**
+     * Retrieve cached invited position records for a user using Redis and MongoDB compound index.
+     * Index utilized: {"user_id": 1, "status": 1}
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function getCachedForUser(string $userId, bool $activeOnly = true): array
+    {
+        $cacheKey = 'invited_position:user:'.$userId.':'.($activeOnly ? 'active' : 'all');
+
+        return Cache::remember($cacheKey, 86400, function () use ($userId, $activeOnly) {
+            $reviewerProfile = ReviewerProfile::where('user_id', $userId)->first();
+            $positionIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->invited_position ?? [])))));
+
+            if (empty($positionIds)) {
+                return [];
+            }
+
+            $query = static::query()->whereIn('_id', $positionIds);
+
+            if ($activeOnly) {
+                $query->whereIn('status', [1, '1', true]);
+            }
+
+            // High-scale index optimized sort & eager-load organization
+            $records = $query->with('organization')
+                ->orderBy('_id', 'desc')
+                ->get();
+
+            $countriesMap = collect(Country::getCachedAll())->keyBy('id');
+
+            $formatted = [];
+            foreach ($records as $p) {
+                $statusVal = (int) ($p->status ?? 1);
+                $isContinuing = $p->isContinuing();
+                $cVal = (string) ($p->country ?? '');
+                $countryName = '';
+                if ($cVal !== '') {
+                    if ($countriesMap->has($cVal)) {
+                        $countryName = (string) ($countriesMap[$cVal]['name'] ?? '');
+                    } elseif (! is_numeric($cVal)) {
+                        $countryName = $cVal;
+                    }
+                }
+
+                $formatted[] = [
+                    'id' => (string) $p->_id,
+                    'role' => (string) ($p->role ?? ''),
+                    'organization_id' => (string) ($p->organization_id ?? ''),
+                    'organization_name' => (string) ($p->organization?->organization_name ?? ''),
+                    'join_date' => (string) ($p->join_date ?? ''),
+                    'end_date' => (string) ($p->end_date ?? ''),
+                    'continue_invited_position' => $isContinuing ? 1 : 0,
+                    'is_continuing' => $isContinuing,
+                    'country' => $cVal,
+                    'country_name' => $countryName,
+                    'webiste_url' => (string) ($p->webiste_url ?? $p->website_url ?? ''),
+                    'website_url' => (string) ($p->website_url ?? $p->webiste_url ?? ''),
+                    'status' => $statusVal === 1 ? 1 : 0,
+                ];
+            }
+
+            return $formatted;
+        });
     }
 }

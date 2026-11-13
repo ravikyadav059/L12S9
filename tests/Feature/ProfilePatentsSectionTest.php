@@ -60,6 +60,11 @@ test('profile patents component renders patent records', function () {
         'status' => 1,
     ]);
 
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'patent' => [(string) $patent->_id],
+    ]);
+
     $component = Volt::test('profile.patents', [
         'user' => $user,
         'isOwnProfile' => true,
@@ -169,6 +174,11 @@ test('admin patents partial renders and allows toggling status', function () {
         'status' => 1,
     ]);
 
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'patent' => [(string) $patent->_id],
+    ]);
+
     $adminComponent = Volt::test('admin.users.partials.patents', [
         'user' => $user,
     ]);
@@ -202,6 +212,11 @@ test('redis caching correctly caches and invalidates patent records', function (
         'filing_date' => 'May 2022',
         'description' => 'Silicon photonics beam steering device for autonomous vehicle navigation.',
         'status' => 1,
+    ]);
+
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'patent' => [(string) $patent->_id],
     ]);
 
     // Initial cached retrieval

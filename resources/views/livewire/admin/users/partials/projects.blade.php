@@ -33,7 +33,14 @@ new class extends Component {
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Catch and stop propagation of unhandled exceptions in the projects section.
@@ -55,17 +62,13 @@ new class extends Component {
     {
         try {
             $reviewerProfile = $this->user->reviewerProfile ?? ReviewerProfile::where('user_id', (string) $this->user->_id)->first();
-            $projectIds = (array) ($reviewerProfile->projects ?? []);
+            $projectIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->projects ?? [])))));
 
-            $query = Project::query();
-            if (! empty($projectIds)) {
-                $query->where(function ($q) use ($projectIds) {
-                    $q->where('user_id', (string) $this->user->_id)
-                      ->orWhereIn('_id', $projectIds);
-                });
-            } else {
-                $query->where('user_id', (string) $this->user->_id);
+            if (empty($projectIds)) {
+                return [];
             }
+
+            $query = Project::whereIn('_id', $projectIds);
 
             if ($this->statusFilter === '1') {
                 $query->whereIn('status', [1, '1', true]);
@@ -487,7 +490,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="mt-6">
+<div id="admin-projects-section" class="mt-6 scroll-mt-24">
     @if ($hasError)
         <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 flex items-start gap-3 shadow-xs">
             <svg class="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -914,7 +917,7 @@ new class extends Component {
             <div class="p-6">
                 {{-- PROJECTS LIST / EMPTY STATE --}}
                 <div class="space-y-4">
-                    @forelse($this->projects as $project)
+                    @forelse(collect($this->projects)->take($limit) as $project)
                         <div 
                             wire:key="admin-project-card-{{ $project['id'] }}" 
                             class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-brand dark:hover:border-brand hover:border-l-4 hover:border-l-brand hover:pl-[13px] bg-zinc-50/40 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-800/50 hover:shadow-xs transition-all duration-200"
@@ -939,10 +942,10 @@ new class extends Component {
                                                 <button 
                                                     type="button" 
                                                     wire:click="toggleProjectStatus('{{ $project['id'] }}')"
-                                                    class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold cursor-pointer transition select-none active:scale-95 {{ $project['status'] === 1 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200' }}"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold cursor-pointer transition select-none active:scale-95 {{ $project['status'] === 1 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100' : 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/60 hover:bg-red-100' }}"
                                                     title="Click to toggle status"
                                                 >
-                                                    <span class="size-1.5 rounded-full {{ $project['status'] === 1 ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
+                                                    <span class="size-1.5 rounded-full {{ $project['status'] === 1 ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
                                                     <span>{{ $project['status'] === 1 ? 'Active' : 'Inactive' }}</span>
                                                 </button>
                                             </div>
@@ -952,7 +955,7 @@ new class extends Component {
                                                 {{-- Agency Name --}}
                                                 @if(!empty($project['agency_name']))
                                                     <span>Agency: <strong class="text-zinc-700 dark:text-zinc-300 font-semibold">{{ $project['agency_name'] }}</strong></span>
-                                                    <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                                    <span class="text-zinc-300 dark:text-zinc-600">Â·</span>
                                                 @endif
 
                                                 {{-- Date Range --}}
@@ -962,7 +965,7 @@ new class extends Component {
                                                 </span>
 
                                                 {{-- Funded Status & Amount --}}
-                                                <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600">Â·</span>
                                                 <span class="inline-flex items-center gap-1">
                                                     <span>Funded:</span>
                                                     @if($project['is_funded'])
@@ -1093,6 +1096,7 @@ new class extends Component {
                         @endforelse
                     </div>
 
+
                     {{-- Add Project Form --}}
                     <div 
                         id="admin-project-add-form"
@@ -1107,7 +1111,7 @@ new class extends Component {
                     </div>
 
                     {{-- Add Project Button --}}
-                    <div class="mt-6 pt-2" x-show="!isAdding">
+                    <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!isAdding">
                         <button 
                             type="button" 
                             @click="openAddForm()" 
@@ -1116,16 +1120,29 @@ new class extends Component {
                             <i class="fa-solid fa-plus text-xs"></i>
                             <span>Add Project</span>
                         </button>
+                        @if(count($this->projects) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($this->projects) - $limit }})</span>
+                    </button>
+                @endif
+                        <span class="hidden md:block"></span>
                     </div>
 
                 </div>
+
+                {{-- Add Author Modal --}}
+                <x-modals.add-author />
+
+                {{-- Unsaved Changes Confirmation Modal --}}
+                <x-profile.unsaved-modal />
             </div>
-
-            {{-- Add Author Modal --}}
-            <x-modals.add-author />
-
-            {{-- Unsaved Changes Confirmation Modal --}}
-            <x-profile.unsaved-modal />
         @endif
     </div>
 

@@ -924,7 +924,21 @@ trait HandlesJournalVerification
         }
 
         // In test environments where Http is not explicitly faked, bypass external network calls
-        if (app()->environment('testing') && ! Http::isFaking()) {
+        $isHttpFaking = false;
+        if (app()->environment('testing')) {
+            try {
+                $factory = Http::getFacadeRoot();
+                if (is_object($factory) && property_exists($factory, 'recording')) {
+                    $ref = new \ReflectionProperty($factory, 'recording');
+                    $ref->setAccessible(true);
+                    $isHttpFaking = (bool) $ref->getValue($factory);
+                }
+            } catch (\Throwable) {
+                $isHttpFaking = false;
+            }
+        }
+
+        if (app()->environment('testing') && ! $isHttpFaking) {
             $result = new JournalVerificationResult(
                 isValid: true,
                 source: 'testing',

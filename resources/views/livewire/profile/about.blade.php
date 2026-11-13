@@ -278,8 +278,8 @@ new class extends Component {
         <section class="bg-white dark:bg-[#111c26] border border-[#e5e7eb] dark:border-zinc-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all duration-300">
             
             <div class="flex items-center justify-between pb-3 mb-4 border-b-2 border-[#f9fafb] dark:border-zinc-800">
-                <h2 class="text-base font-semibold font-space text-[#111827] dark:text-white flex items-center gap-2.5 m-0 leading-snug">
-                    <i class="fa-solid fa-user text-base text-[#4f2a7a] dark:text-[#a855f7]"></i>
+                <h2 class="text-base font-bold font-space text-zinc-900 dark:text-white flex items-center gap-2.5 m-0 leading-snug">
+                    <span class="text-lg">&#x1F464;</span>
                     <span>About</span>
                 </h2>
 

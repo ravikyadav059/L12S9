@@ -25,7 +25,14 @@ new class extends Component {
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Catch and stop propagation of unhandled exceptions in the education section.
@@ -478,11 +485,6 @@ new class extends Component {
                     for (let y = startYear; y >= endYear; y--) {
                         this.allYears.push(String(y));
                     }
-
-                    // Initial fetch for top options
-                    this.fetchOrganizations('');
-                    this.fetchDegrees('');
-                    this.fetchFields('');
                 },
 
                 // Filtered years based on internal search
@@ -1176,7 +1178,7 @@ new class extends Component {
                     @endif
 
                     <div class="space-y-7">
-                        @forelse($adminEducations as $edu)
+                        @forelse(array_slice($adminEducations, 0, $limit) as $edu)
                             <div 
                                 class="relative pl-8" 
                                 wire:key="edu-admin-{{ $edu['id'] }}"
@@ -1227,13 +1229,13 @@ new class extends Component {
                                                     <span>in {{ $edu['field_of_study'] }}</span>
                                                 @endif
                                                 @if($edu['pursuing'] || !empty($edu['passout_year']))
-                                                    <span class="mx-1">·</span>
+                                                    <span class="mx-1">Â·</span>
                                                     <span class="font-medium text-zinc-700 dark:text-zinc-300">
                                                         {{ $edu['pursuing'] ? 'Pursuing' : $edu['passout_year'] }}
                                                     </span>
                                                 @endif
                                                 @if(!empty($edu['grade']))
-                                                    <span class="mx-1">·</span>
+                                                    <span class="mx-1">Â·</span>
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
                                                         Grade: {{ $edu['grade'] }}
                                                     </span>
@@ -1282,10 +1284,10 @@ new class extends Component {
                                         <button 
                                             type="button"
                                             @click.stop="$wire.toggleEducationStatus('{{ $edu['id'] }}')"
-                                            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ ($edu['status'] === 1 || $edu['status'] === '1') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700' }} transition select-none shadow-2xs cursor-pointer"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ ($edu['status'] === 1 || $edu['status'] === '1') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-800/60 hover:bg-red-100 dark:hover:bg-red-900/50' }} transition select-none shadow-2xs cursor-pointer"
                                             title="Click to toggle status"
                                         >
-                                            <span class="size-1.5 rounded-full {{ ($edu['status'] === 1 || $edu['status'] === '1') ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
+                                            <span class="size-1.5 rounded-full {{ ($edu['status'] === 1 || $edu['status'] === '1') ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
                                             <span>{{ ($edu['status'] === 1 || $edu['status'] === '1') ? 'Active' : 'Inactive' }}</span>
                                         </button>
 
@@ -1323,6 +1325,7 @@ new class extends Component {
                     </div>
                 </div>
 
+
                 {{-- Add Education Form --}}
                 <div 
                     id="admin-education-add-form"
@@ -1336,7 +1339,7 @@ new class extends Component {
                 </div>
 
                 {{-- Add Education Button --}}
-                <div class="mt-6 pt-2" x-show="!isAdding">
+                <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!isAdding">
                     <button 
                         type="button" 
                         @click="openAddForm()" 
@@ -1345,6 +1348,19 @@ new class extends Component {
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add Education</span>
                     </button>
+                    @if(count($adminEducations) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($adminEducations) - $limit }})</span>
+                    </button>
+                @endif
+                    <span class="hidden md:block"></span>
                 </div>
 
             </div>

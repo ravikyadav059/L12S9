@@ -27,6 +27,11 @@ test('profile memberships component renders membership records', function () {
         'status' => 1,
     ]);
 
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'membership' => [(string) $membership->_id],
+    ]);
+
     $component = Volt::test('profile.memberships', [
         'user' => $user,
         'isOwnProfile' => true,
@@ -125,6 +130,11 @@ test('admin memberships partial renders and allows toggling status', function ()
         'status' => 1,
     ]);
 
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'membership' => [(string) $membership->_id],
+    ]);
+
     $adminComponent = Volt::test('admin.users.partials.memberships', [
         'user' => $user,
     ]);
@@ -163,6 +173,11 @@ test('redis caching correctly caches and invalidates membership records', functi
         'end_date' => null,
         'continue_membership' => 1,
         'status' => 1,
+    ]);
+
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'membership' => [(string) $membership->_id],
     ]);
 
     // Initial cached retrieval

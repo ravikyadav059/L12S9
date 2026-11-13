@@ -161,17 +161,13 @@ class Membership extends Model
 
         return Cache::remember($cacheKey, 86400, function () use ($userId, $activeOnly) {
             $reviewerProfile = ReviewerProfile::where('user_id', $userId)->first();
-            $membershipIds = (array) ($reviewerProfile->membership ?? []);
+            $membershipIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->membership ?? [])))));
 
-            $query = static::query();
-            if (! empty($membershipIds)) {
-                $query->where(function ($q) use ($membershipIds, $userId) {
-                    $q->whereIn('_id', $membershipIds)
-                        ->orWhere('user_id', $userId);
-                });
-            } else {
-                $query->where('user_id', $userId);
+            if (empty($membershipIds)) {
+                return [];
             }
+
+            $query = static::query()->whereIn('_id', $membershipIds);
 
             if ($activeOnly) {
                 $query->whereIn('status', [1, '1', true]);

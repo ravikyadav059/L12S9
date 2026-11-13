@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LinkPreviewController;
+use App\Livewire\Concerns\HandlesPublicationSection;
 use App\Models\DegreeType;
 use App\Models\Designation;
 use App\Models\FieldOfStudy;
@@ -83,6 +84,22 @@ Route::middleware(['auth', 'throttle:120,1'])->prefix('api')->name('api.')->grou
 
         return response()->json(Grade::searchActive($query));
     })->name('grades');
+
+    Route::get('authors', function (Request $request) {
+        $query = trim((string) $request->input('q', ''));
+
+        return response()->json([
+            'authors' => HandlesPublicationSection::searchAuthorsQuery($query),
+        ]);
+    })->name('authors');
+
+    Route::get('publications/retrieve-doi', function (Request $request) {
+        $doi = (string) $request->input('doi', '');
+
+        return response()->json(
+            HandlesPublicationSection::retrieveDoiData($doi)
+        );
+    })->name('publications.retrieve-doi');
 });
 
 // Impersonation - Return to Admin
@@ -134,7 +151,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('database-fixing/publication/registered-co-author', 'admin.database-fixing.publication.registered-co-author')->name('database-fixing.publication.registered-co-author');
     Volt::route('database-fixing/publication/unregistered-co-author', 'admin.database-fixing.publication.unregistered-co-author')->name('database-fixing.publication.unregistered-co-author');
     Volt::route('database-fixing/publication/orphan-journal', 'admin.database-fixing.publication.orphan-journal')->name('database-fixing.publication.orphan-journal');
+    Volt::route('database-fixing/publication/reviewer-profile', 'admin.database-fixing.publication.reviewer-profile')->name('database-fixing.publication.reviewer-profile');
     Volt::route('database-fixing/role-in-research-journals/role', 'admin.database-fixing.role-in-research-journals.role')->name('database-fixing.role-in-research-journals.role');
+    Volt::route('database-fixing/role-in-research-journals/reviewer-profile', 'admin.database-fixing.role-in-research-journals.reviewer-profile')->name('database-fixing.role-in-research-journals.reviewer-profile');
 
     // RequestReviewPaper Database Fixers
     Volt::route('database-fixing/request-review-paper/registered-co-author', 'admin.database-fixing.request-review-paper.registered-co-author')->name('database-fixing.request-review-paper.registered-co-author');
@@ -197,6 +216,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Volt::route('database-fixing/patent/category', 'admin.database-fixing.patent.category')->name('database-fixing.patent.category');
     Volt::route('database-fixing/patent/reviewer-profile', 'admin.database-fixing.patent.reviewer-profile')->name('database-fixing.patent.reviewer-profile');
     Volt::route('database-fixing/patent', 'admin.database-fixing.patent.category')->name('database-fixing.patent.index');
+
+    // Invited Position Database Fixers
+    Volt::route('database-fixing/invited-position/organization', 'admin.database-fixing.invited-position.organization')->name('database-fixing.invited-position.organization');
+    Volt::route('database-fixing/invited-position/reviewer-profile', 'admin.database-fixing.invited-position.reviewer-profile')->name('database-fixing.invited-position.reviewer-profile');
+    Volt::route('database-fixing/invited-position', 'admin.database-fixing.invited-position.organization')->name('database-fixing.invited-position.index');
 });
 
 require __DIR__.'/auth.php';

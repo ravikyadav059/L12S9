@@ -7,24 +7,29 @@ use Illuminate\Support\Facades\Cache;
 use Livewire\Volt\Volt;
 
 test('profile awards component renders awards with view more toggle', function () {
-    $user = User::where('slug', 'hitesh1-patel1-S9-052023-0500004')->first();
+    $user = User::factory()->create();
 
-    if (! $user) {
-        $user = User::factory()->create();
-    }
+    $award = Award::create([
+        'user_id' => (string) $user->_id,
+        'award_name' => 'Distinguished Researcher Award',
+        'award_by' => 'International Science Foundation',
+        'award_year' => '2024',
+        'description' => 'This is a long description for testing the view more toggle on awards section that exceeds the line-clamp threshold and provides complete details.',
+        'status' => 1,
+    ]);
 
-    // Ensure user has at least one active award with description
-    $award = Award::where('user_id', (string) $user->_id)->whereNotNull('description')->first();
-    if (! $award) {
-        $award = Award::create([
-            'user_id' => (string) $user->_id,
-            'award_name' => 'Distinguished Researcher Award',
-            'award_by' => 'International Science Foundation',
-            'award_year' => '2024',
-            'description' => 'This is a long description for testing the view more toggle on awards section that exceeds the line-clamp threshold and provides complete details.',
-            'status' => 1,
-        ]);
-    }
+    $unlinkedAward = Award::create([
+        'user_id' => (string) $user->_id,
+        'award_name' => 'Unlinked Hidden Award',
+        'award_by' => 'Ghost Org',
+        'award_year' => '2022',
+        'status' => 1,
+    ]);
+
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'award' => [(string) $award->_id],
+    ]);
 
     $component = Volt::test('profile.awards', [
         'user' => $user,
@@ -39,6 +44,7 @@ test('profile awards component renders awards with view more toggle', function (
     $component->assertSee('View Less');
     $component->assertSee('line-clamp-2');
     $component->assertSee('descContainer');
+    $component->assertDontSee('Unlinked Hidden Award');
 });
 
 test('profile awards component allows creating, editing and deleting award', function () {
@@ -100,6 +106,11 @@ test('admin awards partial renders and allows toggling status', function () {
         'status' => 1,
     ]);
 
+    ReviewerProfile::create([
+        'user_id' => (string) $user->_id,
+        'award' => [(string) $award->_id],
+    ]);
+
     $component = Volt::test('admin.users.partials.awards', [
         'user' => $user,
     ]);
@@ -131,6 +142,11 @@ test('awards utilize redis cache and invalidate upon changes', function () {
         'award_by' => 'Science Academy',
         'award_year' => '2024',
         'status' => 1,
+    ]);
+
+    ReviewerProfile::create([
+        'user_id' => $userId,
+        'award' => [(string) $award->_id],
     ]);
 
     // Initial fetch should populate Redis cache

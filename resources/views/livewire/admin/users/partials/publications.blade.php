@@ -1,0 +1,965 @@
+<?php
+
+use App\Livewire\Concerns\HandlesPublicationSection;
+use App\Models\Article;
+use App\Models\Publication;
+use App\Models\User;
+use Illuminate\Validation\ValidationException;
+use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
+
+/**
+ * Admin User Edit - Publications Section Partial
+ *
+ * Allows administrators to view (All / Active / Inactive), add, edit,
+ * 1-click toggle Active/Inactive status, retrieve DOI via Crossref, and delete publication records.
+ */
+new class extends Component
+{
+    use HandlesPublicationSection;
+    use WithFileUploads;
+
+    public ?User $user = null;
+
+    public ?string $editingId = null;
+
+    public bool $showAddForm = false;
+
+    public string $statusFilter = 'all';
+
+    public int $limit = 5;
+
+    public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
+
+    public function updatedStatusFilter(): void
+    {
+        $this->limit = 5;
+    }
+
+    public function mount(?User $user = null): void
+    {
+        $this->user = $user ?? $this->user;
+    }
+
+    public function exception(\Throwable $e, callable $stopPropagation): void
+    {
+        report($e);
+        $stopPropagation();
+        $this->hasError = true;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function with(): array
+    {
+        $articleTypes = Article::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Article $a): array => [
+                'id' => (string) $a->_id,
+                'name' => (string) $a->name,
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'articleTypes' => $articleTypes,
+        ];
+    }
+
+    /**
+     * Retrieve all publication records (active + inactive) for this user.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getRecordsProperty(): array
+    {
+        if (! $this->user) {
+            return [];
+        }
+
+        return Publication::getCachedForUser((string) $this->user->_id, activeOnly: false);
+    }
+
+    /**
+     * @param  array<string, mixed>  $formData
+     * @return array<string, mixed>
+     */
+    public function saveRecord(array $formData): array
+    {
+        if (! $this->user) {
+            return ['ok' => false, 'errors' => ['title' => 'User context is missing.']];
+        }
+
+        try {
+            $this->persistPublication($formData, (string) $this->user->_id, allowStatusChange: true);
+            $this->editingId = null;
+            $this->showAddForm = false;
+            unset($this->records);
+
+            return [
+                'ok' => true,
+                'records' => $this->records,
+            ];
+        } catch (ValidationException $e) {
+            return [
+                'ok' => false,
+                'errors' => $e->errors(),
+            ];
+        }
+    }
+
+    /**
+     * 1-click toggle Active/Inactive status.
+     */
+    public function toggleStatus(string $id): void
+    {
+        $record = Publication::find($id);
+        if (! $record) {
+            return;
+        }
+
+        $record->status = ((int) ($record->status ?? 1)) === 1 ? 0 : 1;
+        $record->save();
+
+        if ($this->user) {
+            Publication::forgetUserCache((string) $this->user->_id);
+        }
+    }
+
+    /**
+     * Delete a publication record (invoked from inside the edit form).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function deleteRecord(string $id): array
+    {
+        if (! $this->user) {
+            return [];
+        }
+
+        $this->deletePublicationRecord($id, (string) $this->user->_id);
+        $this->editingId = null;
+        $this->showAddForm = false;
+        unset($this->records);
+
+        return $this->records;
+    }
+}; ?>
+
+@php
+    $allRecords = $this->records;
+    $activeCount = count(array_filter($allRecords, fn (array $r): bool => ((int) ($r['status'] ?? 1)) === 1));
+    $inactiveCount = count($allRecords) - $activeCount;
+    $filteredRecords = match ($statusFilter) {
+        'active' => array_values(array_filter($allRecords, fn (array $r): bool => ((int) ($r['status'] ?? 1)) === 1)),
+        'inactive' => array_values(array_filter($allRecords, fn (array $r): bool => ((int) ($r['status'] ?? 1)) === 0)),
+        default => $allRecords,
+    };
+    $visibleRecords = array_slice($filteredRecords, 0, $limit);
+    $remainingCount = max(0, count($filteredRecords) - count($visibleRecords));
+@endphp
+
+<div 
+    id="admin-publications"
+    class="bg-white dark:bg-[#111c26] border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-xs scroll-mt-28"
+    x-data="{
+        records: {{ \Illuminate\Support\Js::from($visibleRecords) }},
+        showAddForm: false,
+        editingId: null,
+        form: {
+            id: null,
+            doi: '',
+            title: '',
+            url: '',
+            type: '',
+            authors: [],
+            journal_title: '',
+            journal_name: '',
+            issn_type: 'both',
+            e_issn: '',
+            p_issn: '',
+            published_date: '',
+            citations: '',
+            volume: '',
+            issue: '',
+            page_no: '',
+            image: '',
+            remove_existing_pdf: false,
+            publication_keywords: [],
+            description: '',
+            status: 1
+        },
+        originalSnapshot: '',
+        errors: {},
+        errorMessages: {},
+        isSaving: false,
+        isRetrievingDoi: false,
+        doiFeedback: { ok: true, message: '' },
+        journalDropdownOpen: false,
+        journalResults: [],
+        isSearchingJournals: false,
+        journalCache: {},
+        journalController: null,
+        authorSearchQuery: '',
+        authorDropdownOpen: false,
+        authorSearchResults: [],
+        isSearchingAuthor: false,
+        authorSearchSeq: 0,
+        authorCache: {},
+        authorController: null,
+        keywordInput: '',
+        selectedPdfName: '',
+        showDiscardModal: false,
+        pendingAction: null,
+
+        emptyForm() {
+            return {
+                id: null,
+                doi: '',
+                title: '',
+                url: '',
+                type: '',
+                authors: [],
+                journal_title: '',
+                journal_name: '',
+                issn_type: 'both',
+                e_issn: '',
+                p_issn: '',
+                published_date: '',
+                citations: '',
+                volume: '',
+                issue: '',
+                page_no: '',
+                image: '',
+                remove_existing_pdf: false,
+                publication_keywords: [],
+                description: '',
+                status: 1
+            };
+        },
+
+        init() {
+            this.originalSnapshot = JSON.stringify(this.form);
+        },
+
+        isDirty() {
+            return JSON.stringify(this.form) !== this.originalSnapshot;
+        },
+
+        resetErrors() {
+            this.errors = {};
+            this.errorMessages = {};
+            this.doiFeedback = { ok: true, message: '' };
+        },
+
+        openAddForm() {
+            if ((this.showAddForm || this.editingId) && this.isDirty()) {
+                this.pendingAction = () => this.performOpenAdd();
+                this.showDiscardModal = true;
+                return;
+            }
+            this.performOpenAdd();
+        },
+
+        performOpenAdd() {
+            this.resetErrors();
+            this.form = this.emptyForm();
+            this.originalSnapshot = JSON.stringify(this.form);
+            this.selectedPdfName = '';
+            this.keywordInput = '';
+            this.editingId = null;
+            this.showAddForm = true;
+            this.$nextTick(() => {
+                const slot = this.$refs.addSlot;
+                if (slot && this.$refs.sharedForm) {
+                    slot.appendChild(this.$refs.sharedForm);
+                }
+                this.$dispatch('pub-date-updated', '');
+            });
+        },
+
+        openEditForm(idOrItem) {
+            const id = typeof idOrItem === 'object' && idOrItem !== null ? idOrItem.id : idOrItem;
+            if ((this.showAddForm || this.editingId) && this.editingId !== id && this.isDirty()) {
+                this.pendingAction = () => this.performOpenEdit(idOrItem);
+                this.showDiscardModal = true;
+                return;
+            }
+            this.performOpenEdit(idOrItem);
+        },
+
+        performOpenEdit(idOrItem) {
+            const rec = typeof idOrItem === 'object' && idOrItem !== null
+                ? idOrItem
+                : this.records.find(r => r.id === idOrItem);
+            if (!rec) return;
+            const id = rec.id;
+            this.resetErrors();
+
+            let issnType = 'both';
+            if (rec.e_issn && !rec.p_issn) issnType = 'e_issn';
+            else if (rec.p_issn && !rec.e_issn) issnType = 'p_issn';
+
+            this.form = {
+                id: rec.id,
+                doi: rec.doi || '',
+                title: rec.title || '',
+                url: rec.url || '',
+                type: rec.type || '',
+                authors: (Array.isArray(rec.authors) && rec.authors.length > 0)
+                    ? rec.authors.map(a => ({ name: a.name || '', affiliation: a.affiliation || '', email: a.email || '' }))
+                    : [{ name: '', affiliation: '', email: '' }],
+                journal_title: rec.journal_title || '',
+                journal_name: rec.journal_name || '',
+                issn_type: issnType,
+                e_issn: rec.e_issn || '',
+                p_issn: rec.p_issn || '',
+                published_date: rec.published_date || '',
+                citations: rec.citations ?? '',
+                volume: rec.volume ?? '',
+                issue: rec.issue || '',
+                page_no: rec.page_no || '',
+                image: rec.image || '',
+                remove_existing_pdf: false,
+                publication_keywords: Array.isArray(rec.publication_keywords) ? [...rec.publication_keywords] : [],
+                description: rec.description || '',
+                status: rec.status ?? 1
+            };
+            this.originalSnapshot = JSON.stringify(this.form);
+            this.selectedPdfName = '';
+            this.keywordInput = '';
+            this.showAddForm = false;
+            this.editingId = id;
+            this.$nextTick(() => {
+                const slot = document.getElementById('admin-pub-edit-slot-' + id);
+                if (slot && this.$refs.sharedForm) {
+                    slot.appendChild(this.$refs.sharedForm);
+                }
+                this.$dispatch('pub-date-updated', this.form.published_date);
+            });
+        },
+
+        closeForm() {
+            if (this.isDirty()) {
+                this.pendingAction = () => this.performClose();
+                this.showDiscardModal = true;
+                return;
+            }
+            this.performClose();
+        },
+
+        performClose() {
+            this.showAddForm = false;
+            this.editingId = null;
+            if (this.$refs.addSlot && this.$refs.sharedForm && this.$refs.sharedForm.parentElement !== this.$refs.addSlot.parentElement) {
+                this.$refs.addSlot.parentElement.insertBefore(this.$refs.sharedForm, this.$refs.addSlot.nextSibling);
+            }
+            this.form = this.emptyForm();
+            this.originalSnapshot = JSON.stringify(this.form);
+            this.selectedPdfName = '';
+            this.keywordInput = '';
+            this.resetErrors();
+        },
+
+        cancelDiscard() {
+            this.showDiscardModal = false;
+            this.pendingAction = null;
+        },
+
+        confirmDiscard() {
+            this.showDiscardModal = false;
+            const fn = this.pendingAction;
+            this.pendingAction = null;
+            if (typeof fn === 'function') fn();
+        },
+
+        async retrieveDoi() {
+            const doi = (this.form.doi || '').trim();
+            if (!doi) {
+                this.doiFeedback = { ok: false, message: 'Please enter a DOI before clicking Retrieve.' };
+                return;
+            }
+            this.isRetrievingDoi = true;
+            this.doiFeedback = { ok: true, message: '' };
+            try {
+                const resp = await fetch('/api/publications/retrieve-doi?doi=' + encodeURIComponent(doi), {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const res = await resp.json();
+                if (!res || !res.found) {
+                    this.doiFeedback = { ok: false, message: (res && res.message) ? res.message : 'Publication not found for this DOI.' };
+                    return;
+                }
+                const d = res.data || {};
+                if (d.doi) this.form.doi = d.doi;
+                if (d.title) this.form.title = d.title;
+                if (d.url) this.form.url = d.url;
+                if (d.type) this.form.type = d.type;
+                if (Array.isArray(d.authors) && d.authors.length > 0) this.form.authors = d.authors;
+                if (d.journal_title) this.form.journal_title = d.journal_title;
+                if (d.journal_name) this.form.journal_name = d.journal_name;
+                if (d.issn_type) this.form.issn_type = d.issn_type;
+                if (d.e_issn) this.form.e_issn = d.e_issn;
+                if (d.p_issn) this.form.p_issn = d.p_issn;
+                if (d.published_date) {
+                    this.form.published_date = d.published_date;
+                    this.$dispatch('pub-date-updated', d.published_date);
+                }
+                if (d.citations !== undefined && d.citations !== '') this.form.citations = d.citations;
+                if (d.volume) this.form.volume = d.volume;
+                if (d.issue) this.form.issue = d.issue;
+                if (d.page_no) this.form.page_no = d.page_no;
+                if (Array.isArray(d.publication_keywords) && d.publication_keywords.length > 0) {
+                    this.form.publication_keywords = d.publication_keywords;
+                }
+                if (d.description) this.form.description = d.description;
+                this.doiFeedback = { ok: true, message: 'Publication metadata retrieved successfully.' };
+            } finally {
+                this.isRetrievingDoi = false;
+            }
+        },
+
+        async checkTitleDuplicate() {
+            const title = (this.form.title || '').trim();
+            if (!title) return;
+            const isDup = await this.$wire.checkTitleDuplicate(title, this.form.id);
+            if (isDup) {
+                this.form.title = '';
+                this.errors.title = true;
+                this.errorMessages.title = 'A publication with this title already exists.';
+            }
+        },
+
+        async searchAuthorsCompact() {
+            const q = (this.authorSearchQuery || '').trim();
+            if (q.length < 2) {
+                this.authorSearchResults = [];
+                this.authorDropdownOpen = false;
+                this.isSearchingAuthor = false;
+                return;
+            }
+            const key = q.toLowerCase();
+            if (this.authorCache[key]) {
+                this.authorSearchResults = this.authorCache[key];
+                this.authorDropdownOpen = true;
+                this.isSearchingAuthor = false;
+                return;
+            }
+            if (this.authorController) {
+                this.authorController.abort();
+            }
+            this.authorController = new AbortController();
+            const seq = ++this.authorSearchSeq;
+            this.isSearchingAuthor = true;
+            this.authorDropdownOpen = true;
+            try {
+                const resp = await fetch('/api/authors?q=' + encodeURIComponent(q), {
+                    signal: this.authorController.signal,
+                    headers: { 'Accept': 'application/json' }
+                });
+                const json = await resp.json();
+                if (seq !== this.authorSearchSeq) return;
+                const list = Array.isArray(json.authors) ? json.authors : [];
+                this.authorCache[key] = list;
+                this.authorSearchResults = list;
+            } catch (e) {
+                if (e.name !== 'AbortError' && seq === this.authorSearchSeq) {
+                    this.authorSearchResults = [];
+                }
+            } finally {
+                if (seq === this.authorSearchSeq) {
+                    this.isSearchingAuthor = false;
+                }
+            }
+        },
+
+        selectAuthorChip(res) {
+            const name = (res.name || '').trim();
+            if (!name) return;
+            const exists = this.form.authors.some(a => (a.name || '').toLowerCase() === name.toLowerCase());
+            if (!exists) {
+                this.form.authors.push({
+                    name: name,
+                    affiliation: res.affiliation || '',
+                    email: res.email || ''
+                });
+            }
+            this.authorSearchQuery = '';
+            this.authorSearchResults = [];
+            this.authorDropdownOpen = false;
+            this.errors.authors = false;
+            this.errorMessages.authors = '';
+        },
+
+        openAddAuthorModal(name) {
+            this.authorDropdownOpen = false;
+            this.$wire.openAddAuthorModal(null, name || this.authorSearchQuery);
+        },
+
+        addAuthorFromModal(author) {
+            if (!author || !author.name) return;
+            this.selectAuthorChip(author);
+        },
+
+        removeAuthorChip(idx) {
+            this.form.authors.splice(idx, 1);
+        },
+
+        async searchJournals() {
+            const q = (this.form.journal_name || '').trim();
+            if (q.length < 2) {
+                this.journalResults = [];
+                this.journalDropdownOpen = false;
+                return;
+            }
+            const key = q.toLowerCase();
+            if (this.journalCache[key]) {
+                this.journalResults = this.journalCache[key];
+                this.journalDropdownOpen = true;
+                return;
+            }
+            if (this.journalController) {
+                this.journalController.abort();
+            }
+            this.journalController = new AbortController();
+            this.isSearchingJournals = true;
+            this.journalDropdownOpen = true;
+            try {
+                const resp = await fetch('/search-journals?q=' + encodeURIComponent(q) + '&limit=15', {
+                    signal: this.journalController.signal,
+                    headers: { 'Accept': 'application/json' }
+                });
+                const json = await resp.json();
+                const list = Array.isArray(json.journals) ? json.journals : [];
+                this.journalCache[key] = list;
+                this.journalResults = list;
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    this.journalResults = [];
+                }
+            } finally {
+                this.isSearchingJournals = false;
+            }
+        },
+
+        selectJournal(j) {
+            this.form.journal_title = j.id || j._id || '';
+            this.form.journal_name = j.journal_title || '';
+            this.form.e_issn = j.e_issn || '';
+            this.form.p_issn = j.p_issn || '';
+            if (this.form.e_issn && this.form.p_issn) this.form.issn_type = 'both';
+            else if (this.form.e_issn) this.form.issn_type = 'e_issn';
+            else if (this.form.p_issn) this.form.issn_type = 'p_issn';
+            this.journalDropdownOpen = false;
+            this.errors.journal_title = false;
+            this.errors.e_issn = false;
+            this.errors.p_issn = false;
+        },
+
+        openAddJournalModalJs() {
+            this.journalDropdownOpen = false;
+            this.$dispatch('open-add-journal-modal', { title: this.form.journal_name, target: 'admin-publications' });
+        },
+
+        handleJournalCreated(detail) {
+            if ((!this.showAddForm && !this.editingId) || !detail) return;
+            this.form.journal_title = detail.id || '';
+            this.form.journal_name = detail.journal_title || '';
+            this.form.e_issn = detail.e_issn || '';
+            this.form.p_issn = detail.p_issn || '';
+            if (this.form.e_issn && this.form.p_issn) this.form.issn_type = 'both';
+            else if (this.form.e_issn) this.form.issn_type = 'e_issn';
+            else if (this.form.p_issn) this.form.issn_type = 'p_issn';
+            this.errors.journal_title = false;
+            this.errors.e_issn = false;
+            this.errors.p_issn = false;
+        },
+
+        setIssnType(type) {
+            this.form.issn_type = type;
+            this.errors.e_issn = false;
+            this.errors.p_issn = false;
+        },
+
+        formatIssnField(field) {
+            let clean = (this.form[field] || '').toUpperCase().replace(/[^0-9X]/g, '');
+            if (clean.length > 8) clean = clean.slice(0, 8);
+            this.form[field] = clean.length > 4 ? clean.slice(0, 4) + '-' + clean.slice(4) : clean;
+        },
+
+        isValidIssnChecksum(val) {
+            const clean = (val || '').toUpperCase().replace(/[^0-9X]/g, '');
+            if (clean.length !== 8) return false;
+            let sum = 0;
+            for (let i = 0; i < 7; i++) {
+                const digit = parseInt(clean[i], 10);
+                if (isNaN(digit)) return false;
+                sum += digit * (8 - i);
+            }
+            const checkChar = clean[7];
+            const checkVal = checkChar === 'X' ? 10 : parseInt(checkChar, 10);
+            if (isNaN(checkVal)) return false;
+            return (sum + checkVal) % 11 === 0;
+        },
+
+        commitKeywordInput() {
+            const raw = (this.keywordInput || '').trim();
+            if (!raw) return;
+            raw.split(',').map(s => s.trim()).filter(Boolean).forEach(kw => {
+                if (!this.form.publication_keywords.includes(kw)) {
+                    this.form.publication_keywords.push(kw);
+                }
+            });
+            this.keywordInput = '';
+        },
+
+        handleKeywordPaste(e) {
+            const pasted = (e.clipboardData || window.clipboardData).getData('text') || '';
+            this.keywordInput = (this.keywordInput ? this.keywordInput + ',' : '') + pasted;
+            this.commitKeywordInput();
+        },
+
+        removeKeyword(idx) {
+            this.form.publication_keywords.splice(idx, 1);
+        },
+
+        validateClient() {
+            this.errors = {};
+            this.errorMessages = {};
+            let valid = true;
+
+            if (!(this.form.title || '').trim()) {
+                this.errors.title = true;
+                this.errorMessages.title = 'Title is required.';
+                valid = false;
+            }
+            if (!(this.form.type || '').trim()) {
+                this.errors.type = true;
+                this.errorMessages.type = 'Article Type is required.';
+                valid = false;
+            }
+            if (!(this.form.journal_title || '').trim()) {
+                this.errors.journal_title = true;
+                this.errorMessages.journal_title = 'Please select a journal from the list or add a new journal.';
+                valid = false;
+            }
+            if (this.form.issn_type === 'both' || this.form.issn_type === 'e_issn') {
+                if (!(this.form.e_issn || '').trim()) {
+                    this.errors.e_issn = true;
+                    this.errorMessages.e_issn = 'E-ISSN is required.';
+                    valid = false;
+                } else if (!this.isValidIssnChecksum(this.form.e_issn)) {
+                    this.errors.e_issn = true;
+                    this.errorMessages.e_issn = 'The E-ISSN is not a valid ISSN checksum.';
+                    valid = false;
+                }
+            }
+            if (this.form.issn_type === 'both' || this.form.issn_type === 'p_issn') {
+                if (!(this.form.p_issn || '').trim()) {
+                    this.errors.p_issn = true;
+                    this.errorMessages.p_issn = 'P-ISSN is required.';
+                    valid = false;
+                } else if (!this.isValidIssnChecksum(this.form.p_issn)) {
+                    this.errors.p_issn = true;
+                    this.errorMessages.p_issn = 'The P-ISSN is not a valid ISSN checksum.';
+                    valid = false;
+                }
+            }
+            if (!(this.form.published_date || '').trim()) {
+                this.errors.published_date = true;
+                this.errorMessages.published_date = 'Publication Date is required.';
+                valid = false;
+            }
+            if (!(this.form.description || '').trim()) {
+                this.errors.description = true;
+                this.errorMessages.description = 'Abstract/Description is required.';
+                valid = false;
+            }
+            if (!Array.isArray(this.form.authors) || this.form.authors.length === 0) {
+                this.errors.authors = true;
+                this.errorMessages.authors = 'At least one author is required.';
+                valid = false;
+            }
+
+            return valid;
+        },
+
+        async saveItem() {
+            this.commitKeywordInput();
+            if (!this.validateClient()) return;
+
+            this.isSaving = true;
+            try {
+                const res = await this.$wire.saveRecord(this.form);
+                if (res && res.ok) {
+                    if (Array.isArray(res.records)) {
+                        this.records = res.records;
+                    }
+                    this.performClose();
+                } else if (res && res.errors) {
+                    Object.keys(res.errors).forEach(key => {
+                        this.errors[key] = true;
+                        this.errorMessages[key] = Array.isArray(res.errors[key]) ? res.errors[key][0] : res.errors[key];
+                    });
+                }
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
+        async deleteItem(id) {
+            const updated = await this.$wire.deleteRecord(id);
+            if (Array.isArray(updated)) {
+                this.records = updated;
+            }
+            this.performClose();
+        }
+    }"
+    @journal-created.window="handleJournalCreated($event.detail)"
+    @author-added.window="if (showAddForm || editingId !== null) addAuthorFromModal($event.detail.author)"
+>
+    @if($hasError)
+        <div class="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-xs text-red-700 dark:text-red-300">
+            Unable to load Publications right now. Please refresh the page.
+        </div>
+    @else
+        {{-- Section Header with Status Filter Tabs --}}
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-zinc-100 dark:border-zinc-800/80">
+            <div class="flex items-center gap-3.5">
+                <div class="size-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-book-bookmark text-base"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="font-bold font-space text-base sm:text-lg text-zinc-900 dark:text-white">
+                            Publications
+                        </h3>
+                        <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-brand/10 text-brand">
+                            {{ count($allRecords) }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        Manage published research papers, DOI metadata, and visibility status
+                    </p>
+                </div>
+            </div>
+
+            {{-- Filter Tabs --}}
+            <div class="inline-flex items-center p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200/80 dark:border-zinc-700">
+                <button 
+                    type="button" 
+                    wire:click="$set('statusFilter', 'all')"
+                    class="px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer {{ $statusFilter === 'all' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400' }}"
+                >
+                    All ({{ count($allRecords) }})
+                </button>
+                <button 
+                    type="button" 
+                    wire:click="$set('statusFilter', 'active')"
+                    class="px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer {{ $statusFilter === 'active' ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400' }}"
+                >
+                    Active ({{ $activeCount }})
+                </button>
+                <button 
+                    type="button" 
+                    wire:click="$set('statusFilter', 'inactive')"
+                    class="px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer {{ $statusFilter === 'inactive' ? 'bg-white dark:bg-zinc-900 text-red-700 dark:text-red-400 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400' }}"
+                >
+                    Inactive ({{ $inactiveCount }})
+                </button>
+            </div>
+        </div>
+
+        {{-- Records List (5 Initially + Load More) --}}
+        <div class="mt-5 space-y-4">
+            @forelse($visibleRecords as $item)
+                @php
+                    $isActive = ((int) ($item['status'] ?? 1)) === 1;
+                    $detailUrl = ! empty($item['slug'])
+                        ? route('publication.detail', ['slug' => $item['slug']])
+                        : (! empty($item['url']) ? $item['url'] : '#');
+                    $keywords = is_array($item['publication_keywords'] ?? null) ? $item['publication_keywords'] : [];
+                    $visibleKeywords = array_slice($keywords, 0, 3);
+                    $remainingKeywordsCount = max(0, count($keywords) - 3);
+                @endphp
+                <div wire:key="admin-pub-card-{{ $item['id'] }}">
+                        <div class="group p-4 sm:p-5 rounded-2xl border {{ $isActive ? 'border-zinc-200/80 dark:border-zinc-800' : 'border-red-200/70 dark:border-red-900/40' }} hover:border-brand/40 transition-all">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="min-w-0 flex-1 space-y-2">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h4 class="font-bold text-sm sm:text-[15px] leading-snug">
+                                            <a href="{{ $detailUrl }}" class="text-zinc-900 dark:text-white hover:text-[#198BEA] dark:hover:text-[#198BEA] transition-colors">
+                                                {{ $item['title'] }}
+                                            </a>
+                                        </h4>
+
+                                        {{-- Database ID with select-all --}}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[10.5px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 select-all" title="Database ID (Click to select)">
+                                            <span class="text-zinc-400 select-none">ID:</span>
+                                            <span>{{ $item['id'] }}</span>
+                                        </span>
+
+                                        <button 
+                                            type="button" 
+                                            wire:click="toggleStatus('{{ $item['id'] }}')"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition cursor-pointer {{ $isActive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border-red-200 dark:border-red-800/60 hover:bg-red-100' }}"
+                                            title="Click to toggle status"
+                                        >
+                                            <span class="size-1.5 rounded-full {{ $isActive ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
+                                            {{ $isActive ? 'Active' : 'Inactive' }}
+                                        </button>
+                                    </div>
+
+                                    @if(!empty($item['journal_name']) || !empty($item['published_date']))
+                                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+                                            @if(!empty($item['journal_name']))
+                                                <span>
+                                                    <span class="font-semibold text-zinc-500 dark:text-zinc-400">Journal:</span>
+                                                    <span class="font-medium text-zinc-800 dark:text-zinc-200">{{ $item['journal_name'] }}</span>
+                                                </span>
+                                            @endif
+                                            @if(!empty($item['journal_name']) && !empty($item['published_date']))
+                                                <span class="text-zinc-300 dark:text-zinc-700">&bull;</span>
+                                            @endif
+                                            @if(!empty($item['published_date']))
+                                                <span>
+                                                    <span class="font-semibold text-zinc-500 dark:text-zinc-400">Published:</span>
+                                                    <span class="font-medium text-zinc-800 dark:text-zinc-200">{{ $item['published_date'] }}</span>
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                    @if(!empty($item['description']))
+                                        <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-2">
+                                            <span class="font-semibold text-zinc-500 dark:text-zinc-400">Description:</span>
+                                            {{ $item['description'] }}
+                                        </p>
+                                    @endif
+
+                                    @if(!empty($visibleKeywords))
+                                        <div class="flex flex-wrap items-center gap-2 pt-1">
+                                            @foreach($visibleKeywords as $kw)
+                                                <span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-sky-50 text-[#0284c7] dark:bg-sky-950/50 dark:text-sky-300">
+                                                    {{ $kw }}
+                                                </span>
+                                            @endforeach
+                                            @if($remainingKeywordsCount > 0)
+                                                <a href="{{ $detailUrl }}" class="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-sky-50 text-[#0284c7] dark:bg-sky-950/50 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition-colors">
+                                                    +{{ $remainingKeywordsCount }} more
+                                                </a>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <button 
+                                    type="button" 
+                                    x-show="editingId !== '{{ $item['id'] }}'"
+                                    @click="openEditForm({{ \Illuminate\Support\Js::from($item) }})"
+                                    class="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer shrink-0 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                    title="Edit Publication"
+                                >
+                                    <i class="fa-solid fa-pen-to-square text-[16px]"></i>
+                                </button>
+                            </div>
+
+                            {{-- Inline Edit Form Slot (Single Shared Form Teleported Here) --}}
+                            <div id="admin-pub-edit-slot-{{ $item['id'] }}" x-show="editingId === '{{ $item['id'] }}'" x-cloak></div>
+                        </div>
+                </div>
+            @empty
+                <div x-show="!showAddForm" class="py-10 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl">
+                    <i class="fa-solid fa-book-bookmark text-2xl text-zinc-300 dark:text-zinc-700 mb-2"></i>
+                    <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">No publications found in this filter.</p>
+                </div>
+            @endforelse
+        </div>
+
+        {{-- Single Shared Add/Edit Form (0 Server Round-Trips) & Bottom Row (+ Add Publication & Load More) --}}
+        <div class="mt-5">
+            <div x-ref="addSlot" x-show="showAddForm" x-cloak></div>
+            <div x-ref="sharedForm" x-show="showAddForm || editingId !== null" x-cloak wire:ignore.self>
+                <x-profile.publication-form :show-status="true" :article-types="$articleTypes" />
+            </div>
+            <div class="relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!showAddForm">
+                <button 
+                    type="button" 
+                    @click="openAddForm()"
+                    class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-600 transition cursor-pointer"
+                >
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Add Publication</span>
+                </button>
+                @if($remainingCount > 0)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ $remainingCount }})</span>
+                    </button>
+                @endif
+                <span class="hidden md:block"></span>
+            </div>
+        </div>
+
+        {{-- 100% Frontend Unsaved Changes Modal --}}
+        <div 
+            x-show="showDiscardModal" 
+            x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+            @keydown.escape.window="if (showDiscardModal) { cancelDiscard(); }"
+        >
+            <div 
+                @click.outside="cancelDiscard()"
+                class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-2xl space-y-4"
+            >
+                <div class="flex items-start gap-3">
+                    <div class="size-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-triangle-exclamation text-base"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm text-zinc-900 dark:text-white">Unsaved Changes</h4>
+                        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">You have unsaved changes in this form. Discard changes and proceed?</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button 
+                        type="button" 
+                        @click="cancelDiscard()"
+                        class="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition cursor-pointer"
+                    >
+                        Keep Editing
+                    </button>
+                    <button 
+                        type="button" 
+                        @click="confirmDiscard()"
+                        class="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition cursor-pointer"
+                    >
+                        Discard Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Shared Add New Journal Modal --}}
+        <x-modals.add-journal scope="admin-publications" />
+
+        {{-- Shared Add New Author Modal --}}
+        <x-modals.add-author />
+
+        {{-- Shared Duplicate Article Modal --}}
+        <x-modals.duplicate-article target-input="#admin-publications input" />
+    @endif
+</div>

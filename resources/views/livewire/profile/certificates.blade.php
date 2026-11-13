@@ -50,7 +50,14 @@ new class extends Component {
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Component mount lifecycle hook.
@@ -118,18 +125,13 @@ new class extends Component {
     {
         try {
             $reviewerProfile = $this->user?->reviewerProfile ?? ($this->user ? ReviewerProfile::where('user_id', (string) $this->user->_id)->first() : null);
-            $certIds = (array) ($reviewerProfile->certificate ?? []);
+            $certIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->certificate ?? [])))));
 
-            // Also query by user_id to ensure legacy or directly assigned certificates are included
-            $query = Certificate::query();
-            if (! empty($certIds)) {
-                $query->where(function ($q) use ($certIds) {
-                    $q->whereIn('_id', $certIds)
-                        ->orWhere('user_id', (string) $this->user->_id);
-                });
-            } else {
-                $query->where('user_id', (string) $this->user->_id);
+            if (empty($certIds)) {
+                return [];
             }
+
+            $query = Certificate::whereIn('_id', $certIds);
 
             // ONLY active records (status = 1 or '1' or true), ordered latest first
             $records = $query->whereIn('status', [1, '1', true])
@@ -668,18 +670,11 @@ new class extends Component {
         {{-- SECTION HEADER --}}
         <div class="p-6 border-b border-zinc-100 dark:border-zinc-800">
             <div class="flex items-center justify-between flex-wrap gap-4">
-                <div class="flex items-center gap-3">
-                    <div class="size-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800/80 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                        <i class="fa-solid fa-certificate text-lg"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                            <span>Certificates</span>
-                            <span class="inline-flex items-center justify-center size-5 text-xs font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 rounded-full">
-                                {{ count($this->certificates) }}
-                            </span>
-                        </h2>
-                    </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="text-lg">&#x1F4DC;</span>
+                    <h2 class="text-base font-bold font-space text-zinc-900 dark:text-white">
+                        Certificates ({{ count($this->certificates) }})
+                    </h2>
                 </div>
             </div>
         </div>
@@ -687,7 +682,7 @@ new class extends Component {
         <div class="p-6">
             {{-- CERTIFICATES LIST --}}
             <div class="space-y-4">
-                @forelse($this->certificates as $cert)
+                @forelse(collect($this->certificates)->take($limit) as $cert)
                     <div 
                         wire:key="profile-cert-card-{{ $cert['id'] }}" 
                         class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-brand dark:hover:border-brand hover:border-l-4 hover:border-l-brand hover:pl-[13px] bg-zinc-50/40 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-800/50 hover:shadow-xs transition-all duration-200"
@@ -751,7 +746,7 @@ new class extends Component {
                                             {{-- Date --}}
                                             @if(!empty($cert['month_year']))
                                                 @if(!empty($cert['organizer']))
-                                                    <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                                    <span class="text-zinc-300 dark:text-zinc-600">Â·</span>
                                                 @endif
                                                 <span class="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
                                                     <i class="fa-regular fa-calendar text-[11px] text-zinc-400"></i>
@@ -761,7 +756,7 @@ new class extends Component {
 
                                             {{-- Credential ID / URL --}}
                                             @if(!empty($cert['certificate_no']))
-                                                <span class="text-zinc-300 dark:text-zinc-600">·</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600">Â·</span>
                                                 @if(str_starts_with($cert['certificate_no'], 'http://') || str_starts_with($cert['certificate_no'], 'https://'))
                                                     <a 
                                                         href="{{ $cert['certificate_no'] }}" 
@@ -854,15 +849,17 @@ new class extends Component {
                 @endforelse
             </div>
 
+
             {{-- BOTTOM ADD FORM CONTAINER --}}
             <div x-show="showAddForm" x-cloak class="mt-4">
                 <x-profile.certificate-form />
             </div>
 
             {{-- ADD CERTIFICATE BUTTON (Always At Bottom) --}}
-            @if($isOwnProfile)
-                <div class="mt-6 pt-2" x-show="!showAddForm">
-                    <button 
+            @if($isOwnProfile || count($this->certificates) > $limit)
+                <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!showAddForm">
+                    @if($isOwnProfile)
+                        <button 
                         type="button" 
                         @click="openAddForm()" 
                         class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-600 hover:underline cursor-pointer transition-colors"
@@ -870,8 +867,24 @@ new class extends Component {
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add Certificate</span>
                     </button>
+                    @else
+                        <span></span>
+                    @endif
+                    @if(count($this->certificates) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($this->certificates) - $limit }})</span>
+                    </button>
+                @endif
+                    <span class="hidden md:block"></span>
                 </div>
-            @endif
+                @endif
         </div>
 
         {{-- UNSAVED CHANGES CONFIRMATION MODAL --}}

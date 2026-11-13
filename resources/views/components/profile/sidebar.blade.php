@@ -37,6 +37,11 @@
                 <li>
                     <a 
                         href="#{{ $sec['id'] }}" 
+                        @click.prevent="
+                            const el = document.getElementById('{{ $sec['id'] }}');
+                            if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+                            if (window.location.hash) { history.replaceState(null, '', window.location.pathname + window.location.search); }
+                        "
                         class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800/70 hover:text-brand transition-colors"
                     >
                         <span>{{ $sec['icon'] }}</span>

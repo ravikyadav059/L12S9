@@ -1398,7 +1398,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                         <span class="text-xs text-zinc-500 dark:text-zinc-400">Can't find your journal?</span>
                                                         <button 
                                                             type="button" 
-                                                            wire:click="openAddJournalModal" 
+                                                            @click="open = false; $dispatch('open-add-journal-modal', { title: ($wire.journalName || '').trim() })" 
                                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#198BEA] hover:bg-[#1476c9] text-white text-xs font-bold rounded-lg shadow-sm transition cursor-pointer"
                                                         >
                                                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -1419,7 +1419,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                                                 </div>
                                                 <button 
                                                     type="button" 
-                                                    wire:click="openAddJournalModal" 
+                                                    @click="open = false; $dispatch('open-add-journal-modal', { title: ($wire.journalName || '').trim() })" 
                                                     class="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[#198BEA] hover:bg-[#1476c9] text-white text-xs font-bold rounded-lg shadow-sm transition cursor-pointer"
                                                 >
                                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">

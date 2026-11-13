@@ -23,7 +23,14 @@ new class extends Component {
     /**
      * Error boundary flag.
      */
+    public int $limit = 5;
+
     public bool $hasError = false;
+
+    public function loadMore(): void
+    {
+        $this->limit += 5;
+    }
 
     /**
      * Catch and stop propagation of unhandled exceptions in the experience section.
@@ -472,8 +479,6 @@ new class extends Component {
             orgAbortController: null,
 
             init() {
-                this.fetchDesignations('');
-                this.fetchOrganizations('');
             },
 
             fetchDesignations(query = '', page = 1) {
@@ -1059,7 +1064,7 @@ new class extends Component {
                 @endif
 
                 <div class="space-y-7">
-                    @forelse($adminExperiences as $exp)
+                    @forelse(array_slice($adminExperiences, 0, $limit) as $exp)
                         <div 
                             class="relative pl-8" 
                             wire:key="exp-admin-{{ $exp['id'] }}"
@@ -1100,7 +1105,7 @@ new class extends Component {
                                         
                                         <p class="text-[13px] text-zinc-600 dark:text-zinc-400 font-normal leading-snug">
                                             <span class="font-semibold text-brand">{{ $exp['organization'] }}</span>
-                                            <span class="mx-1">·</span>
+                                            <span class="mx-1">Â·</span>
                                             <span>{{ $exp['start_date'] }} - {{ $exp['is_current'] ? 'Present' : $exp['end_date'] }}</span>
                                         </p>
 
@@ -1146,10 +1151,10 @@ new class extends Component {
                                     <button 
                                         type="button"
                                         @click.stop="$wire.toggleExperienceStatus('{{ $exp['id'] }}')"
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ ($exp['status'] === 1 || $exp['status'] === '1') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700' }} transition select-none shadow-2xs cursor-pointer"
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ ($exp['status'] === 1 || $exp['status'] === '1') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-800/60 hover:bg-red-100 dark:hover:bg-red-900/50' }} transition select-none shadow-2xs cursor-pointer"
                                         title="Click to toggle status"
                                     >
-                                        <span class="size-1.5 rounded-full {{ ($exp['status'] === 1 || $exp['status'] === '1') ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
+                                        <span class="size-1.5 rounded-full {{ ($exp['status'] === 1 || $exp['status'] === '1') ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
                                         <span>{{ ($exp['status'] === 1 || $exp['status'] === '1') ? 'Active' : 'Inactive' }}</span>
                                     </button>
 
@@ -1187,6 +1192,7 @@ new class extends Component {
                 </div>
             </div>
 
+
             {{-- Add Experience Form --}}
             <div 
                 id="admin-experience-add-form"
@@ -1200,7 +1206,7 @@ new class extends Component {
             </div>
 
             {{-- Add Experience Button --}}
-            <div class="mt-6 pt-2" x-show="!isAdding">
+            <div class="mt-6 pt-2 relative flex items-center justify-between gap-3 flex-wrap min-h-[34px]" x-show="!isAdding">
                 <button 
                     type="button" 
                     @click="openAddForm()" 
@@ -1209,6 +1215,19 @@ new class extends Component {
                     <i class="fa-solid fa-plus text-xs"></i>
                     <span>Add Experience</span>
                 </button>
+                @if(count($adminExperiences) > $limit)
+                    <button 
+                        type="button" 
+                        wire:click="loadMore"
+                        wire:loading.attr="disabled"
+                        class="md:absolute md:left-1/2 md:-translate-x-1/2 inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-xl transition cursor-pointer disabled:opacity-60"
+                    >
+                        <i wire:loading.remove wire:target="loadMore" class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <i wire:loading wire:target="loadMore" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        <span>Load More ({{ count($adminExperiences) - $limit }})</span>
+                    </button>
+                @endif
+                <span class="hidden md:block"></span>
             </div>
 
         </div>

@@ -861,6 +861,9 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     <!-- 6. EDUCATION (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
     <livewire:admin.users.partials.education :user="$user" :key="'admin-user-education-'.$user->_id" />
 
+    <!-- PUBLICATIONS (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
+    <livewire:admin.users.partials.publications :user="$user" :key="'admin-user-publications-'.$user->_id" />
+
     <!-- 7. PROJECTS (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
     <livewire:admin.users.partials.projects :user="$user" :key="'admin-user-projects-'.$user->_id" />
 
@@ -882,8 +885,122 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     <!-- 13. PATENTS (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
     <livewire:admin.users.partials.patents :user="$user" :key="'admin-user-patents-'.$user->_id" />
 
+    <!-- 14. INVITED POSITIONS (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
+    <livewire:admin.users.partials.invited-positions :user="$user" :key="'admin-user-invited-positions-'.$user->_id" />
+
+    <!-- 15. ROLE IN RESEARCH JOURNALS (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
+    <livewire:admin.users.partials.journal-roles :user="$user" :key="'admin-user-journal-roles-'.$user->_id" />
+
     <!-- ADMIN USER MODALS (CROP PHOTO, CHANGE PASSWORD, CHANGE EMAIL) -->
     <x-admin.users.crop-modal />
     <x-admin.users.password-modal />
     <x-admin.users.email-modal :user="$user" />
+
+    <!-- RIGHT-EDGE FLOATING QUICK NAVIGATION SIDE DRAWER -->
+    <div
+        x-data="{
+            openQuickNav: false,
+            activeSection: 'main-user-edit-form',
+            sections: [
+                { id: 'main-user-edit-form', label: 'Personal & Contact', icon: 'fa-user' },
+                { id: 'about-profile-card', label: 'About & Skills', icon: 'fa-address-card' },
+                { id: 'experience-profile-card', label: 'Work Experience', icon: 'fa-briefcase' },
+                { id: 'education-profile-card', label: 'Education', icon: 'fa-graduation-cap' },
+                { id: 'admin-publications', label: 'Publications', icon: 'fa-book-open' },
+                { id: 'admin-projects-section', label: 'Projects', icon: 'fa-diagram-project' },
+                { id: 'admin-user-seminars-card', label: 'Conferences & Seminars', icon: 'fa-chalkboard-user' },
+                { id: 'admin-certificates-section', label: 'Certificates', icon: 'fa-certificate' },
+                { id: 'admin-awards-section', label: 'Awards & Achievements', icon: 'fa-trophy' },
+                { id: 'admin-thesis-guided', label: 'Thesis Guided', icon: 'fa-scroll' },
+                { id: 'admin-memberships', label: 'Memberships', icon: 'fa-id-badge' },
+                { id: 'admin-user-patents', label: 'Patents', icon: 'fa-lightbulb' },
+                { id: 'invited-positions', label: 'Invited Positions', icon: 'fa-user-tie' },
+                { id: 'admin-editorial-roles', label: 'Journal Roles', icon: 'fa-book-journal-whills' }
+            ],
+            jumpToSection(sectionId) {
+                this.activeSection = sectionId;
+                this.openQuickNav = false;
+                this.$nextTick(() => {
+                    const el = document.getElementById(sectionId);
+                    if (el) {
+                        const y = el.getBoundingClientRect().top + window.pageYOffset - 80;
+                        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+                        el.classList.add('ring-2', 'ring-brand/60', 'ring-offset-2');
+                        setTimeout(() => el.classList.remove('ring-2', 'ring-brand/60', 'ring-offset-2'), 1500);
+                    }
+                });
+            },
+            scrollToTop() {
+                this.openQuickNav = false;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }"
+        @keydown.escape.window="openQuickNav = false"
+        @click.outside="openQuickNav = false"
+        class="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center"
+    >
+        <!-- Edge Arrow Toggle Button -->
+        <button
+            type="button"
+            @click="openQuickNav = !openQuickNav"
+            :aria-expanded="openQuickNav.toString()"
+            title="Quick Section Navigation"
+            class="flex items-center justify-center w-9 h-12 rounded-l-xl bg-white dark:bg-[#111c26] border border-r-0 border-zinc-200 dark:border-zinc-700 shadow-lg text-zinc-700 dark:text-zinc-200 hover:bg-brand hover:text-white hover:border-brand transition-all cursor-pointer group"
+        >
+            <svg
+                class="size-4 transition-transform duration-200"
+                :class="openQuickNav ? 'rotate-180' : ''"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.2"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+        </button>
+
+        <!-- Slide-Out Quick Navigation Drawer -->
+        <div
+            x-show="openQuickNav"
+            x-cloak
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 translate-x-6"
+            x-transition:enter-end="opacity-100 translate-x-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-x-0"
+            x-transition:leave-end="opacity-0 translate-x-6"
+            class="w-60 max-h-[82vh] flex flex-col bg-white dark:bg-[#111c26] border border-r-0 border-zinc-200 dark:border-zinc-700 rounded-l-2xl shadow-2xl overflow-hidden"
+        >
+            <div class="px-3.5 py-2.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="size-2 rounded-full bg-brand"></span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-100">Quick Navigation</span>
+                </div>
+                <button
+                    type="button"
+                    @click="scrollToTop()"
+                    title="Scroll to Top"
+                    class="text-[11px] font-semibold text-brand hover:underline cursor-pointer"
+                >
+                    Top &uarr;
+                </button>
+            </div>
+
+            <nav class="p-1.5 overflow-y-auto space-y-0.5">
+                <template x-for="sec in sections" :key="sec.id">
+                    <button
+                        type="button"
+                        @click="jumpToSection(sec.id)"
+                        :class="activeSection === sec.id
+                            ? 'bg-brand/10 text-brand dark:bg-brand/20 font-semibold'
+                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/70'"
+                        class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer"
+                    >
+                        <i class="fa-solid w-4 text-center text-[11px] opacity-80" :class="sec.icon"></i>
+                        <span class="truncate" x-text="sec.label"></span>
+                    </button>
+                </template>
+            </nav>
+        </div>
+    </div>
 </div>

@@ -109,17 +109,13 @@ class Patent extends Model
 
         return Cache::remember($cacheKey, 86400, function () use ($userId, $activeOnly) {
             $reviewerProfile = ReviewerProfile::where('user_id', $userId)->first();
-            $patentIds = (array) ($reviewerProfile->patent ?? []);
+            $patentIds = array_values(array_unique(array_filter(array_map('strval', (array) ($reviewerProfile->patent ?? [])))));
 
-            $query = static::query();
-            if (! empty($patentIds)) {
-                $query->where(function ($q) use ($patentIds, $userId) {
-                    $q->whereIn('_id', $patentIds)
-                        ->orWhere('user_id', $userId);
-                });
-            } else {
-                $query->where('user_id', $userId);
+            if (empty($patentIds)) {
+                return [];
             }
+
+            $query = static::query()->whereIn('_id', $patentIds);
 
             if ($activeOnly) {
                 $query->whereIn('status', [1, '1', true]);

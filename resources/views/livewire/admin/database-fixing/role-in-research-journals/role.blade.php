@@ -293,8 +293,8 @@ new #[Layout('components.layouts.admin')] #[Title('RoleInResearchJournals — ro
 }; ?>
 
 <div class="space-y-5">
-    <!-- TOP BREADCRUMB & BACK BUTTON -->
-    <div class="flex items-center justify-between">
+    <!-- TOP BREADCRUMB & SWITCHER NAV -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
         <a 
             href="{{ route('admin.database-fixing.index') }}" 
             wire:navigate
@@ -306,9 +306,18 @@ new #[Layout('components.layouts.admin')] #[Title('RoleInResearchJournals — ro
             <span>Back to Database Fixing List</span>
         </a>
 
-        <span class="text-xs font-semibold text-zinc-400">
-            Table: <strong class="text-zinc-700 dark:text-zinc-200">RoleInResearchJournals</strong> &bull; Field: <code class="font-mono text-brand">role</code>
-        </span>
+        @if (Route::has('admin.database-fixing.role-in-research-journals.reviewer-profile'))
+            <div class="inline-flex rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300 shadow-xs">
+                    <flux:icon.tag class="size-3.5" />
+                    <span>Role ObjectId Fixer</span>
+                </span>
+                <a href="{{ route('admin.database-fixing.role-in-research-journals.reviewer-profile') }}" wire:navigate class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200">
+                    <flux:icon.user-group class="size-3.5" />
+                    <span>Reviewer Profile & User Sync</span>
+                </a>
+            </div>
+        @endif
     </div>
 
     <!-- STATS / ACTION CARD -->
