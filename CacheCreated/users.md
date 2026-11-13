@@ -12,7 +12,7 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`users:publishers:active:list`** | Array of active verified academic publishers: `[['id' => string, 'name' => string, 'email' => string], ...]` | **1 Hour** (3,600 seconds) | Journal registration form, Publisher selector dropdown | Cleared on `User::forgetCachedPublishers()` |
+| **`publishers:initial`** (alias: `users:publishers:active:list`) | Array of active verified academic publishers: `[['id' => string, 'name' => string, 'email' => string], ...]` | **1 Hour** (3,600 seconds) | Journal registration form, Publisher selector dropdown | Cleared on `User::forgetCachedPublishers()` |
 | **`qa_active_contributors`** | Top active community contributors with answer counts and badges | **15 Minutes** (900 seconds) | Q&A Community Sidebar ([`question/index.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/question/index.blade.php)) | Auto-expires via TTL |
 
 ---
@@ -44,11 +44,12 @@ When an admin approves or revokes a publisher account:
 ```php
 // app/Models/User.php
 
-public const CACHE_KEY_PUBLISHERS = 'users:publishers:active:list';
+public const CACHE_KEY_PUBLISHERS = 'publishers:initial';
 
 public static function forgetCachedPublishers(): void
 {
     Cache::forget(self::CACHE_KEY_PUBLISHERS);
+    Cache::forget('users:publishers:active:list'); // historical alias
 }
 
 public static function getInitialPublishers(int $limit = 20, ?string $selectedId = null): array

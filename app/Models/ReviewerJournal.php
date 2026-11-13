@@ -510,7 +510,9 @@ class ReviewerJournal extends Model
         Cache::forget('journals:active:count');
         Cache::forget('journals:active:disciplines:list');
         Cache::forget('journals:active:indexers:list');
-        Cache::tags([self::SEARCH_CACHE_TAG])->flush();
+        if (Cache::supportsTags()) {
+            Cache::tags([self::SEARCH_CACHE_TAG])->flush();
+        }
         IndexingAgency::forgetCached();
     }
 
@@ -559,8 +561,9 @@ class ReviewerJournal extends Model
         }
 
         $cacheKey = 'journals:search:'.md5(strtolower($query).'_'.$limit);
+        $cacheDriver = Cache::supportsTags() ? Cache::tags([self::SEARCH_CACHE_TAG]) : Cache::store();
 
-        return Cache::tags([self::SEARCH_CACHE_TAG])->remember($cacheKey, 300, function () use ($query, $limit) {
+        return $cacheDriver->remember($cacheKey, 300, function () use ($query, $limit) {
             $fields = [
                 '_id',
                 'journal_title',

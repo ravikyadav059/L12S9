@@ -39,6 +39,28 @@ class Skill extends Eloquent
     ];
 
     /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (): void {
+            static::clearAvailableCache();
+        });
+
+        static::deleted(function (): void {
+            static::clearAvailableCache();
+        });
+    }
+
+    /**
+     * Clear cached list of available skills.
+     */
+    public static function clearAvailableCache(): void
+    {
+        Cache::forget(self::AVAILABLE_CACHE_KEY);
+    }
+
+    /**
      * Retrieve the active skills used by the public question pages.
      *
      * @return list<string>

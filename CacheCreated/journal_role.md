@@ -12,7 +12,7 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`journal_roles:active:list`** | Array of active editorial roles: `[['id' => string, 'name' => string], ...]` | **24 Hours** (86,400 seconds) | Scholar Profile editorial section, Admin user edit | Cleared on `JournalRole::forgetCached()` |
+| **`journal_roles:active`** (alias: `journal_roles:active:list`) | Array of active editorial roles: `[['id' => string, 'name' => string], ...]` | **24 Hours** (86,400 seconds) | Scholar Profile editorial section, Admin user edit | Cleared on `JournalRole::forgetCached()` |
 
 ---
 
@@ -38,7 +38,7 @@ The cache is cleared whenever an admin creates, updates, or deletes an editorial
 ```php
 // app/Models/JournalRole.php
 
-public const CACHE_KEY = 'journal_roles:active:list';
+public const CACHE_KEY = 'journal_roles:active';
 
 protected static function booted(): void
 {
@@ -54,6 +54,7 @@ protected static function booted(): void
 public static function forgetCached(): void
 {
     Cache::forget(self::CACHE_KEY);
+    Cache::forget('journal_roles:active:list'); // historical alias
 }
 
 public static function getCachedActive(): array

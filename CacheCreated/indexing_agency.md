@@ -12,7 +12,7 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`indexing_agencies:active:list`** | Array of active agencies sorted by `serial_number`: `[['name' => string, 'key' => string, 'image' => ?string], ...]` | **24 Hours** (86,400 seconds) | Journal submission checklists, Admin verification | Cleared on `IndexingAgency::forgetCached()` |
+| **`indexing_agencies:active`** (alias: `indexing_agencies:active:list`) | Array of active agencies sorted by `serial_number`: `[['name' => string, 'key' => string, 'image' => ?string], ...]` | **24 Hours** (86,400 seconds) | Journal submission checklists, Admin verification | Cleared on `IndexingAgency::forgetCached()` |
 | **`indexing_agencies_active_all`** | Formatted array of active agencies with asset URLs | **24 Hours** (86,400 seconds) | Public Journal Detail ([`journal/show.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/journal/show.blade.php)) | Cleared on `IndexingAgency::forgetCached()` |
 
 ---
@@ -42,11 +42,12 @@ The cache is flushed instantly whenever an indexing agency is created, updated, 
 ```php
 // app/Models/IndexingAgency.php
 
-public const CACHE_KEY = 'indexing_agencies:active:list';
+public const CACHE_KEY = 'indexing_agencies:active';
 
 public static function forgetCached(): void
 {
     Cache::forget(self::CACHE_KEY);
+    Cache::forget('indexing_agencies:active:list'); // historical alias
     Cache::forget('indexing_agencies_active_all');
 }
 

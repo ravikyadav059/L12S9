@@ -62,6 +62,7 @@ class JournalRole extends Model
     public static function forgetCached(): void
     {
         Cache::forget(self::CACHE_KEY);
+        Cache::forget('journal_roles:active:list');
     }
 
     /**

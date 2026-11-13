@@ -12,7 +12,7 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`qa_available_skills`** | List of all approved skill tags for question tagging and filtering | **30 Mins** (1,800s) | Q&A Forum Tag Filters, Question Ask Modal | Auto-expires via TTL |
+| **`qa_available_skills`** | List of all approved skill tags for question tagging and filtering | **30 Mins** (1,800s) | Q&A Forum Tag Filters, Question Ask Modal | Cleared on `Skill` save or delete; TTL remains a fallback |
 
 ---
 
@@ -34,10 +34,7 @@
 
 ## 3. Lifecycle & Flush Events (Save & Update)
 
-```php
-// Both question pages use the same cache key and 30-minute TTL.
-$availableSkills = Skill::getCachedAvailable();
-```
+Both question pages use the same cache key and 30-minute TTL through `Skill::getCachedAvailable()`. `Skill` model `saved` and `deleted` events call `Skill::clearAvailableCache()`, so tag additions, edits, status changes, and deletions are visible on the next request.
 
 ---
 

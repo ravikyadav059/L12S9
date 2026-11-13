@@ -1,6 +1,6 @@
 # Cache Documentation: `experience`
 
-> **Audit status:** The registry in [README.md](README.md) is current; verify historical implementation notes below against source.
+> **Audit status:** Verified and active. `Experience` model events invalidate `organizations:metrics:{orgId}` on save, update (including reassigned organizations), and delete.
 
 ## Collection: `experience`
 **Eloquent Model**: [`App\Models\Experience`](file:///c:/Users/hp/Desktop/L12S9/app/Models/Experience.php)  
@@ -12,7 +12,7 @@
 
 | Cache Key Pattern | Data Stored | TTL (Duration) | Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **Compiled in `organizations:metrics:{orgId}`** | Current faculty scholar IDs (`current_organization = 1`) and alumni user IDs | **30 Minutes** (1,800s) | Institution Detail & Directory Metrics | Auto-expires via TTL (1,800s) |
+| **Compiled in `organizations:metrics:{orgId}`** | Current faculty scholar IDs (`current_organization = 1`) and alumni user IDs | **30 Minutes** (1,800s) | Institution Detail & Directory Metrics | Cleared on `Experience::saved()`, `Experience::deleted()`, or TTL |
 | **User Profile Experience List** | Cached array of experience timeline entries for public scholar profiles | **1 Hour** (3,600s) | Scholar Public Profile ([`/profile/{slug}`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/userprofile.blade.php)) | Cleared when user saves or deletes an experience record |
 
 ---
@@ -41,16 +41,18 @@ When a user adds or updates their work experience:
 // app/Models/Experience.php
 protected static function booted(): void
 {
-    static::saved(function ($model) {
-        if (! empty($model->organization_id)) {
-            // Invalidate metrics cache for the associated organization
-            Cache::forget('organizations:metrics:' . (string) $model->organization_id);
+    static::saved(function (Experience $experience): void {
+        if (! empty($experience->organization_id)) {
+            Cache::forget('organizations:metrics:'.(string) $experience->organization_id);
+        }
+        if ($experience->wasChanged('organization_id') && ! empty($experience->getOriginal('organization_id'))) {
+            Cache::forget('organizations:metrics:'.(string) $experience->getOriginal('organization_id'));
         }
     });
 
-    static::deleted(function ($model) {
-        if (! empty($model->organization_id)) {
-            Cache::forget('organizations:metrics:' . (string) $model->organization_id);
+    static::deleted(function (Experience $experience): void {
+        if (! empty($experience->organization_id)) {
+            Cache::forget('organizations:metrics:'.(string) $experience->organization_id);
         }
     });
 }

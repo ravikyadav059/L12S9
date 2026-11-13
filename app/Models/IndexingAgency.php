@@ -64,6 +64,8 @@ class IndexingAgency extends Model
     public static function forgetCached(): void
     {
         Cache::forget(self::CACHE_KEY);
+        Cache::forget('indexing_agencies:active:list');
+        Cache::forget('indexing_agencies_active_all');
     }
 
     /**

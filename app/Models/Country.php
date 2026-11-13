@@ -69,6 +69,7 @@ class Country extends Model
     public static function forgetCached(): void
     {
         Cache::forget(self::CACHE_KEY);
+        Cache::forget('countries:all:list');
     }
 
     /**

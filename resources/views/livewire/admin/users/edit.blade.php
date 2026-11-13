@@ -17,16 +17,26 @@ use Livewire\Volt\Component;
 /**
  * Admin User Edit Component (Livewire Volt Single-File Component)
  *
- * This component provides administrative control over a user's account details,
- * profile titles, contact information, geographic location, profile statuses,
- * roles, avatar photo with cropping, about/research interests, and work experiences.
+ * Master coordinator component for administrative user management.
+ * Provides full profile control with isolated, high-performance child Volt components.
  *
- * View partials included in this component:
- * - partials/header.blade.php        : Breadcrumb, title, Unique ID, public profile link, and session alerts
- * - partials/status-bar.blade.php    : Quick status pill toggles (profile, verified, publisher, reviewer, badge, role, password, conference)
- * - partials/profile-info.blade.php   : Main profile form (avatar management, personal info, address & location cascading selects)
- * - partials/about.blade.php         : About / bio, skills tags, research interests, and social profile links
- * - partials/experience.blade.php    : Independent child Volt component with isolated CRUD, status toggling, and error boundary
+ * Modular Child Volt Components (Independent & Isolated):
+ * - partials/header.blade.php           : Breadcrumb, title, Unique ID, and public profile link
+ * - partials/status-bar.blade.php       : Independent child Volt component (profile status, verification, roles, badges, conference)
+ * - partials/profile-info.blade.php      : Independent child Volt component (avatar photo, personal details, cascading address lookups)
+ * - partials/about.blade.php            : Independent child Volt component (about / bio, skills tags, research interests, social links)
+ * - partials/experience.blade.php       : Independent child Volt component (work experience CRUD & error boundary)
+ * - partials/education.blade.php        : Independent child Volt component (education history CRUD & error boundary)
+ * - partials/publications.blade.php     : Independent child Volt component (publications CRUD & error boundary)
+ * - partials/projects.blade.php         : Independent child Volt component (projects CRUD & error boundary)
+ * - partials/seminars.blade.php         : Independent child Volt component (conferences & seminars CRUD & error boundary)
+ * - partials/certificates.blade.php     : Independent child Volt component (certificates CRUD & error boundary)
+ * - partials/awards.blade.php           : Independent child Volt component (awards & achievements CRUD & error boundary)
+ * - partials/thesis.blade.php           : Independent child Volt component (thesis guided CRUD & error boundary)
+ * - partials/memberships.blade.php      : Independent child Volt component (professional memberships CRUD & error boundary)
+ * - partials/patents.blade.php          : Independent child Volt component (patents CRUD & error boundary)
+ * - partials/invited-positions.blade.php: Independent child Volt component (invited positions CRUD & error boundary)
+ * - partials/journal-roles.blade.php     : Independent child Volt component (journal editorial roles CRUD & error boundary)
  */
 new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class extends Component {
     /**
@@ -97,42 +107,6 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
 
     #[Validate('nullable|string|max:30')]
     public string $zipcode = '';
-
-    // =========================================================================
-    // SECTION: Role, Bio & Research Interests Properties
-    // =========================================================================
-
-    #[Validate('nullable|string|max:50')]
-    public string $role = '';
-
-    public string $about_us = '';
-
-    public string $skills_input = '';
-
-    public string $research_interests_input = '';
-
-    // =========================================================================
-    // SECTION: Social & Academic Profile Links
-    // =========================================================================
-
-    public string $github_url = '';
-    public string $google_scholar_url = '';
-    public string $linkedin_url = '';
-    public string $orcid_url = '';
-    public string $public_profile = '';
-    public string $youtube_link = '';
-    public string $employee_url = '';
-
-    // =========================================================================
-    // SECTION: Quick Status & Administrative Permissions
-    // =========================================================================
-
-    public string $profile_status = '0';
-    public string $verified = '0';
-    public string $publisher_status = '0';
-    public string $reviewer_status = '0';
-    public string $badge_type = '';
-    public bool $enable_conference = false;
 
     // =========================================================================
     // SECTION: Security & Password Modal State
@@ -209,54 +183,9 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
             $this->state = (string) ($reviewerProfile?->state ?? '');
             $this->city = (string) ($reviewerProfile?->city ?? '');
             $this->zipcode = (string) ($reviewerProfile?->zipcode ?? '');
-            $this->role = (string) ($this->user->role ?? '');
-
-            // Load About / Bio, Skills and Research Interests
-            $this->about_us = (string) ($reviewerProfile?->about_us ?? $reviewerProfile?->aboutus ?? '');
-            $skillsData = $reviewerProfile?->skills_tags ?? $reviewerProfile?->skills ?? [];
-            if (is_array($skillsData)) {
-                $this->skills_input = implode(', ', $skillsData);
-            } else {
-                $this->skills_input = (string) $skillsData;
-            }
-
-            $researchData = $reviewerProfile?->research_tags ?? $reviewerProfile?->research ?? [];
-            if (is_array($researchData)) {
-                $this->research_interests_input = implode(', ', $researchData);
-            } else {
-                $this->research_interests_input = (string) $researchData;
-            }
-
-            // Hydrate Social & Profile Links
-            $this->github_url = (string) ($reviewerProfile?->github_url ?? '');
-            $this->google_scholar_url = (string) ($reviewerProfile?->google_scholar_url ?? '');
-            $this->linkedin_url = (string) ($reviewerProfile?->linkedin_url ?? '');
-            $this->orcid_url = (string) ($reviewerProfile?->orcid_url ?? '');
-            $this->public_profile = (string) ($reviewerProfile?->public_profile ?? '');
-            $this->youtube_link = (string) ($reviewerProfile?->youtube_link ?? ($reviewerProfile?->youtube_url ?? ''));
-            $this->employee_url = (string) ($reviewerProfile?->employee_url ?? '');
         } catch (\Throwable $e) {
             report($e);
         }
-
-        // Initialize status properties with normalized values
-        $this->profile_status = (string) $this->user->getStatusCode();
-        $this->verified = ! empty($this->user->verified) ? '1' : '0';
-        $rawPub = strtolower(trim((string) ($this->user->publisher_status ?? '0')));
-        $this->publisher_status = match ($rawPub) {
-            '1', 'accept', 'accepted' => '1',
-            '2', 'reject', 'rejected' => '2',
-            default => '0',
-        };
-
-        $rawRev = strtolower(trim((string) ($this->user->reviewer_status ?? '0')));
-        $this->reviewer_status = match ($rawRev) {
-            '1', 'accept', 'accepted' => '1',
-            '2', 'reject', 'rejected' => '2',
-            default => '0',
-        };
-        $this->badge_type = (string) ($this->user->badge_type ?? '');
-        $this->enable_conference = (bool) ($this->user->enable_conference ?? false);
     }
 
     // =========================================================================
@@ -411,82 +340,54 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     }
 
     // =========================================================================
-    // SECTION: Quick Status Bar Direct Actions
+    // SECTION: Status Bar Compatibility Proxies
     // =========================================================================
 
-    /**
-     * Directly update user profile status (0=Pending, 1=Active, 2=Re-Document, 3=Reject).
-     */
     public function updateProfileStatus(string $val): void
     {
-        $this->profile_status = $val;
         $this->user->status = (int) $val;
         $this->user->save();
         session()->flash('quick_message', 'Profile status updated.');
     }
 
-    /**
-     * Directly update verified user status flag (0=No, 1=Yes).
-     */
     public function updateVerifiedUser(string $val): void
     {
-        $this->verified = $val;
         $this->user->verified = (int) $val;
         $this->user->save();
         session()->flash('quick_message', 'Verified user status updated.');
     }
 
-    /**
-     * Directly update publisher application status (0=Pending, 1=Accept, 2=Reject).
-     */
     public function updatePublisherStatus(string $val): void
     {
-        $this->publisher_status = $val;
         $this->user->publisher_status = (int) $val;
         $this->user->save();
         session()->flash('quick_message', 'Publisher status updated.');
     }
 
-    /**
-     * Directly update reviewer application status (0=Pending, 1=Accept, 2=Reject).
-     */
     public function updateReviewerStatus(string $val): void
     {
-        $this->reviewer_status = $val;
         $this->user->reviewer_status = (int) $val;
         $this->user->save();
         session()->flash('quick_message', 'Reviewer status updated.');
     }
 
-    /**
-     * Directly update badge type (1=Researcher, 2=Reviewer, 3=Professional).
-     */
     public function updateBadgeType(string $val): void
     {
-        $this->badge_type = $val;
         $this->user->badge_type = $val;
         $this->user->save();
         session()->flash('quick_message', 'Badge type updated.');
     }
 
-    /**
-     * Directly update system user role (scholar, admin, publisher, python).
-     */
     public function updateUserRole(string $val): void
     {
-        $this->role = $val;
         $this->user->role = $val;
         $this->user->save();
         session()->flash('quick_message', 'User role updated.');
     }
 
-    /**
-     * Toggle the conference participation access flag for all journals.
-     */
     public function toggleConference(): void
     {
-        $this->enable_conference = ! $this->enable_conference;
-        $this->user->enable_conference = $this->enable_conference;
+        $this->user->enable_conference = ! ($this->user->enable_conference ?? false);
         $this->user->save();
         session()->flash('quick_message', 'Conference settings updated.');
     }
@@ -581,66 +482,6 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
 
         session()->flash('message', 'User ' . ($this->profileId) . ' changes saved successfully.');
         $this->dispatch('scroll-to-top');
-    }
-
-    // =========================================================================
-    // SECTION: About / Bio, Skills & Research Interests Persistence
-    // =========================================================================
-
-    /**
-     * Validate and save user bio, skills tags, research interests, and social profile links.
-     * Automatically registers and tracks research interests in the Research collection.
-     */
-    public function saveAboutProfile(): void
-    {
-        $this->validate([
-            'about_us' => 'nullable|string|max:3000',
-            'skills_input' => 'nullable|string',
-            'research_interests_input' => 'nullable|string',
-            'github_url' => 'nullable|string|max:255',
-            'google_scholar_url' => 'nullable|string|max:255',
-            'linkedin_url' => 'nullable|string|max:255',
-            'orcid_url' => 'nullable|string|max:255',
-            'public_profile' => 'nullable|string|max:255',
-            'youtube_link' => 'nullable|string|max:255',
-            'employee_url' => 'nullable|string|max:255',
-        ]);
-
-        $reviewerProfile = $this->user->reviewerProfile ?? $this->user->reviewerProfile()->make([
-            'unique_id' => (string) ($this->user->unique_id ?? $this->profileId),
-            'status' => (string) $this->user->getStatusCode(),
-        ]);
-
-        $reviewerProfile->about_us = trim($this->about_us);
-        $reviewerProfile->aboutus = trim($this->about_us);
-
-        $parsedSkills = array_values(array_filter(array_map('trim', explode(',', $this->skills_input))));
-        $reviewerProfile->skills_tags = $parsedSkills;
-        $reviewerProfile->skills = $parsedSkills;
-
-        $parsedResearch = array_values(array_filter(array_map('trim', explode(',', $this->research_interests_input))));
-        $reviewerProfile->research_tags = $parsedResearch;
-        $reviewerProfile->research = $parsedResearch;
-
-        // Save Social Links in ReviewerProfile
-        $reviewerProfile->github_url = trim($this->github_url);
-        $reviewerProfile->google_scholar_url = trim($this->google_scholar_url);
-        $reviewerProfile->linkedin_url = trim($this->linkedin_url);
-        $reviewerProfile->orcid_url = trim($this->orcid_url);
-        $reviewerProfile->public_profile = trim($this->public_profile);
-        $reviewerProfile->youtube_link = trim($this->youtube_link);
-        $reviewerProfile->employee_url = trim($this->employee_url);
-
-        $reviewerProfile->save();
-
-        // Track and auto-promote research tags in Research collection
-        foreach ($parsedResearch as $interestTitle) {
-            Research::recordUsage($interestTitle);
-        }
-
-        session()->flash('about_message', 'About section updated successfully!');
-        $this->dispatch('scroll-to-about');
-        $this->dispatch('toast', message: 'About section updated successfully!', type: 'success', position: 'bottom');
     }
 }; ?>
 
@@ -806,6 +647,7 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
             }
         }
     }"
+    @open-password-modal.window="showPasswordModal = true"
     @password-updated.window="showPasswordModal = false"
     @scroll-to-about.window="
         $nextTick(() => {
@@ -846,14 +688,14 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     <!-- 1. PAGE HEADER & BREADCRUMBS (PARTIAL) -->
     @include('livewire.admin.users.partials.header')
 
-    <!-- 2. QUICK STATUS & ACTION BAR (PARTIAL) -->
-    @include('livewire.admin.users.partials.status-bar')
+    <!-- 2. QUICK STATUS & ACTION BAR (INDEPENDENT CHILD VOLT COMPONENT) -->
+    <livewire:admin.users.partials.status-bar :user="$user" :key="'admin-user-status-bar-'.$user->_id" />
 
-    <!-- 3. MAIN USER PROFILE & ADDRESS FORM (PARTIAL) -->
-    @include('livewire.admin.users.partials.profile-info')
+    <!-- 3. MAIN USER PROFILE & ADDRESS FORM (INDEPENDENT CHILD VOLT COMPONENT) -->
+    <livewire:admin.users.partials.profile-info :user="$user" :key="'admin-user-profile-info-'.$user->_id" />
 
-    <!-- 4. ABOUT, SKILLS & RESEARCH PROFILE (PARTIAL) -->
-    @include('livewire.admin.users.partials.about')
+    <!-- 4. ABOUT, SKILLS & RESEARCH PROFILE (INDEPENDENT CHILD VOLT COMPONENT) -->
+    <livewire:admin.users.partials.about :user="$user" :key="'admin-user-about-'.$user->_id" />
 
     <!-- 5. WORK EXPERIENCE (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
     <livewire:admin.users.partials.experience :user="$user" :key="'admin-user-experience-'.$user->_id" />
@@ -891,10 +733,8 @@ new #[Layout('components.layouts.admin')] #[Title('Edit User - Admin')] class ex
     <!-- 15. ROLE IN RESEARCH JOURNALS (INDEPENDENT CHILD VOLT COMPONENT WITH ERROR BOUNDARY) -->
     <livewire:admin.users.partials.journal-roles :user="$user" :key="'admin-user-journal-roles-'.$user->_id" />
 
-    <!-- ADMIN USER MODALS (CROP PHOTO, CHANGE PASSWORD, CHANGE EMAIL) -->
-    <x-admin.users.crop-modal />
+    <!-- ADMIN USER MODALS (CHANGE PASSWORD) -->
     <x-admin.users.password-modal />
-    <x-admin.users.email-modal :user="$user" />
 
     <!-- RIGHT-EDGE FLOATING QUICK NAVIGATION SIDE DRAWER -->
     <div

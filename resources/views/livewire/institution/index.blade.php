@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\City;
 use App\Models\Country;
@@ -241,241 +241,22 @@ new #[Layout('components.layouts.app')] class extends Component {
             return $map;
         }) : [];
 
-        // 5. Batch calculate metrics (Scholars, Alumni, Publications, Citations, Seminars) for visible organizations
+        // 5. Calculate metrics (Scholars, Alumni, Publications, Citations, Seminars) for visible organizations with atomic stampede protection
         $orgIds = $organizations->pluck('_id')->map(fn ($id) => (string) $id)->all();
         $orgMetricsMap = [];
         $allUserIds = [];
 
-        if (! empty($orgIds)) {
-            $missingOrgIds = [];
-            foreach ($orgIds as $oid) {
-                $cached = Cache::get('organizations:metrics:'.$oid);
-                if ($cached !== null) {
-                    $orgMetricsMap[$oid] = $cached;
-                    if (! empty($cached['scholar_uids'])) {
-                        $allUserIds = array_merge($allUserIds, $cached['scholar_uids']);
-                    }
-                    if (! empty($cached['alumni_uids'])) {
-                        $allUserIds = array_merge($allUserIds, $cached['alumni_uids']);
-                    }
-                } else {
-                    $missingOrgIds[] = $oid;
-                }
+        foreach ($orgIds as $oid) {
+            $metricData = Organization::getMetrics($oid);
+            $orgMetricsMap[$oid] = $metricData;
+
+            if (! empty($metricData['scholar_uids'])) {
+                $allUserIds = array_merge($allUserIds, $metricData['scholar_uids']);
             }
-
-            if (! empty($missingOrgIds)) {
-                $experiences = Experience::raw(fn ($col) => $col->find(
-                    [
-                        'organization_id' => ['$in' => $missingOrgIds],
-                        'user_id' => ['$exists' => true, '$ne' => '', '$nin' => [null, '']],
-                        'status' => ['$in' => [1, '1']],
-                    ],
-                    [
-                        'projection' => [
-                            'organization_id' => 1,
-                            'user_id' => 1,
-                            'current_organization' => 1,
-                        ],
-                    ]
-                ));
-
-                $currentUsersByOrg = [];
-                $alumniUsersByOrg = [];
-                $allCandidateUserIds = [];
-
-                foreach ($experiences as $exp) {
-                    $oid = (string) ($exp['organization_id'] ?? '');
-                    $uid = (string) ($exp['user_id'] ?? '');
-                    $curr = $exp['current_organization'] ?? null;
-
-                    if ($oid === '' || $uid === '') {
-                        continue;
-                    }
-
-                    $allCandidateUserIds[$uid] = true;
-                    $isCurrent = in_array($curr, [1, '1', true], true);
-                    if ($isCurrent) {
-                        $currentUsersByOrg[$oid][$uid] = true;
-                    } else {
-                        $alumniUsersByOrg[$oid][$uid] = true;
-                    }
-                }
-
-                // Verify active user status (status = 1 or "1") for all candidates
-                $activeUserMap = [];
-                $candidateUids = array_keys($allCandidateUserIds);
-                if (! empty($candidateUids)) {
-                    $cObjIds = [];
-                    $cStrIds = [];
-                    foreach ($candidateUids as $cuid) {
-                        $cuidStr = (string) $cuid;
-                        $cStrIds[] = $cuidStr;
-                        if (strlen($cuidStr) === 24 && ctype_xdigit($cuidStr)) {
-                            $cObjIds[] = new \MongoDB\BSON\ObjectId($cuidStr);
-                        }
-                    }
-
-                    $activeUserDocs = User::raw(fn ($col) => $col->find(
-                        [
-                            '_id' => ['$in' => array_merge($cObjIds, $cStrIds)],
-                            'status' => ['$in' => [1, '1']],
-                        ],
-                        [
-                            'projection' => ['_id' => 1],
-                        ]
-                    ));
-
-                    foreach ($activeUserDocs as $au) {
-                        $activeUserMap[(string) $au['_id']] = true;
-                    }
-                }
-
-                // Filter current and alumni lists to only active users
-                $allCurrentScholarUserIds = [];
-                foreach ($currentUsersByOrg as $oKey => $uList) {
-                    foreach (array_keys($uList) as $uId) {
-                        if (isset($activeUserMap[$uId])) {
-                            $allCurrentScholarUserIds[$uId] = true;
-                        } else {
-                            unset($currentUsersByOrg[$oKey][$uId]);
-                        }
-                    }
-                }
-
-                foreach ($alumniUsersByOrg as $oKey => $uList) {
-                    foreach (array_keys($uList) as $uId) {
-                        if (! isset($activeUserMap[$uId])) {
-                            unset($alumniUsersByOrg[$oKey][$uId]);
-                        }
-                    }
-                }
-
-                $distinctCurrentScholarUserIds = array_keys($allCurrentScholarUserIds);
-
-                $profilesByUser = [];
-                $allPubIds = [];
-
-                if (! empty($distinctCurrentScholarUserIds)) {
-                    $profiles = ReviewerProfile::raw(fn ($col) => $col->find(
-                        [
-                            'user_id' => ['$in' => $distinctCurrentScholarUserIds],
-                            'status' => ['$in' => [1, '1']],
-                        ],
-                        [
-                            'projection' => [
-                                'user_id' => 1,
-                                'publication' => 1,
-                                'seminar' => 1,
-                            ],
-                        ]
-                    ));
-
-                    foreach ($profiles as $prof) {
-                        $uid = (string) ($prof['user_id'] ?? '');
-                        $pubs = is_array($prof['publication'] ?? null) ? $prof['publication'] : [];
-                        $sems = is_array($prof['seminar'] ?? null) ? $prof['seminar'] : [];
-
-                        $cleanPubs = [];
-                        foreach ($pubs as $p) {
-                            if (! empty($p)) {
-                                $pid = (string) $p;
-                                $cleanPubs[] = $pid;
-                                $allPubIds[$pid] = true;
-                            }
-                        }
-
-                        $cleanSems = [];
-                        foreach ($sems as $s) {
-                            if (! empty($s)) {
-                                $cleanSems[] = (string) $s;
-                            }
-                        }
-
-                        $profilesByUser[$uid] = [
-                            'publications' => $cleanPubs,
-                            'seminars' => $cleanSems,
-                        ];
-                    }
-                }
-
-                $citationsByPubId = [];
-                $distinctPubIds = array_keys($allPubIds);
-
-                if (! empty($distinctPubIds)) {
-                    $validObjectIds = [];
-                    foreach ($distinctPubIds as $pid) {
-                        if (strlen($pid) === 24 && ctype_xdigit($pid)) {
-                            $validObjectIds[] = new \MongoDB\BSON\ObjectId($pid);
-                        }
-                    }
-
-                    if (! empty($validObjectIds)) {
-                        $pubDocs = Publication::raw(fn ($col) => $col->find(
-                            [
-                                '_id' => ['$in' => $validObjectIds],
-                                'status' => ['$in' => [1, '1']],
-                            ],
-                            [
-                                'projection' => [
-                                    '_id' => 1,
-                                    'citations' => 1,
-                                ],
-                            ]
-                        ));
-
-                        foreach ($pubDocs as $pd) {
-                            $citationsByPubId[(string) $pd['_id']] = (int) ($pd['citations'] ?? 0);
-                        }
-                    }
-                }
-
-                foreach ($missingOrgIds as $mOid) {
-                    $currentUids = array_values(array_keys($currentUsersByOrg[$mOid] ?? []));
-                    $alumniRawUids = array_keys($alumniUsersByOrg[$mOid] ?? []);
-                    $alumniUids = array_values(array_diff($alumniRawUids, $currentUids));
-
-                    $orgPubIds = [];
-                    $orgSeminarIds = [];
-
-                    foreach ($currentUids as $cuid) {
-                        if (isset($profilesByUser[$cuid])) {
-                            foreach ($profilesByUser[$cuid]['publications'] as $pId) {
-                                $orgPubIds[$pId] = true;
-                            }
-                            foreach ($profilesByUser[$cuid]['seminars'] as $sId) {
-                                $orgSeminarIds[$sId] = true;
-                            }
-                        }
-                    }
-
-                    $totalCitations = 0;
-                    $validOrgPubIds = [];
-                    foreach (array_keys($orgPubIds) as $pId) {
-                        if (isset($citationsByPubId[$pId])) {
-                            $validOrgPubIds[] = $pId;
-                            $totalCitations += $citationsByPubId[$pId];
-                        }
-                    }
-
-                    $metricData = [
-                        'scholars' => count($currentUids),
-                        'alumni' => count($alumniUids),
-                        'publications' => count($validOrgPubIds),
-                        'citations' => $totalCitations,
-                        'seminars' => count($orgSeminarIds),
-                        'scholar_uids' => $currentUids,
-                        'alumni_uids' => $alumniUids,
-                        'pub_ids' => $validOrgPubIds,
-                    ];
-
-                    Cache::put('organizations:metrics:'.$mOid, $metricData, 1800);
-                    $orgMetricsMap[$mOid] = $metricData;
-
-                    $allUserIds = array_merge($allUserIds, $currentUids, $alumniUids);
-                }
+            if (! empty($metricData['alumni_uids'])) {
+                $allUserIds = array_merge($allUserIds, $metricData['alumni_uids']);
             }
         }
-
         // 6. Batch load user details (avatars, names, profiles) for all scholars & alumni across visible orgs
         $userMap = [];
         $uniqueUserIds = array_values(array_unique(array_filter($allUserIds)));
@@ -808,21 +589,21 @@ new #[Layout('components.layouts.app')] class extends Component {
                             @if($search !== '')
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#eaf5ff] dark:bg-sky-950/60 text-[#198BEA] dark:text-sky-300 border border-sky-200/80 dark:border-sky-800 font-medium">
                                     <span>Keyword: "<strong>{{ $search }}</strong>"</span>
-                                    <button type="button" wire:click="$set('search', '')" class="hover:text-red-500 font-bold ml-0.5 cursor-pointer">×</button>
+                                    <button type="button" wire:click="$set('search', '')" class="hover:text-red-500 font-bold ml-0.5 cursor-pointer">Ã—</button>
                                 </span>
                             @endif
 
                             @if($typeFilter !== 'all')
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-medium">
                                     <span>Type: <strong>{{ $typeLabels[$typeFilter] ?? ucfirst($typeFilter) }}</strong></span>
-                                    <button type="button" wire:click="$set('typeFilter', 'all')" class="hover:text-red-500 font-bold ml-0.5 cursor-pointer">×</button>
+                                    <button type="button" wire:click="$set('typeFilter', 'all')" class="hover:text-red-500 font-bold ml-0.5 cursor-pointer">Ã—</button>
                                 </span>
                             @endif
 
                             @if(!empty($countryFilter) && isset($countryMap[$countryFilter]))
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-medium">
                                     <span>Country: <strong>{{ $countryMap[$countryFilter] }}</strong></span>
-                                    <button type="button" wire:click="$set('countryFilter', '')" class="hover:text-red-500 font-bold ml-0.5 cursor-pointer">×</button>
+                                    <button type="button" wire:click="$set('countryFilter', '')" class="hover:text-red-500 font-bold ml-0.5 cursor-pointer">Ã—</button>
                                 </span>
                             @endif
                         </div>

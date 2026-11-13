@@ -9,7 +9,7 @@ This is the source-of-truth cache registry for the current working tree, refresh
 | Active store | `.env` sets `CACHE_STORE=redis`; all audited calls use Laravel's default `Cache` store. |
 | Full-page cache? | No. These are data/query fragments. Every request still runs Laravel, Livewire, authorization where applicable, and Blade rendering. |
 | Scope | Public keys are shared. Profile keys include the target user's ID, so all viewers of one profile share data but different profiles are isolated. |
-| Stampede protection | Not implemented. Production uses `remember`, `get`, `put`, and `forget`; there is no active `Cache::lock`, `Cache::flexible`, or stale-value fallback. |
+| Stampede protection | Institution detail (`institution/show`) and directory cards (`institution/index`) use `Organization::getMetrics()` / `Organization::getMetricsWithLock()` for atomic mutex stampede protection. Other cache families currently use standard `remember`/`get`/`put` without active locks or `Cache::flexible`. |
 
 ## Current cache families
 
@@ -21,7 +21,7 @@ This is the source-of-truth cache registry for the current working tree, refresh
 | Journals | `journals:active:count`, `journals:active:disciplines:list`, `journals:active:indexers:list`, `journals:search:{queryHash}` | 5 minutes to 24 hours | Directory, filters, autocomplete | [reviewer_journal.md](reviewer_journal.md) |
 | Q&A | `qa_community_stats`, `qa_sidebar_community_stats`, `qa_popular_questions`, `qa_popular_questions_detail`, `qa_active_contributors`, `qa_available_skills`, `admin_questions_counts` | 60 seconds to 30 minutes | Q&A pages and admin list | [question.md](question.md) |
 | Profile sections | `awards`, `membership`, `phd`, `invited_position`, `patent`, `publication`, `role_in_research_journals` keys in `:user:{id}:{active|all}` form | 2 or 24 hours | Public profile and profile editor | [profile_section_caches.md](profile_section_caches.md) |
-| Services | `authors:search:{queryHash}`, `link_preview_{urlHash}` | 5 minutes or 24 hours | Author autocomplete, URL previews | [service_caches.md](service_caches.md) |
+| Services | `authors:search:{queryHash}`, `link_preview_{urlHash}` | 5 minutes; previews: 24 hours on success / 60 seconds on failure | Author autocomplete, URL previews | [service_caches.md](service_caches.md) |
 | Admin diagnostics | `db_fixing_*_issues`, `orphan_journal_missing_stats` | 60 seconds or 5 minutes | Database-fixing Livewire screens | [admin_diagnostic_caches.md](admin_diagnostic_caches.md) |
 
 `journal/index.blade copy.php` defines separately named `journals:all:*` caches for its all-status data, but is excluded from this active registry unless it is deliberately routed or included.

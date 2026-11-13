@@ -16,12 +16,12 @@
 
 | Cache Key Pattern | Data Stored | TTL (Duration) | Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`countries:all:list`** | All countries sorted alphabetically: `[['id' => string, 'name' => string], ...]` | **24 Hours** (86,400s) | Profile address, institution filters, journal location | Cleared on `Country::forgetCached()` |
+| **`countries:all`** (alias: `countries:all:list`) | All countries sorted alphabetically: `[['id' => string, 'name' => string], ...]` | **24 Hours** (86,400s) | Profile address, institution filters, journal location | Cleared on `Country::forgetCached()` |
 | **`countries_all_collection`** | Full Eloquent collection of countries | **24 Hours** (86,400s) | Journal ISSN country resolution | Auto-expires via TTL |
 | **`countries:directory:list`** | Array of countries for directory dropdowns | **24 Hours** (86,400s) | Institution directory filter header | Auto-expires via TTL |
 | **`countries:directory:id-name-map`** | Key-value associative map `[id => name]` | **24 Hours** (86,400s) | Instant ID-to-Name card resolution | Auto-expires via TTL |
-| **`states_lookup_{countryId}`** | All states belonging to a specific country ID | **24 Hours** (86,400s) | Cascading State dropdown in profile/institution forms | Auto-expires via TTL |
-| **`cities_lookup_{stateId}`** | All cities belonging to a specific state ID | **24 Hours** (86,400s) | Cascading City dropdown in profile/institution forms | Auto-expires via TTL |
+| **`states_lookup_{countryId}`** | All states belonging to a specific country ID | **24 Hours** (86,400s) | Cascading State dropdown in profile/institution forms | Cleared when a state is saved/deleted for that country (and for its old country after reassignment) |
+| **`cities_lookup_{stateId}`** | All cities belonging to a specific state ID | **24 Hours** (86,400s) | Cascading City dropdown in profile/institution forms | Cleared when a city is saved/deleted for that state (and for its old state after reassignment) |
 | **`states:directory:map:{md5_ids}`** | Batch mapped state names by ID list | **24 Hours** (86,400s) | Institution search results table | Auto-expires via TTL |
 | **`cities:directory:map:{md5_ids}`** | Batch mapped city names by ID list | **24 Hours** (86,400s) | Institution search results table | Auto-expires via TTL |
 | **`tz_country_iso_{timezone}`** | ISO 2-character country code for timezone | **30 Days** (2,592,000s) | Auto-detecting visitor country from timezone | Auto-expires via TTL |
@@ -53,7 +53,7 @@
 ```php
 // app/Models/Country.php
 
-public const CACHE_KEY = 'countries:all:list';
+public const CACHE_KEY = 'countries:all';
 
 protected static function booted(): void
 {
@@ -64,6 +64,7 @@ protected static function booted(): void
 public static function forgetCached(): void
 {
     Cache::forget(self::CACHE_KEY);
+    Cache::forget('countries:all:list'); // historical alias
 }
 
 // Cascading State retrieval:
@@ -93,6 +94,8 @@ public static function getCachedByCountry(string|int|null $countryId): array
     });
 }
 ```
+
+`Country::forgetCached()` intentionally clears both the canonical `countries:all` key and the historical `countries:all:list` key. Directory country maps, raw location-item keys, and batch state/city maps are not invalidated by these events and can remain stale until their 24-hour TTL ends.
 
 ---
 

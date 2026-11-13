@@ -15,7 +15,7 @@
 | **`journals:active:count`** | Integer count of all active journals | **1 Hour** (3,600s) | Journal directory header ([`journal/index.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/journal/index.blade.php)) | Cleared via `ReviewerJournal::forgetCaches()` |
 | **`journals:active:disciplines:list`** | Distinct list of academic disciplines | **24 Hours** (86,400s) | Journal directory sidebar filters | Cleared via `ReviewerJournal::forgetCaches()` |
 | **`journals:active:indexers:list`** | Distinct list of indexing agencies linked to journals | **24 Hours** (86,400s) | Journal directory indexing filters | Cleared via `ReviewerJournal::forgetCaches()` |
-| **`journals:search:{queryHash}`** | Autocomplete results for journal title search | **5 Minutes** (300s) | Article submission journal autofill / search | Tagged with `reviewer-journal-search` and flushed by `forgetCaches()` |
+| **`journals:search:{queryHash}`** | Autocomplete results for journal title search | **5 Minutes** (300s) | Article submission journal autofill / search | Tagged with `reviewer-journal-search` and flushed by `forgetCaches()` on tag-capable stores; otherwise TTL only |
 | **`countries_all_collection`** | Collection of all country documents | **24 Hours** (86,400s) | ISSN assignee country display in journal cards | Auto-expires via TTL (86,400s) |
 
 ---
@@ -51,7 +51,9 @@ public static function forgetCaches(): void
     Cache::forget('journals:active:count');
     Cache::forget('journals:active:disciplines:list');
     Cache::forget('journals:active:indexers:list');
-    Cache::tags(['reviewer-journal-search'])->flush();
+    if (Cache::supportsTags()) {
+        Cache::tags(['reviewer-journal-search'])->flush();
+    }
     
     IndexingAgency::forgetCached();
 }
@@ -68,7 +70,11 @@ public static function searchTitles(string $query, int $limit = 15): array
 
     $cacheKey = 'journals:search:'.md5(strtolower($query).'_'.$limit);
 
-    return Cache::tags(['reviewer-journal-search'])->remember($cacheKey, 300, function () use ($query, $limit) {
+    $store = Cache::supportsTags()
+        ? Cache::tags(['reviewer-journal-search'])
+        : Cache::store();
+
+    return $store->remember($cacheKey, 300, function () use ($query, $limit) {
         return self::query()
             ->select(['_id', 'journal_title', 'e_issn', 'p_issn', 'journal_impact_factor'])
             ->where('status', '!=', 2)
@@ -93,4 +99,4 @@ public static function searchTitles(string $query, int $limit = 15): array
 ### Architectural Solutions:
 1. **Livewire Debounce**: Input is debounced by 300ms (`wire:model.live.debounce.300ms`) so queries are only dispatched after typing pauses.
 2. **Search Character Guard**: Minimum 2 characters required (`mb_strlen($query) >= 2`) before executing queries.
-3. **Tagged Search Purge**: `forgetCaches()` flushes only entries tagged `reviewer-journal-search`, so journal autocomplete caches are invalidated immediately without affecting unrelated cache data.
+3. **Tagged Search Purge**: On the production Redis store, `forgetCaches()` flushes only entries tagged `reviewer-journal-search`, so journal autocomplete caches are invalidated immediately without affecting unrelated cache data. A non-taggable store deliberately falls back to an untagged cache and can retain the old autocomplete result for up to five minutes.

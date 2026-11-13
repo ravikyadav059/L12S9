@@ -1,6 +1,6 @@
 # Cache Documentation: `question`
 
-> **Audit status:** The registry in [README.md](README.md) is current. The atomic-lock example below is a recommendation, not production code.
+> **Audit status:** The keys below reflect proposed forum cache specifications. Active tag caching is handled via `Skill::getCachedAvailable()` (`qa_available_skills`). Invalidation on question mutation is planned when live Q&A cache views are deployed. Any atomic-lock example below is a recommendation.
 
 ## Collection: `question`
 **Eloquent Model**: [`App\Models\Question`](file:///c:/Users/hp/Desktop/L12S9/app/Models/Question.php)  

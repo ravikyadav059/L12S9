@@ -41,6 +41,33 @@ class State extends Model
     }
 
     /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (State $state): void {
+            static::forgetCachedCountry($state->country_id);
+            if ($state->wasChanged('country_id') && ! empty($state->getOriginal('country_id'))) {
+                static::forgetCachedCountry($state->getOriginal('country_id'));
+            }
+        });
+
+        static::deleted(function (State $state): void {
+            static::forgetCachedCountry($state->country_id);
+        });
+    }
+
+    /**
+     * Clear cached states for a given country ID.
+     */
+    public static function forgetCachedCountry(string|int|null $countryId): void
+    {
+        if (! empty($countryId)) {
+            Cache::forget("states_lookup_{$countryId}");
+        }
+    }
+
+    /**
      * Get cached states for a given country ID.
      *
      * @return array<int, array{id: string, name: string}>

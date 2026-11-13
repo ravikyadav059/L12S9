@@ -1,5 +1,113 @@
-{{-- resources/views/livewire/admin/users/partials/about.blade.php --}}
-<!-- ABOUT, SKILLS & RESEARCH PROFILE (INDEPENDENT CARD & SEPARATE SAVING) -->
+<?php
+
+use App\Models\Research;
+use App\Models\ReviewerProfile;
+use App\Models\User;
+use Livewire\Volt\Component;
+
+/**
+ * Admin User Edit - About, Skills & Research Component (Isolated Volt Child Component)
+ */
+new class extends Component {
+    public User $user;
+
+    public string $about_us = '';
+    public string $skills_input = '';
+    public string $research_interests_input = '';
+
+    public string $github_url = '';
+    public string $google_scholar_url = '';
+    public string $linkedin_url = '';
+    public string $orcid_url = '';
+    public string $public_profile = '';
+    public string $youtube_link = '';
+    public string $employee_url = '';
+
+    public function mount(User $user): void
+    {
+        $this->user = $user;
+
+        try {
+            $reviewerProfile = $this->user->reviewerProfile;
+
+            $this->about_us = (string) ($reviewerProfile?->about_us ?? $reviewerProfile?->aboutus ?? '');
+            $skillsData = $reviewerProfile?->skills_tags ?? $reviewerProfile?->skills ?? [];
+            if (is_array($skillsData)) {
+                $this->skills_input = implode(', ', $skillsData);
+            } else {
+                $this->skills_input = (string) $skillsData;
+            }
+
+            $researchData = $reviewerProfile?->research_tags ?? $reviewerProfile?->research ?? [];
+            if (is_array($researchData)) {
+                $this->research_interests_input = implode(', ', $researchData);
+            } else {
+                $this->research_interests_input = (string) $researchData;
+            }
+
+            $this->github_url = (string) ($reviewerProfile?->github_url ?? '');
+            $this->google_scholar_url = (string) ($reviewerProfile?->google_scholar_url ?? '');
+            $this->linkedin_url = (string) ($reviewerProfile?->linkedin_url ?? '');
+            $this->orcid_url = (string) ($reviewerProfile?->orcid_url ?? '');
+            $this->public_profile = (string) ($reviewerProfile?->public_profile ?? '');
+            $this->youtube_link = (string) ($reviewerProfile?->youtube_link ?? ($reviewerProfile?->youtube_url ?? ''));
+            $this->employee_url = (string) ($reviewerProfile?->employee_url ?? '');
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    public function saveAboutProfile(): void
+    {
+        $this->validate([
+            'about_us' => 'nullable|string|max:3000',
+            'skills_input' => 'nullable|string',
+            'research_interests_input' => 'nullable|string',
+            'github_url' => 'nullable|string|max:255',
+            'google_scholar_url' => 'nullable|string|max:255',
+            'linkedin_url' => 'nullable|string|max:255',
+            'orcid_url' => 'nullable|string|max:255',
+            'public_profile' => 'nullable|string|max:255',
+            'youtube_link' => 'nullable|string|max:255',
+            'employee_url' => 'nullable|string|max:255',
+        ]);
+
+        $reviewerProfile = $this->user->reviewerProfile ?? $this->user->reviewerProfile()->make([
+            'unique_id' => (string) ($this->user->unique_id ?? ''),
+            'status' => (string) $this->user->getStatusCode(),
+        ]);
+
+        $reviewerProfile->about_us = trim($this->about_us);
+        $reviewerProfile->aboutus = trim($this->about_us);
+
+        $parsedSkills = array_values(array_filter(array_map('trim', explode(',', $this->skills_input))));
+        $reviewerProfile->skills_tags = $parsedSkills;
+        $reviewerProfile->skills = $parsedSkills;
+
+        $parsedResearch = array_values(array_filter(array_map('trim', explode(',', $this->research_interests_input))));
+        $reviewerProfile->research_tags = $parsedResearch;
+        $reviewerProfile->research = $parsedResearch;
+
+        $reviewerProfile->github_url = trim($this->github_url);
+        $reviewerProfile->google_scholar_url = trim($this->google_scholar_url);
+        $reviewerProfile->linkedin_url = trim($this->linkedin_url);
+        $reviewerProfile->orcid_url = trim($this->orcid_url);
+        $reviewerProfile->public_profile = trim($this->public_profile);
+        $reviewerProfile->youtube_link = trim($this->youtube_link);
+        $reviewerProfile->employee_url = trim($this->employee_url);
+
+        $reviewerProfile->save();
+
+        foreach ($parsedResearch as $interestTitle) {
+            Research::recordUsage($interestTitle);
+        }
+
+        session()->flash('about_message', 'About section updated successfully!');
+        $this->dispatch('scroll-to-about');
+        $this->dispatch('toast', message: 'About section updated successfully!', type: 'success', position: 'bottom');
+    }
+}; ?>
+
 <form 
     id="about-profile-card" 
     wire:submit="saveAboutProfile" 

@@ -609,6 +609,7 @@ class User extends Authenticatable // implements MustVerifyEmail
     public static function forgetCachedPublishers(): void
     {
         Cache::forget(self::CACHE_KEY_PUBLISHERS);
+        Cache::forget('users:publishers:active:list');
     }
 
     /**

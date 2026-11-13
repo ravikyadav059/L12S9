@@ -41,6 +41,33 @@ class City extends Model
     }
 
     /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (City $city): void {
+            static::forgetCachedState($city->state_id);
+            if ($city->wasChanged('state_id') && ! empty($city->getOriginal('state_id'))) {
+                static::forgetCachedState($city->getOriginal('state_id'));
+            }
+        });
+
+        static::deleted(function (City $city): void {
+            static::forgetCachedState($city->state_id);
+        });
+    }
+
+    /**
+     * Clear cached cities for a given state ID.
+     */
+    public static function forgetCachedState(string|int|null $stateId): void
+    {
+        if (! empty($stateId)) {
+            Cache::forget("cities_lookup_{$stateId}");
+        }
+    }
+
+    /**
      * Get cached cities for a given state ID.
      *
      * @return array<int, array{id: string, name: string}>

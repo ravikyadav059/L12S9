@@ -1,6 +1,6 @@
 # Cache Documentation: `organization`
 
-> **Audit status:** The registry in [README.md](README.md) is current. The mutex code below is a recommended future safeguard, not production code.
+> **Audit status:** `Organization::getMetricsWithLock()` is implemented, tested, and used by the institution detail page. The directory's batched metric path still bypasses it. The mutex example below describes that remaining integration work.
 
 ## Collection: `organization`
 **Eloquent Model**: [`App\Models\Organization`](file:///c:/Users/hp/Desktop/L12S9/app/Models/Organization.php)  
@@ -12,11 +12,11 @@
 
 | Cache Key Pattern | Data Stored | TTL (Duration) | Purpose / Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`organizations:default:list`** | Top active institutions list for default dropdown state | **1 Hour** (3,600s) | Work experience & education modal dropdowns | Cleared on `findOrCreateQuick()` or record save |
-| **`organizations:default:list:p:{page}:l:{limit}`** | Paginated default institution list | **1 Hour** (3,600s) | Infinite scroll in institution dropdowns | Cleared on `findOrCreateQuick()` or record save |
-| **`organizations:search:{md5_query}:p:{page}:l:{limit}`** | Search results for a specific search query | **5 Minutes** (300s) | Live autocomplete in user profile modals | Auto-expires via TTL (300 seconds) |
+| **`organizations:default:list`** | Top active institutions list for default dropdown state | **1 Hour** (3,600s) | Work experience & education modal dropdowns | Cleared on organization save/delete |
+| **`organizations:default:list:p:{page}:l:{limit}`** | Paginated default institution list | **1 Hour** (3,600s) | Infinite scroll in institution dropdowns | On save/delete, code clears pages 1–10 for limits 10 and 20; other variants expire by TTL |
+| **`organizations:search:{md5_query}:p:{page}:l:{limit}`** | Search results for a specific search query | **5 Minutes** (300s) | Live autocomplete in user profile modals | TTL only |
 | **`organizations:active:count`** | Total count of active institutions | **1 Hour** (3,600s) | Public Directory header ([`institution/index.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/institution/index.blade.php)) | Auto-expires via TTL; cleared on admin adds |
-| **`organizations:metrics:{orgId}`** | Aggregated counts: Scholars, Alumnus, Papers, Citations, Seminars | **30 Minutes** (1,800s) | Public Institution Profile ([`institution/show.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/institution/show.blade.php)) & Directory cards | Auto-expires via TTL (1,800 seconds) |
+| **`organizations:metrics:{orgId}`** | Aggregated counts: Scholars, Alumnus, Papers, Citations, Seminars | **30 Minutes** (1,800s) | Public Institution Profile ([`institution/show.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/institution/show.blade.php)) & Directory cards | Cleared when its organization or a related `Experience` is saved/deleted; TTL remains a fallback |
 | **`country_item_raw_{rawCountry}`**<br>**`state_item_raw_{rawState}`**<br>**`city_item_raw_{rawCity}`** | Raw location documents used to resolve an institution's location on its public detail page | **24 Hours** (86,400s) | Public Institution Profile | Auto-expires via TTL |
 | **`countries:directory:list`**<br>**`countries:directory:id-name-map`** | Country list and ID-to-name map for the directory | **24 Hours** (86,400s) | Public Institution Directory | Auto-expires via TTL |
 | **`states:directory:map:{idsHash}`**<br>**`cities:directory:map:{idsHash}`** | State/city maps for the visible directory result IDs | **24 Hours** (86,400s) | Public Institution Directory | Auto-expires via TTL |
@@ -57,14 +57,15 @@
 ## 3. Lifecycle & Flush Events (Save & Update)
 
 ### When Does It Flush?
-1. **On Inline Creation / Promotion (`findOrCreateQuick`)**:
-   When a user types a new institution name or promotes an existing one:
+1. **On Organization Save/Delete**:
+   `Organization::clearActiveCache()` clears the default base list, the first ten pages at limits 10 and 20, and the active count. Search keys and unenumerated page/limit variants intentionally remain until their short TTL expires.
    ```php
    // app/Models/Organization.php
    Cache::forget('organizations:default:list');
    Cache::forget('organizations:default:list:p:1:l:20');
    ```
-2. **On Metrics Computation (`institution/show.blade.php`)**:
+2. **On Metric-Input Changes**:
+   Saving or deleting an `Organization` clears its metric key. Saving/deleting an `Experience` clears the current organization key and, if reassigned, the original organization key. The views currently compute metrics as follows:
    ```php
    $metrics = Cache::remember('organizations:metrics:'.$orgId, 1800, function () use ($orgId) {
        // Multi-collection aggregation across experience, users, reviewer_profile, publications
@@ -91,24 +92,40 @@
   - **PHP-FPM Worker Starvation**: Workers take 2 seconds each, blocking all PHP process threads. Nginx starts responding with `504 Gateway Timeout`.
   - **Redis Socket Pressure**: 1,000 workers attempt to write identical 5KB payloads back to the exact same Redis key.
 
-### Architectural Solution:
-Use **Atomic Mutex Locking** with fallback stale data:
+### Implemented Protection (Detail Page and Directory Cards)
+
+`Organization::getMetrics($orgId)` calls `Organization::getMetricsWithLock()` with a 15-second Redis mutex lock (`lock:organizations:metrics:{orgId}`) and waits up to 4 seconds with a double-check cache retrieval before executing `calculateMetrics($orgId)`.
+
+Both live institution presentation paths are now protected:
+- **[`institution/show.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/institution/show.blade.php)**: Calls `Organization::getMetrics($orgId)` for the institution detail page.
+- **[`institution/index.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/institution/index.blade.php)**: Calls `Organization::getMetrics($oid)` for every visible organization card.
+
+Concurrent requests for cold organization metrics on both pages coalesce behind the Redis lock, preventing duplicate 5-collection aggregation scans.
 
 ```php
-public static function getMetricsWithMutex(string $orgId): array
+// app/Models/Organization.php
+public static function getMetrics(string $orgId, int $ttl = 1800): array
 {
-    $cacheKey = 'organizations:metrics:' . $orgId;
-    $lockKey  = 'lock:' . $cacheKey;
+    return static::getMetricsWithLock($orgId, function () use ($orgId): array {
+        return static::calculateMetrics($orgId);
+    }, $ttl);
+}
 
-    if ($cached = Cache::get($cacheKey)) {
+public static function getMetricsWithLock(string $orgId, \Closure $calculator, int $ttl = 1800): array
+{
+    $cacheKey = 'organizations:metrics:'.$orgId;
+
+    $cached = Cache::get($cacheKey);
+    if (is_array($cached)) {
         return $cached;
     }
 
-    // Only ONE PHP worker performs the heavy 5-collection cross-aggregation
-    return Cache::lock($lockKey, 15)->block(4, function () use ($cacheKey, $orgId) {
-        return Cache::remember($cacheKey, 1800, function () use ($orgId) {
-            return static::calculateHeavyMetrics($orgId);
+    try {
+        return Cache::lock('lock:'.$cacheKey, 15)->block(4, function () use ($cacheKey, $calculator, $ttl) {
+            return Cache::remember($cacheKey, $ttl, $calculator);
         });
-    });
+    } catch (\Throwable) {
+        return Cache::remember($cacheKey, $ttl, $calculator);
+    }
 }
 ```

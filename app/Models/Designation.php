@@ -110,7 +110,10 @@ class Designation extends Model
     {
         Cache::forget(self::CACHE_KEY_ACTIVE);
         Cache::forget('designations:default:list');
-        Cache::forget('designations:default:list:p:1:l:20');
+        for ($p = 1; $p <= 10; $p++) {
+            Cache::forget("designations:default:list:p:{$p}:l:20");
+            Cache::forget("designations:default:list:p:{$p}:l:10");
+        }
     }
 
     /**

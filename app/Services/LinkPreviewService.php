@@ -28,44 +28,59 @@ class LinkPreviewService
             ];
         }
 
-        // Cache preview data for 24 hours to avoid redundant requests
+        // Cache preview data to avoid redundant requests (24 hours for success, 60s for errors)
         $cacheKey = 'link_preview_'.md5($cleanUrl);
 
-        return Cache::remember($cacheKey, 86400, function () use ($cleanUrl) {
-            try {
-                $response = Http::timeout(6)
-                    ->withHeaders([
-                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    ])
-                    ->get($cleanUrl);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return $cached;
+        }
 
-                if (! $response->successful()) {
-                    return [
-                        'success' => false,
-                        'url' => $cleanUrl,
-                        'error' => 'Unable to fetch URL (HTTP '.$response->status().')',
-                    ];
-                }
+        try {
+            $response = Http::timeout(6)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                ])
+                ->get($cleanUrl);
 
-                $html = $response->body();
-                if (empty($html)) {
-                    return [
-                        'success' => false,
-                        'url' => $cleanUrl,
-                        'error' => 'Empty response from URL',
-                    ];
-                }
-
-                return $this->parseHtml($html, $cleanUrl);
-            } catch (Exception $e) {
-                return [
+            if (! $response->successful()) {
+                $result = [
                     'success' => false,
                     'url' => $cleanUrl,
-                    'error' => $e->getMessage(),
+                    'error' => 'Unable to fetch URL (HTTP '.$response->status().')',
                 ];
+                Cache::put($cacheKey, $result, 60);
+
+                return $result;
             }
-        });
+
+            $html = $response->body();
+            if (empty($html)) {
+                $result = [
+                    'success' => false,
+                    'url' => $cleanUrl,
+                    'error' => 'Empty response from URL',
+                ];
+                Cache::put($cacheKey, $result, 60);
+
+                return $result;
+            }
+
+            $parsed = $this->parseHtml($html, $cleanUrl);
+            Cache::put($cacheKey, $parsed, 86400);
+
+            return $parsed;
+        } catch (Exception $e) {
+            $result = [
+                'success' => false,
+                'url' => $cleanUrl,
+                'error' => $e->getMessage(),
+            ];
+            Cache::put($cacheKey, $result, 60);
+
+            return $result;
+        }
     }
 
     /**

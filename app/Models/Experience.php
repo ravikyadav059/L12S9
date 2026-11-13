@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Cache;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\Laravel\Eloquent\Model;
 use MongoDB\Laravel\Relations\BelongsTo;
@@ -68,6 +69,21 @@ class Experience extends Model
 
             if (! empty($experience->end_date)) {
                 $experience->end_date = static::formatMonthYear($experience->end_date, true);
+            }
+        });
+
+        static::saved(function (Experience $experience): void {
+            if (! empty($experience->organization_id)) {
+                Cache::forget('organizations:metrics:'.(string) $experience->organization_id);
+            }
+            if ($experience->wasChanged('organization_id') && ! empty($experience->getOriginal('organization_id'))) {
+                Cache::forget('organizations:metrics:'.(string) $experience->getOriginal('organization_id'));
+            }
+        });
+
+        static::deleted(function (Experience $experience): void {
+            if (! empty($experience->organization_id)) {
+                Cache::forget('organizations:metrics:'.(string) $experience->organization_id);
             }
         });
     }
