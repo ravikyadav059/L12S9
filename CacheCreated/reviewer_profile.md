@@ -1,5 +1,7 @@
 # Cache Documentation: `reviewer_profile`
 
+> **Audit status:** The registry in [README.md](README.md) is current. Atomic mutex locking is recommended only; it is not active in production code.
+
 ## Collection: `reviewer_profile`
 **Eloquent Model**: [`App\Models\ReviewerProfile`](file:///c:/Users/hp/Desktop/L12S9/app/Models/ReviewerProfile.php)  
 **Database**: MongoDB (`clonedata.reviewer_profile`)
@@ -10,7 +12,7 @@
 
 | Cache Key Pattern | Data Stored | TTL (Duration) | Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **Compiled in `org_metrics_v6_{orgId}`** | Aggregated publication and conference IDs linked to affiliated scholars | **30 Minutes** (1,800s) | Institution Detail & Directory Metrics | Auto-expires via TTL (1,800s) |
+| **Compiled in `organizations:metrics:{orgId}`** | Aggregated publication and conference IDs linked to affiliated scholars | **30 Minutes** (1,800s) | Institution Detail & Directory Metrics | Auto-expires via TTL (1,800s) |
 | **`scholar_profile_metrics_{userId}`** | Cached scholar publication count, h-index, and citation stats | **1 Hour** (3,600s) | Public Scholar Profile ([`/profile/{slug}`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/userprofile.blade.php)) | Flushed on new paper submission or edit |
 
 ---

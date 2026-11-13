@@ -1,5 +1,7 @@
 # Cache Documentation: `grade`
 
+> **Audit status:** The registry in [README.md](README.md) is current. Any mutex/pre-warming code below is a recommendation, not production code.
+
 ## Collection: `grade`
 **Eloquent Model**: [`App\Models\Grade`](file:///c:/Users/hp/Desktop/L12S9/app/Models/Grade.php)  
 **Database**: MongoDB (`clonedata.grade`)
@@ -10,7 +12,7 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Storage Driver | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`grades:all_active_v1`** | Array of active academic grades: `[['id' => string, 'name' => string], ...]` | **7 Days** (604,800 seconds) | Redis / Cache Store | Cleared on `Grade::saved()`, `Grade::deleted()`, or `Grade::clearCache()` |
+| **`grades:active`** | Array of active academic grades: `[['id' => string, 'name' => string], ...]` | **7 Days** (604,800 seconds) | Redis / Cache Store | Cleared on `Grade::saved()`, `Grade::deleted()`, or `Grade::clearCache()` |
 
 ---
 
@@ -37,7 +39,7 @@ The cache is flushed instantly whenever a grade document is inserted, updated, o
 ```php
 // app/Models/Grade.php
 
-public const CACHE_KEY_ALL = 'grades:all_active_v1';
+public const CACHE_KEY_ALL = 'grades:active';
 
 protected static function booted(): void
 {

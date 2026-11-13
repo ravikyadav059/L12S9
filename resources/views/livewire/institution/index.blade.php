@@ -158,7 +158,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         $organizations = $hasMore ? $results->slice(0, $this->perPage) : $results;
 
         // Base total count cached for 1 hour
-        $baseTotalCount = Cache::remember('total_active_organizations_count_v4', 3600, function () {
+        $baseTotalCount = Cache::remember('organizations:active:count', 3600, function () {
             return Organization::whereNotNull('organization_name')
                 ->where('organization_name', '!=', '')
                 ->where(function ($q) {
@@ -168,7 +168,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         });
 
         // Countries list for filter dropdown cached for 24 hours
-        $allCountries = Cache::remember('all_countries_lookup_v3', 86400, function () {
+        $allCountries = Cache::remember('countries:directory:list', 86400, function () {
             $docs = Country::raw(fn ($col) => $col->find([], ['projection' => ['id' => 1, 'name' => 1, 'sortname' => 1]]));
             $list = [];
             foreach ($docs as $d) {
@@ -186,7 +186,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         });
 
         // Country name lookup dictionary (supports both integer and string keys)
-        $countryMap = Cache::remember('country_id_to_name_map_v3', 86400, function () {
+        $countryMap = Cache::remember('countries:directory:id-name-map', 86400, function () {
             $docs = Country::raw(fn ($col) => $col->find([], ['projection' => ['id' => 1, 'name' => 1]]));
             $map = [];
             foreach ($docs as $d) {
@@ -206,7 +206,7 @@ new #[Layout('components.layouts.app')] class extends Component {
             ->values()
             ->all();
 
-        $stateMap = ! empty($stateIds) ? Cache::remember('state_map_v3_'.md5(json_encode($stateIds)), 86400, function () use ($stateIds) {
+        $stateMap = ! empty($stateIds) ? Cache::remember('states:directory:map:'.md5(json_encode($stateIds)), 86400, function () use ($stateIds) {
             $filterIds = array_merge(array_map('strval', $stateIds), array_map('intval', $stateIds));
             $docs = State::raw(fn ($col) => $col->find(['id' => ['$in' => $filterIds]], ['projection' => ['id' => 1, 'name' => 1]]));
             $map = [];
@@ -227,7 +227,7 @@ new #[Layout('components.layouts.app')] class extends Component {
             ->values()
             ->all();
 
-        $cityMap = ! empty($cityIds) ? Cache::remember('city_map_v3_'.md5(json_encode($cityIds)), 86400, function () use ($cityIds) {
+        $cityMap = ! empty($cityIds) ? Cache::remember('cities:directory:map:'.md5(json_encode($cityIds)), 86400, function () use ($cityIds) {
             $filterIds = array_merge(array_map('strval', $cityIds), array_map('intval', $cityIds));
             $docs = City::raw(fn ($col) => $col->find(['id' => ['$in' => $filterIds]], ['projection' => ['id' => 1, 'name' => 1]]));
             $map = [];
@@ -249,7 +249,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         if (! empty($orgIds)) {
             $missingOrgIds = [];
             foreach ($orgIds as $oid) {
-                $cached = Cache::get('org_metrics_v6_'.$oid);
+                $cached = Cache::get('organizations:metrics:'.$oid);
                 if ($cached !== null) {
                     $orgMetricsMap[$oid] = $cached;
                     if (! empty($cached['scholar_uids'])) {
@@ -468,7 +468,7 @@ new #[Layout('components.layouts.app')] class extends Component {
                         'pub_ids' => $validOrgPubIds,
                     ];
 
-                    Cache::put('org_metrics_v6_'.$mOid, $metricData, 1800);
+                    Cache::put('organizations:metrics:'.$mOid, $metricData, 1800);
                     $orgMetricsMap[$mOid] = $metricData;
 
                     $allUserIds = array_merge($allUserIds, $currentUids, $alumniUids);

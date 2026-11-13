@@ -1,5 +1,7 @@
 # Cache Documentation: `users`
 
+> **Audit status:** The registry in [README.md](README.md) is current. The atomic-lock example below is a recommendation, not production code.
+
 ## Collection: `users`
 **Eloquent Model**: [`App\Models\User`](file:///c:/Users/hp/Desktop/L12S9/app/Models/User.php)  
 **Database**: MongoDB (`clonedata.users`)

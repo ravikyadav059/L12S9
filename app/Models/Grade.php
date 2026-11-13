@@ -30,7 +30,7 @@ class Grade extends Model
     /**
      * Cache key for all active grades.
      */
-    public const CACHE_KEY_ALL = 'grades:all_active_v1';
+    public const CACHE_KEY_ALL = 'grades:active';
 
     /**
      * Clear active grades cache.

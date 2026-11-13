@@ -57,6 +57,30 @@ test('search-journals route returns matching journals json', function () {
     $response->assertJsonStructure(['journals']);
 });
 
+test('journal title search uses a tagged cache that is invalidated with journal caches', function () {
+    Cache::tags([ReviewerJournal::SEARCH_CACHE_TAG])->flush();
+
+    $title = 'Tagged Journal '.uniqid();
+    $journal = ReviewerJournal::create([
+        'journal_title' => $title,
+        'status' => 1,
+    ]);
+    $cacheKey = 'journals:search:'.md5(strtolower($title).'_15');
+
+    $results = ReviewerJournal::searchTitles($title);
+
+    expect(collect($results)->pluck('journal_title')->all())
+        ->toContain($title)
+        ->and(Cache::tags([ReviewerJournal::SEARCH_CACHE_TAG])->has($cacheKey))
+        ->toBeTrue();
+
+    ReviewerJournal::forgetCaches();
+
+    expect(Cache::tags([ReviewerJournal::SEARCH_CACHE_TAG])->has($cacheKey))->toBeFalse();
+
+    $journal->delete();
+});
+
 test('admin user can view add journal page with all required fields and sections', function () {
     $this->actingAs($this->admin);
 

@@ -1,5 +1,7 @@
 # Cache Documentation: `designation`
 
+> **Audit status:** The registry in [README.md](README.md) is current. Any mutex/pre-warming code below is a recommendation, not production code.
+
 ## Collection: `designation`
 **Eloquent Model**: [`App\Models\Designation`](file:///c:/Users/hp/Desktop/L12S9/app/Models/Designation.php)  
 **Database**: MongoDB (`clonedata.designation`)
@@ -10,9 +12,9 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Storage Driver | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`designations:all_active_v1`** | Array of active designations: `[['id' => string, 'name' => string], ...]` | **2 Days** (172,800 seconds) | Redis / Cache Store | Cleared on `Designation::saved()`, `Designation::deleted()`, or `clearActiveCache()` |
-| **`designations:default:list`** | Default paginated top active designations for dropdowns | **1 Hour** (3,600 seconds) | Redis / Cache Store | Cleared alongside `all_active_v1` on model updates |
-| **`designations:default:list:p:1:l:20`** | Paginated top-20 active designations buffer | **1 Hour** (3,600 seconds) | Redis / Cache Store | Cleared alongside `all_active_v1` on model updates |
+| **`designations:active`** | Array of active designations: `[['id' => string, 'name' => string], ...]` | **2 Days** (172,800 seconds) | Redis / Cache Store | Cleared on `Designation::saved()`, `Designation::deleted()`, or `clearActiveCache()` |
+| **`designations:default:list`** | Default paginated top active designations for dropdowns | **1 Hour** (3,600 seconds) | Redis / Cache Store | Cleared alongside `designations:active` on model updates |
+| **`designations:default:list:p:1:l:20`** | Paginated top-20 active designations buffer | **1 Hour** (3,600 seconds) | Redis / Cache Store | Cleared alongside `designations:active` on model updates |
 
 ---
 
@@ -84,7 +86,7 @@ public static function getAllActiveCached(): array
 ## 4. Concurrency Pressure Analysis & Stampede Protection
 
 ### The Bottleneck Scenario:
-- **What Happens**: If an administrator edits a designation during peak traffic hours, `clearActiveCache()` purges `designations:all_active_v1`.
+- **What Happens**: If an administrator edits a designation during peak traffic hours, `clearActiveCache()` purges `designations:active`.
 - **Where the Pressure Happens**:
   - 200 users opening work experience modals at the exact same second will encounter a **Cache Miss**.
   - All 200 requests execute `Designation::query()->whereIn('status', ...)->orderBy('designation', 'asc')->get()` concurrently against MongoDB.

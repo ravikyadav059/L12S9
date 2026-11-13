@@ -50,17 +50,26 @@
                 @mouseleave="pubDropdownOpen = false"
                 @click.outside="pubDropdownOpen = false"
             >
-                <button 
-                    @click="pubDropdownOpen = !pubDropdownOpen"
-                    class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
-                    :class="pubDropdownOpen || {{ request()->is('articles*') ? 'true' : 'false' }} ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : ''"
-                >
-                    <i class="fas fa-file-alt text-[20px] leading-6"></i>
-                    <span class="flex items-center gap-0.5 font-medium">
-                        Publications
-                        <span class="text-[9px] transition-transform inline-block ml-0.5" :class="pubDropdownOpen ? 'rotate-180' : ''">▼</span>
-                    </span>
-                </button>
+                <div class="flex items-stretch">
+                    <a
+                        href="{{ url('articles') }}"
+                        class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-l-lg transition-colors"
+                        :class="pubDropdownOpen || {{ request()->is('articles*') || request()->is('deposit-article*') ? 'true' : 'false' }} ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : ''"
+                        wire:navigate
+                    >
+                        <i class="fas fa-file-alt text-[20px] leading-6"></i>
+                        <span class="font-medium">Publications</span>
+                    </a>
+                    <button
+                        type="button"
+                        @click.stop="pubDropdownOpen = !pubDropdownOpen"
+                        class="flex items-end pb-2 pr-3 text-[9px] text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-lg transition-colors cursor-pointer"
+                        :class="pubDropdownOpen || {{ request()->is('articles*') || request()->is('deposit-article*') ? 'true' : 'false' }} ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : ''"
+                        aria-label="Toggle Publications menu"
+                    >
+                        <span class="transition-transform inline-block" :class="pubDropdownOpen ? 'rotate-180' : ''">▼</span>
+                    </button>
+                </div>
 
                 <!-- Publications Menu -->
                 <div 
@@ -75,14 +84,14 @@
                     style="display: none;"
                 >
                     <!-- Article List -->
-                    <a href="{{ url('articles') }}" @click="pubDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-sky-600 dark:hover:text-sky-400 rounded-xl transition-colors" wire:navigate>
-                        <i class="fas fa-list text-zinc-400 w-5 text-center shrink-0"></i>
+                    <a href="{{ url('articles') }}" @click="pubDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700/60 rounded-xl transition-colors {{ request()->is('articles') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-800 dark:text-zinc-200 hover:text-sky-600 dark:hover:text-sky-400' }}" wire:navigate>
+                        <i class="fas fa-list w-5 text-center shrink-0 {{ request()->is('articles') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400' }}"></i>
                         <span>Article List</span>
                     </a>
 
                     <!-- Deposit Article -->
-                    <a href="{{ url('deposit-article') }}" @click="pubDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-sky-600 dark:hover:text-sky-400 rounded-xl transition-colors" wire:navigate>
-                        <i class="fas fa-upload text-zinc-400 w-5 text-center shrink-0"></i>
+                    <a href="{{ url('deposit-article') }}" @click="pubDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700/60 rounded-xl transition-colors {{ request()->is('deposit-article') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-800 dark:text-zinc-200 hover:text-sky-600 dark:hover:text-sky-400' }}" wire:navigate>
+                        <i class="fas fa-upload w-5 text-center shrink-0 {{ request()->is('deposit-article') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400' }}"></i>
                         <span>Deposit Article</span>
                     </a>
                 </div>
@@ -95,17 +104,26 @@
                 @mouseleave="mentorDropdownOpen = false"
                 @click.outside="mentorDropdownOpen = false"
             >
-                <button 
-                    @click="mentorDropdownOpen = !mentorDropdownOpen"
-                    class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
-                    :class="mentorDropdownOpen || {{ request()->is('mentorship*') ? 'true' : 'false' }} ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : ''"
-                >
-                    <i class="fas fa-user-tie text-[20px] leading-6"></i>
-                    <span class="flex items-center gap-0.5 font-medium">
-                        Mentorship
-                        <span class="text-[9px] transition-transform inline-block ml-0.5" :class="mentorDropdownOpen ? 'rotate-180' : ''">▼</span>
-                    </span>
-                </button>
+                <div class="flex items-stretch">
+                    <a
+                        href="{{ url('mentorship') }}"
+                        class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-l-lg transition-colors"
+                        :class="mentorDropdownOpen || {{ request()->is('mentorship*') || request()->is('mentor-sessions*') ? 'true' : 'false' }} ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : ''"
+                        wire:navigate
+                    >
+                        <i class="fas fa-user-tie text-[20px] leading-6"></i>
+                        <span class="font-medium">Mentorship</span>
+                    </a>
+                    <button
+                        type="button"
+                        @click.stop="mentorDropdownOpen = !mentorDropdownOpen"
+                        class="flex items-end pb-2 pr-3 text-[9px] text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-lg transition-colors cursor-pointer"
+                        :class="mentorDropdownOpen || {{ request()->is('mentorship*') || request()->is('mentor-sessions*') ? 'true' : 'false' }} ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : ''"
+                        aria-label="Toggle Mentorship menu"
+                    >
+                        <span class="transition-transform inline-block" :class="mentorDropdownOpen ? 'rotate-180' : ''">▼</span>
+                    </button>
+                </div>
 
                 <!-- Mentorship Menu -->
                 <div 
@@ -119,31 +137,31 @@
                     class="absolute top-full left-0 w-52 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700/80 rounded-2xl shadow-xl p-2 z-50 origin-top-left"
                     style="display: none;"
                 >
-                    <a href="{{ url('mentorship') }}" @click="mentorDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-sky-600 dark:hover:text-sky-400 rounded-xl transition-colors" wire:navigate>
-                        <i class="fas fa-eye text-zinc-400 w-5 text-center shrink-0"></i>
+                    <a href="{{ url('mentorship') }}" @click="mentorDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700/60 rounded-xl transition-colors {{ request()->is('mentorship') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-800 dark:text-zinc-200 hover:text-sky-600 dark:hover:text-sky-400' }}" wire:navigate>
+                        <i class="fas fa-eye w-5 text-center shrink-0 {{ request()->is('mentorship') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400' }}"></i>
                         <span>Overview</span>
                     </a>
-                    <a href="{{ url('mentor-sessions') }}" @click="mentorDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 hover:text-sky-600 dark:hover:text-sky-400 rounded-xl transition-colors" wire:navigate>
-                        <i class="fas fa-calendar-alt text-zinc-400 w-5 text-center shrink-0"></i>
+                    <a href="{{ url('mentor-sessions') }}" @click="mentorDropdownOpen = false" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700/60 rounded-xl transition-colors {{ request()->is('mentor-sessions') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-800 dark:text-zinc-200 hover:text-sky-600 dark:hover:text-sky-400' }}" wire:navigate>
+                        <i class="fas fa-calendar-alt w-5 text-center shrink-0 {{ request()->is('mentor-sessions') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400' }}"></i>
                         <span>Sessions</span>
                     </a>
                 </div>
             </div>
 
             <!-- 3. Q&A -->
-            <a href="{{ url('questions') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('questions*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+            <a href="{{ url('questions') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('question*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                 <i class="fas fa-question-circle text-[20px] leading-6"></i>
                 <span>Q&A</span>
             </a>
 
             <!-- 4. Institutions -->
-            <a href="{{ url('institutions') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('institutions*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+            <a href="{{ url('institutions') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('institution*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                 <i class="fas fa-university text-[20px] leading-6"></i>
                 <span>Institutions</span>
             </a>
 
             <!-- 5. Scholars / Graduate Cap -->
-            <a href="{{ url('network') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('network*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+            <a href="{{ url('network') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('network*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                 @if(auth()->check())
                     <i class="fas fa-users text-[20px] leading-6"></i>
                 @else
@@ -153,7 +171,7 @@
             </a>
 
             <!-- 6. Journals -->
-            <a href="{{ url('journals') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('journals*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+            <a href="{{ url('journals') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('journal*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                 <i class="fas fa-book text-[20px] leading-6"></i>
                 <span>Journals</span>
             </a>
@@ -172,12 +190,12 @@
                             <span class="whitespace-nowrap">Enroll as Reviewer</span>
                         </a>
                     @elseif ((string) $navAuthUser->reviewer_status === '0')
-                        <a href="{{ url('/reviewer/profile') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('reviewer*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+                        <a href="{{ url('/reviewer/profile') }}" class="flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('reviewer*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                             <i class="fas fa-clipboard-check text-[22px]"></i>
                             <span class="whitespace-nowrap">Reviewer Panel</span>
                         </a>
                     @elseif ((string) $navAuthUser->reviewer_status === '1')
-                        <a href="{{ url('reviewer/profile') }}" class="relative flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('reviewer*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+                        <a href="{{ url('reviewer/profile') }}" class="relative flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors {{ request()->is('reviewer*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                             <i class="fas fa-clipboard-check text-[22px]"></i>
                             <span class="whitespace-nowrap">Reviewer Panel</span>
                             @if (!empty($pendingReviewsCount) && $pendingReviewsCount > 0)
@@ -379,51 +397,67 @@
                 <nav class="space-y-1">
                     <!-- Publications Accordion -->
                     <div>
-                        <button 
-                            @click="mobilePubOpen = !mobilePubOpen"
-                            class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl"
-                        >
-                            <span class="flex items-center gap-3">
+                        <div class="flex items-stretch">
+                            <a
+                                href="{{ url('articles') }}"
+                                class="flex flex-1 items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-l-xl {{ request()->is('articles*') || request()->is('deposit-article*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}"
+                                wire:navigate
+                            >
                                 <i class="fas fa-file-alt text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                                 Publications
-                            </span>
-                            <span class="text-[10px] text-zinc-400 transition-transform inline-block" :class="mobilePubOpen ? 'rotate-180' : ''">▼</span>
-                        </button>
+                            </a>
+                            <button
+                                type="button"
+                                @click="mobilePubOpen = !mobilePubOpen"
+                                class="px-3 py-2.5 text-[10px] text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-xl"
+                                aria-label="Toggle Publications menu"
+                            >
+                                <span class="transition-transform inline-block" :class="mobilePubOpen ? 'rotate-180' : ''">▼</span>
+                            </button>
+                        </div>
                         <div x-show="mobilePubOpen" class="pl-10 pr-2 py-1 space-y-1 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg my-1">
-                            <a href="{{ url('articles') }}" class="block py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600">Article List</a>
-                            <a href="{{ url('deposit-article') }}" class="block py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600">Deposit Article</a>
+                            <a href="{{ url('articles') }}" class="block py-1.5 text-xs font-medium {{ request()->is('articles') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-600 dark:text-zinc-300 hover:text-sky-600' }}" wire:navigate>Article List</a>
+                            <a href="{{ url('deposit-article') }}" class="block py-1.5 text-xs font-medium {{ request()->is('deposit-article') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-600 dark:text-zinc-300 hover:text-sky-600' }}" wire:navigate>Deposit Article</a>
                         </div>
                     </div>
 
                     <!-- Mentorship Accordion -->
                     <div>
-                        <button 
-                            @click="mobileMentorOpen = !mobileMentorOpen"
-                            class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl"
-                        >
-                            <span class="flex items-center gap-3">
+                        <div class="flex items-stretch">
+                            <a
+                                href="{{ url('mentorship') }}"
+                                class="flex flex-1 items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-l-xl {{ request()->is('mentorship*') || request()->is('mentor-sessions*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}"
+                                wire:navigate
+                            >
                                 <i class="fas fa-user-tie text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                                 Mentorship
-                            </span>
-                            <span class="text-[10px] text-zinc-400 transition-transform inline-block" :class="mobileMentorOpen ? 'rotate-180' : ''">▼</span>
-                        </button>
+                            </a>
+                            <button
+                                type="button"
+                                @click="mobileMentorOpen = !mobileMentorOpen"
+                                class="px-3 py-2.5 text-[10px] text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-xl"
+                                aria-label="Toggle Mentorship menu"
+                            >
+                                <span class="transition-transform inline-block" :class="mobileMentorOpen ? 'rotate-180' : ''">▼</span>
+                            </button>
+                        </div>
                         <div x-show="mobileMentorOpen" class="pl-10 pr-2 py-1 space-y-1 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg my-1">
-                            <a href="{{ url('mentorship') }}" class="block py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600">Overview</a>
-                            <a href="{{ url('mentor-sessions') }}" class="block py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-sky-600">Sessions</a>
+                            <a href="{{ url('mentorship') }}" class="block py-1.5 text-xs font-medium {{ request()->is('mentorship') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-600 dark:text-zinc-300 hover:text-sky-600' }}" wire:navigate>Overview</a>
+                            <a href="{{ url('mentor-sessions') }}" class="block py-1.5 text-xs font-medium {{ request()->is('mentor-sessions') ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-600 dark:text-zinc-300 hover:text-sky-600' }}" wire:navigate>Sessions</a>
                         </div>
                     </div>
 
-                    <a href="{{ url('questions') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl" wire:navigate>
+                    <a href="{{ url('questions') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('question*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                         <i class="fas fa-question-circle text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                         <span>Q&A</span>
                     </a>
 
-                    <a href="{{ url('institutions') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl" wire:navigate>
+                    <a href="{{ url('institutions') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('institution*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                         <i class="fas fa-university text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                         <span>Institutions</span>
                     </a>
 
-                    <a href="{{ url('network') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl" wire:navigate>
+                    <a href="{{ url('network') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('network*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                         @if(auth()->check())
                             <i class="fas fa-users text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                         @else
@@ -432,7 +466,7 @@
                         <span>{{ auth()->check() ? 'Network' : 'Scholars' }}</span>
                     </a>
 
-                    <a href="{{ url('journals') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl" wire:navigate>
+                    <a href="{{ url('journals') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('journal*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                         <i class="fas fa-book text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                         <span>Journals</span>
                     </a>
@@ -449,12 +483,12 @@
                                     <span>Enroll as Reviewer</span>
                                 </a>
                             @elseif ((string) $drawerAuthUser->reviewer_status === '0')
-                                <a href="{{ url('/reviewer/profile') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('reviewer*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+                                <a href="{{ url('/reviewer/profile') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('reviewer*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                                     <i class="fas fa-clipboard-check text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                                     <span>Reviewer Panel</span>
                                 </a>
                             @elseif ((string) $drawerAuthUser->reviewer_status === '1')
-                                <a href="{{ url('reviewer/profile') }}" class="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('reviewer*') ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
+                                <a href="{{ url('reviewer/profile') }}" class="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl {{ request()->is('reviewer*') ? '!text-sky-600 dark:!text-sky-400 bg-sky-50 dark:bg-sky-950/40' : '' }}" wire:navigate>
                                     <span class="flex items-center gap-3">
                                         <i class="fas fa-clipboard-check text-lg w-6 text-center text-zinc-500 shrink-0"></i>
                                         <span>Reviewer Panel</span>

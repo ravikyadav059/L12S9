@@ -110,14 +110,16 @@
                 </label>
 
                 {{-- Selected Authors Pills --}}
-                <div x-show="form.authors && form.authors.length > 0" class="flex flex-wrap gap-1.5 mb-2">
+                <div x-show="form.authors && form.authors.filter(a => a && (a.name || '').trim()).length > 0" class="flex flex-wrap gap-1.5 mb-2">
                     <template x-for="(author, aIdx) in form.authors" :key="aIdx">
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-[#0284c7] dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                            <span x-text="author.name"></span>
-                            <button type="button" @click="removeAuthorChip(aIdx)" class="hover:text-red-500 cursor-pointer">
-                                <i class="fa-solid fa-xmark text-[11px]"></i>
-                            </button>
-                        </span>
+                        <template x-if="author && (author.name || '').trim()">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-[#0284c7] dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                <span x-text="author.name"></span>
+                                <button type="button" @click="removeAuthorChip(aIdx)" class="hover:text-red-500 cursor-pointer">
+                                    <i class="fa-solid fa-xmark text-[11px]"></i>
+                                </button>
+                            </span>
+                        </template>
                     </template>
                 </div>
 
@@ -396,6 +398,7 @@
                         this.fp = flatpickr(this.$refs.pubDateInput, {
                             plugins: plugins,
                             dateFormat: 'F Y',
+                            maxDate: new Date(),
                             defaultDate: form.published_date || null,
                             onChange: (selectedDates, dateStr) => {
                                 form.published_date = dateStr;

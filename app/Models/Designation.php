@@ -87,7 +87,7 @@ class Designation extends Model
     /**
      * Cache key for all active designations.
      */
-    public const CACHE_KEY_ACTIVE = 'designations:all_active_v1';
+    public const CACHE_KEY_ACTIVE = 'designations:active';
 
     /**
      * Boot model events to clear cache on change.

@@ -44,22 +44,7 @@ new #[Layout('components.layouts.app')] class extends Component {
     {
         $this->slug = $slug;
 
-        $this->availableSkills = Cache::remember('qa_available_skills_v2', 3600, function () {
-            $skills = Skill::query()
-                ->whereIn('skills_status', [1, '1'])
-                ->limit(50)
-                ->get()
-                ->map(fn ($s) => trim((string) ($s->skills_title ?? '')))
-                ->filter()
-                ->unique()
-                ->values()
-                ->all();
-
-            return ! empty($skills) ? $skills : [
-                'React', 'Laravel', 'MongoDB', 'Python', 'TypeScript', 'Docker',
-                'Data Analysis (STATA)', 'Visual Studio', 'PHP', 'JavaScript',
-            ];
-        });
+        $this->availableSkills = Skill::getCachedAvailable();
 
         // Record a view count on the question
         $question = Question::query()

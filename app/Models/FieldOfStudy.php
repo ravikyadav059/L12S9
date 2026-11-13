@@ -44,7 +44,7 @@ class FieldOfStudy extends Model
     /**
      * Cache key for all active fields of study.
      */
-    public const CACHE_KEY_ACTIVE = 'fields_of_study:all_active_v1';
+    public const CACHE_KEY_ACTIVE = 'fields-of-study:active';
 
     /**
      * Clear the cached active fields of study list.

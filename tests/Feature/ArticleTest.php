@@ -1,7 +1,16 @@
 <?php
 
+use App\Livewire\Concerns\HandlesAddJournalModal;
 use App\Models\ReviewerJournal;
 use Livewire\Volt\Volt;
+
+beforeEach(function () {
+    HandlesAddJournalModal::$verifyInTesting = false;
+});
+
+afterEach(function () {
+    HandlesAddJournalModal::$verifyInTesting = false;
+});
 
 test('deposit article route is registered', function () {
     $this->assertTrue(Route::has('articles.deposit'));

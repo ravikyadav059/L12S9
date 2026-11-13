@@ -1,5 +1,7 @@
 # Cache Documentation: `skills`
 
+> **Audit status:** The registry in [README.md](README.md) is current. The atomic-lock example below is a recommendation, not production code.
+
 ## Collection: `skills`
 **Eloquent Model**: [`App\Models\Skill`](file:///c:/Users/hp/Desktop/L12S9/app/Models/Skill.php)  
 **Database**: MongoDB (`clonedata.skills`)
@@ -10,7 +12,7 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Where Used | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`qa_available_skills_v2`** | List of all approved skill tags for question tagging and filtering | **30 Mins** (1,800s) to **1 Hour** (3,600s) | Q&A Forum Tag Filters, Question Ask Modal | Auto-expires via TTL |
+| **`qa_available_skills`** | List of all approved skill tags for question tagging and filtering | **30 Mins** (1,800s) | Q&A Forum Tag Filters, Question Ask Modal | Auto-expires via TTL |
 
 ---
 
@@ -33,20 +35,8 @@
 ## 3. Lifecycle & Flush Events (Save & Update)
 
 ```php
-// resources/views/livewire/question/index.blade.php
-$availableSkills = Cache::remember('qa_available_skills_v2', 1800, function () {
-    return Skill::query()
-        ->whereIn('skills_status', [1, '1'])
-        ->select(['_id', 'skills_title', 'slug'])
-        ->orderBy('skills_title', 'asc')
-        ->get()
-        ->map(fn ($s) => [
-            'id'    => (string) $s->_id,
-            'title' => (string) $s->skills_title,
-            'slug'  => (string) $s->slug,
-        ])
-        ->toArray();
-});
+// Both question pages use the same cache key and 30-minute TTL.
+$availableSkills = Skill::getCachedAvailable();
 ```
 
 ---
@@ -59,8 +49,8 @@ Utilize Laravel's **`Cache::lock`** mutex pattern:
 ```php
 public static function getAvailableSkillsSafe(): array
 {
-    return Cache::lock('lock:qa_available_skills_v2', 10)->block(3, function () {
-        return Cache::remember('qa_available_skills_v2', 1800, function () {
+    return Cache::lock('lock:qa_available_skills', 10)->block(3, function () {
+        return Cache::remember('qa_available_skills', 1800, function () {
             return Skill::whereIn('skills_status', [1, '1'])
                 ->orderBy('skills_title', 'asc')
                 ->get(['_id', 'skills_title', 'slug'])

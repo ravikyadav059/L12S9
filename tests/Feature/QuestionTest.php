@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\Question;
+use App\Models\Skill;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 
@@ -30,6 +32,32 @@ test('volt question index component renders and handles search and filters', fun
         ->assertSee('non_existent_search_query_12345')
         ->call('clearSearch')
         ->assertSet('search', '');
+});
+
+test('question pages share one unversioned available skills cache', function () {
+    Cache::forget(Skill::AVAILABLE_CACHE_KEY);
+
+    $skill = Skill::create([
+        'skills_title' => 'Shared Cache Skill',
+        'skills_status' => 1,
+    ]);
+    $question = Question::create([
+        'title' => 'Question With Shared Skills Cache',
+        'description' => 'A question used to verify the shared skills cache.',
+        'status' => 1,
+    ]);
+
+    Volt::test('question.index');
+
+    expect(Cache::get(Skill::AVAILABLE_CACHE_KEY))->toContain('Shared Cache Skill');
+
+    $questionDetail = Volt::test('question.show', ['slug' => $question->slug]);
+
+    expect($questionDetail->get('availableSkills'))->toContain('Shared Cache Skill');
+
+    $question->delete();
+    $skill->delete();
+    Cache::forget(Skill::AVAILABLE_CACHE_KEY);
 });
 
 test('volt question index component can sort questions', function () {

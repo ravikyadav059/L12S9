@@ -1,5 +1,7 @@
 # Cache Documentation: `publications`
 
+> **Audit status:** The registry in [README.md](README.md) and [profile_section_caches.md](profile_section_caches.md) are current. Mutex guidance below is not yet implemented.
+
 ## Collection: `publications`
 **Eloquent Model**: [`App\Models\Publication`](file:///c:/Users/hp/Desktop/L12S9/app/Models/Publication.php)  
 **Database**: MongoDB (`clonedata.publications`)
@@ -12,7 +14,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **`orphan_journal_missing_stats`** | Count of publications with unresolved `journal_title` foreign keys | **5 Minutes** (300 seconds) | Admin Database Fixing ([`orphan-journal.blade.php`](file:///c:/Users/hp/Desktop/L12S9/resources/views/livewire/admin/database-fixing/publication/orphan-journal.blade.php)) | Cleared via `Cache::forget('orphan_journal_missing_stats')` on batch fix |
 | **`link_preview_{md5_url}`** | OpenGraph & DOI metadata for article URLs | **24 Hours** (86,400 seconds) | Publication submission link preview card | Auto-expires via TTL |
-| **Compiled in `org_metrics_v6_{id}`** | Aggregated publication count & citation totals per institution | **30 Minutes** (1,800 seconds) | Public Institution Profile & Directory | Auto-expires via TTL (1,800s) |
+| **Compiled in `organizations:metrics:{id}`** | Aggregated publication count & citation totals per institution | **30 Minutes** (1,800 seconds) | Public Institution Profile & Directory | Auto-expires via TTL (1,800s) |
 
 ---
 

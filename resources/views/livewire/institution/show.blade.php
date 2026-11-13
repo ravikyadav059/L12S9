@@ -93,7 +93,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         }
 
         // Metrics calculation (Scholars, Alumnus, Publications, Citations, Seminars)
-        $metrics = Cache::remember('org_metrics_v6_'.$orgId, 1800, function () use ($orgId) {
+        $metrics = Cache::remember('organizations:metrics:'.$orgId, 1800, function () use ($orgId) {
             $experiences = Experience::raw(fn ($col) => $col->find(
                 [
                     'organization_id' => $orgId,

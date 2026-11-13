@@ -21,7 +21,6 @@ class Publication extends Model
         'publication_keywords',
         'status',
         'serial_number',
-        'journal_name',
         'journal_title',
         'publication_type',
         'submit_from_page',
@@ -137,9 +136,64 @@ class Publication extends Model
 
             $records = $query->with(['reviewerJournal', 'articleTypeRelation'])
                 ->orderByDesc('created_at')
+                ->orderByDesc('_id')
                 ->get();
 
-            return $records->map(function (Publication $record): array {
+            // Preload fresh author details from User & Experience models for all registered_co_author IDs
+            $allCoAuthorIds = [];
+            foreach ($records as $rec) {
+                if (is_array($rec->registered_co_author)) {
+                    foreach ($rec->registered_co_author as $cid) {
+                        $cidStr = trim((string) $cid);
+                        if ($cidStr !== '') {
+                            $allCoAuthorIds[] = $cidStr;
+                        }
+                    }
+                }
+            }
+            $allCoAuthorIds = array_values(array_unique($allCoAuthorIds));
+
+            $usersById = [];
+            $expMapByUserId = [];
+            if (! empty($allCoAuthorIds)) {
+                $usersById = User::whereIn('_id', $allCoAuthorIds)->get()->keyBy(fn (User $u): string => (string) $u->_id);
+                $experiences = Experience::whereIn('user_id', $allCoAuthorIds)
+                    ->orderByDesc('current_organization')
+                    ->orderByDesc('end_date')
+                    ->get();
+
+                $orgIds = [];
+                $userPrimaryExp = [];
+                foreach ($experiences as $exp) {
+                    $uId = (string) $exp->user_id;
+                    if (! isset($userPrimaryExp[$uId])) {
+                        $userPrimaryExp[$uId] = $exp;
+                        $orgId = trim((string) ($exp->organization_id ?? ''));
+                        if ($orgId !== '') {
+                            $orgIds[] = $orgId;
+                        }
+                    }
+                }
+                $orgIds = array_values(array_unique($orgIds));
+                $orgMap = [];
+                if (! empty($orgIds)) {
+                    $orgs = Organization::whereIn('_id', $orgIds)->get();
+                    foreach ($orgs as $org) {
+                        if (! empty($org->organization_name)) {
+                            $orgMap[(string) $org->_id] = (string) $org->organization_name;
+                        }
+                    }
+                }
+
+                foreach ($userPrimaryExp as $uId => $exp) {
+                    $orgId = trim((string) ($exp->organization_id ?? ''));
+                    if ($orgId !== '' && isset($orgMap[$orgId])) {
+                        $expMapByUserId[$uId] = $orgMap[$orgId];
+                    }
+                }
+            }
+
+            return $records->map(function (Publication $record) use ($usersById, $expMapByUserId): array {
                 $journal = $record->reviewerJournal;
                 $articleType = $record->articleTypeRelation;
 
@@ -151,15 +205,46 @@ class Publication extends Model
                     $eIssn = $legacyIssn;
                 }
 
-                $authors = is_array($record->authors) ? array_values(array_map(function ($author): array {
-                    $a = is_array($author) ? $author : (array) $author;
+                // Resolve authors strictly from registered_co_author user records so fresh details (name, affiliation, email) are always reflected
+                $authors = [];
+                if (is_array($record->registered_co_author) && ! empty($record->registered_co_author)) {
+                    foreach ($record->registered_co_author as $cid) {
+                        $cidStr = trim((string) $cid);
+                        $u = $usersById[$cidStr] ?? null;
+                        if ($u) {
+                            $fullName = trim(($u->first_name ?? '').' '.($u->last_name ?? ''));
+                            if ($fullName === '' && ! empty($u->fullname)) {
+                                $fullName = trim((string) $u->fullname);
+                            }
+                            if ($fullName === '' && ! empty($u->name)) {
+                                $fullName = trim((string) $u->name);
+                            }
+                            $affiliation = (string) ($expMapByUserId[$cidStr] ?? ($u->affiliation ?? ''));
+                            if ($fullName !== '') {
+                                $authors[] = [
+                                    'id' => $cidStr,
+                                    'name' => $fullName,
+                                    'affiliation' => $affiliation,
+                                    'email' => (string) ($u->email ?? ''),
+                                ];
+                            }
+                        }
+                    }
+                }
 
-                    return [
-                        'name' => (string) ($a['name'] ?? ''),
-                        'affiliation' => (string) ($a['affiliation'] ?? ''),
-                        'email' => (string) ($a['email'] ?? ''),
-                    ];
-                }, $record->authors)) : [];
+                // Fallback for any record that may have legacy embedded authors but no registered_co_author
+                if (empty($authors) && is_array($record->authors) && ! empty($record->authors)) {
+                    $authors = array_values(array_filter(array_map(function ($author): array {
+                        $a = is_array($author) ? $author : (array) $author;
+
+                        return [
+                            'id' => isset($a['id']) ? (string) $a['id'] : (isset($a['_id']) ? (string) $a['_id'] : null),
+                            'name' => trim((string) ($a['name'] ?? $a['fullname'] ?? '')),
+                            'affiliation' => trim((string) ($a['affiliation'] ?? '')),
+                            'email' => trim((string) ($a['email'] ?? '')),
+                        ];
+                    }, $record->authors), fn (array $a): bool => $a['name'] !== ''));
+                }
 
                 $keywords = is_array($record->publication_keywords)
                     ? array_values(array_filter(array_map('strval', $record->publication_keywords)))

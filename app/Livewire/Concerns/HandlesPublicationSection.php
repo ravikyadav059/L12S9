@@ -306,7 +306,7 @@ trait HandlesPublicationSection
             return [];
         }
 
-        $cacheKey = 'authors:search:v1:'.md5(strtolower($trimmed));
+        $cacheKey = 'authors:search:'.md5(strtolower($trimmed));
 
         return Cache::remember($cacheKey, 300, function () use ($trimmed): array {
             $queryParts = array_values(array_filter(explode(' ', $trimmed)));
@@ -426,8 +426,8 @@ trait HandlesPublicationSection
             $issnType = 'both';
         }
 
-        $eIssn = IssnHelper::format((string) ($formData['e_issn'] ?? ''));
-        $pIssn = IssnHelper::format((string) ($formData['p_issn'] ?? ''));
+        $eIssn = $issnType === 'p_issn' ? '' : IssnHelper::format((string) ($formData['e_issn'] ?? ''));
+        $pIssn = $issnType === 'e_issn' ? '' : IssnHelper::format((string) ($formData['p_issn'] ?? ''));
 
         $authors = array_values(array_filter(array_map(function ($author): array {
             $a = is_array($author) ? $author : [];
@@ -473,19 +473,46 @@ trait HandlesPublicationSection
             'url' => ['nullable', 'url', 'max:1000'],
             'type' => ['required', 'string'],
             'journal_title' => ['required', 'string'],
-            'e_issn' => [
-                in_array($issnType, ['both', 'e_issn'], true) ? 'required' : 'nullable',
+            'e_issn' => in_array($issnType, ['both', 'e_issn'], true)
+                ? ['required', 'string', 'max:20', new ValidIssn]
+                : ['nullable'],
+            'p_issn' => in_array($issnType, ['both', 'p_issn'], true)
+                ? ['required', 'string', 'max:20', new ValidIssn]
+                : ['nullable'],
+            'published_date' => [
+                'required',
                 'string',
-                'max:20',
-                new ValidIssn,
+                'max:100',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $val = trim((string) $value);
+                    if ($val === '') {
+                        return;
+                    }
+                    try {
+                        $parsed = Carbon::parse($val);
+                        $now = Carbon::now();
+                        if ($parsed->year > $now->year) {
+                            $fail('Publication Date cannot be in the future.');
+
+                            return;
+                        }
+                        if ($parsed->year === $now->year && $parsed->month > $now->month) {
+                            $fail('Publication Date cannot be in the future.');
+
+                            return;
+                        }
+                        if (preg_match('/\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/', $val)) {
+                            if ($parsed->isFuture() && $parsed->toDateString() > $now->toDateString()) {
+                                $fail('Publication Date cannot be in the future.');
+
+                                return;
+                            }
+                        }
+                    } catch (\Throwable) {
+                        // ignore unparseable formats
+                    }
+                },
             ],
-            'p_issn' => [
-                in_array($issnType, ['both', 'p_issn'], true) ? 'required' : 'nullable',
-                'string',
-                'max:20',
-                new ValidIssn,
-            ],
-            'published_date' => ['required', 'string', 'max:100'],
             'citations' => ['nullable', 'integer', 'min:0'],
             'volume' => ['nullable', 'integer', 'min:1'],
             'issue' => ['nullable', 'string', 'max:50', 'regex:/^[a-zA-Z0-9]+([-–][a-zA-Z0-9]+)*$/'],
@@ -526,7 +553,6 @@ trait HandlesPublicationSection
         }
 
         $journal = ReviewerJournal::find($dataToValidate['journal_title']);
-        $resolvedJournalName = $journal ? (string) ($journal->journal_title ?? $dataToValidate['journal_name']) : $dataToValidate['journal_name'];
 
         $record = $recordId ? Publication::findOrFail($recordId) : new Publication;
 
@@ -558,7 +584,10 @@ trait HandlesPublicationSection
 
         $registeredCoAuthors = [$ownerUserId];
         foreach ($authors as $author) {
-            if ($author['email'] !== '') {
+            $authorId = trim((string) ($author['id'] ?? ''));
+            if ($authorId !== '') {
+                $registeredCoAuthors[] = $authorId;
+            } elseif (! empty($author['email'])) {
                 $matchedUser = User::where('email', 'regex', new Regex('^'.preg_quote($author['email'], '/').'$', 'i'))->first();
                 if ($matchedUser) {
                     $registeredCoAuthors[] = (string) $matchedUser->_id;
@@ -577,7 +606,6 @@ trait HandlesPublicationSection
             'url' => $dataToValidate['url'] !== '' ? $dataToValidate['url'] : null,
             'type' => $dataToValidate['type'],
             'journal_title' => $dataToValidate['journal_title'],
-            'journal_name' => $resolvedJournalName,
             'issn' => $eIssn !== '' ? $eIssn : $pIssn,
             'e_issn' => $eIssn !== '' ? $eIssn : null,
             'p_issn' => $pIssn !== '' ? $pIssn : null,

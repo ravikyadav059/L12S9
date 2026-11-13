@@ -1,5 +1,7 @@
 # Cache Documentation: `geo_locations` (`country`, `state`, `city`)
 
+> **Audit status:** The registry in [README.md](README.md) is current. Any mutex/pre-warming code below is a recommendation, not production code.
+
 ## Collections: `country`, `state`, `city`
 **Eloquent Models**:
 - [`App\Models\Country`](file:///c:/Users/hp/Desktop/L12S9/app/Models/Country.php)
@@ -16,12 +18,12 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **`countries:all:list`** | All countries sorted alphabetically: `[['id' => string, 'name' => string], ...]` | **24 Hours** (86,400s) | Profile address, institution filters, journal location | Cleared on `Country::forgetCached()` |
 | **`countries_all_collection`** | Full Eloquent collection of countries | **24 Hours** (86,400s) | Journal ISSN country resolution | Auto-expires via TTL |
-| **`all_countries_lookup_v3`** | Array of countries for directory dropdowns | **24 Hours** (86,400s) | Institution directory filter header | Auto-expires via TTL |
-| **`country_id_to_name_map_v3`** | Key-value associative map `[id => name]` | **24 Hours** (86,400s) | Instant ID-to-Name card resolution | Auto-expires via TTL |
+| **`countries:directory:list`** | Array of countries for directory dropdowns | **24 Hours** (86,400s) | Institution directory filter header | Auto-expires via TTL |
+| **`countries:directory:id-name-map`** | Key-value associative map `[id => name]` | **24 Hours** (86,400s) | Instant ID-to-Name card resolution | Auto-expires via TTL |
 | **`states_lookup_{countryId}`** | All states belonging to a specific country ID | **24 Hours** (86,400s) | Cascading State dropdown in profile/institution forms | Auto-expires via TTL |
 | **`cities_lookup_{stateId}`** | All cities belonging to a specific state ID | **24 Hours** (86,400s) | Cascading City dropdown in profile/institution forms | Auto-expires via TTL |
-| **`state_map_v3_{md5_ids}`** | Batch mapped state names by ID list | **24 Hours** (86,400s) | Institution search results table | Auto-expires via TTL |
-| **`city_map_v3_{md5_ids}`** | Batch mapped city names by ID list | **24 Hours** (86,400s) | Institution search results table | Auto-expires via TTL |
+| **`states:directory:map:{md5_ids}`** | Batch mapped state names by ID list | **24 Hours** (86,400s) | Institution search results table | Auto-expires via TTL |
+| **`cities:directory:map:{md5_ids}`** | Batch mapped city names by ID list | **24 Hours** (86,400s) | Institution search results table | Auto-expires via TTL |
 | **`tz_country_iso_{timezone}`** | ISO 2-character country code for timezone | **30 Days** (2,592,000s) | Auto-detecting visitor country from timezone | Auto-expires via TTL |
 
 ---

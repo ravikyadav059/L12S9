@@ -1,5 +1,7 @@
 # Cache Documentation: `field_of_study`
 
+> **Audit status:** The registry in [README.md](README.md) is current. Any mutex/pre-warming code below is a recommendation, not production code.
+
 ## Collection: `field_of_study`
 **Eloquent Model**: [`App\Models\FieldOfStudy`](file:///c:/Users/hp/Desktop/L12S9/app/Models/FieldOfStudy.php)  
 **Database**: MongoDB (`clonedata.field_of_study`)
@@ -10,7 +12,7 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Storage Driver | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`fields_of_study:all_active_v1`** | Deduplicated array of active academic disciplines: `[['id' => string, 'name' => string], ...]` | **2 Days** (172,800 seconds) | Redis / Cache Store | Cleared on `FieldOfStudy::saved()`, `FieldOfStudy::deleted()`, or `clearActiveCache()` |
+| **`fields-of-study:active`** | Deduplicated array of active academic disciplines: `[['id' => string, 'name' => string], ...]` | **2 Days** (172,800 seconds) | Redis / Cache Store | Cleared on `FieldOfStudy::saved()`, `FieldOfStudy::deleted()`, or `clearActiveCache()` |
 
 ---
 
@@ -37,7 +39,7 @@ The cache is flushed instantly whenever a discipline document is added, edited, 
 ```php
 // app/Models/FieldOfStudy.php
 
-public const CACHE_KEY_ACTIVE = 'fields_of_study:all_active_v1';
+public const CACHE_KEY_ACTIVE = 'fields-of-study:active';
 
 protected static function booted(): void
 {

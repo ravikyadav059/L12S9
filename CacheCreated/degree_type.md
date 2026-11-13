@@ -1,5 +1,7 @@
 # Cache Documentation: `degree_type`
 
+> **Audit status:** The registry in [README.md](README.md) is current. Any mutex/pre-warming code below is a recommendation, not production code.
+
 ## Collection: `degree_type`
 **Eloquent Model**: [`App\Models\DegreeType`](file:///c:/Users/hp/Desktop/L12S9/app/Models/DegreeType.php)  
 **Database**: MongoDB (`clonedata.degree_type`)
@@ -10,7 +12,7 @@
 
 | Cache Key | Data Stored | TTL (Duration) | Storage Driver | Invalidation Trigger |
 | :--- | :--- | :--- | :--- | :--- |
-| **`degree_types:all_active_v1`** | Deduplicated list of active degrees: `[['id' => string, 'name' => string], ...]` | **2 Days** (172,800 seconds) | Redis / Cache Store | Cleared on `DegreeType::saved()`, `DegreeType::deleted()`, or `clearActiveCache()` |
+| **`degree-types:active`** | Deduplicated list of active degrees: `[['id' => string, 'name' => string], ...]` | **2 Days** (172,800 seconds) | Redis / Cache Store | Cleared on `DegreeType::saved()`, `DegreeType::deleted()`, or `clearActiveCache()` |
 
 ---
 
@@ -37,7 +39,7 @@ The cache is flushed instantly whenever a degree type is added, modified, or rem
 ```php
 // app/Models/DegreeType.php
 
-public const CACHE_KEY_ACTIVE = 'degree_types:all_active_v1';
+public const CACHE_KEY_ACTIVE = 'degree-types:active';
 
 protected static function booted(): void
 {

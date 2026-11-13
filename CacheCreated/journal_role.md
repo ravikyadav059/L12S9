@@ -1,5 +1,7 @@
 # Cache Documentation: `journal_role`
 
+> **Audit status:** The registry in [README.md](README.md) is current. Any mutex/pre-warming code below is a recommendation, not production code.
+
 ## Collection: `journal_role`
 **Eloquent Model**: [`App\Models\JournalRole`](file:///c:/Users/hp/Desktop/L12S9/app/Models/JournalRole.php)  
 **Database**: MongoDB (`clonedata.journal_role`)

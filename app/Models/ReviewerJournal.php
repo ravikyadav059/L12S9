@@ -9,6 +9,8 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class ReviewerJournal extends Model
 {
+    public const SEARCH_CACHE_TAG = 'reviewer-journal-search';
+
     protected $connection = 'mongodb';
 
     protected $collection = 'reviewer_journal';
@@ -505,10 +507,10 @@ class ReviewerJournal extends Model
      */
     public static function forgetCaches(): void
     {
-        Cache::forget('total_active_journals_count');
-        Cache::forget('journal_disciplines_list');
-        Cache::forget('journal_indexers_list');
-        Cache::put('j_search_version', time());
+        Cache::forget('journals:active:count');
+        Cache::forget('journals:active:disciplines:list');
+        Cache::forget('journals:active:indexers:list');
+        Cache::tags([self::SEARCH_CACHE_TAG])->flush();
         IndexingAgency::forgetCached();
     }
 
@@ -556,10 +558,9 @@ class ReviewerJournal extends Model
             return [];
         }
 
-        $searchVer = Cache::get('j_search_version', 1);
-        $cacheKey = 'j_search_v3_'.$searchVer.'_'.md5(strtolower($query).'_'.$limit);
+        $cacheKey = 'journals:search:'.md5(strtolower($query).'_'.$limit);
 
-        return Cache::remember($cacheKey, 300, function () use ($query, $limit) {
+        return Cache::tags([self::SEARCH_CACHE_TAG])->remember($cacheKey, 300, function () use ($query, $limit) {
             $fields = [
                 '_id',
                 'journal_title',

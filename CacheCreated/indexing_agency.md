@@ -1,5 +1,7 @@
 # Cache Documentation: `indexing_agency`
 
+> **Audit status:** The registry in [README.md](README.md) is current; verify historical implementation notes below against source.
+
 ## Collection: `indexing_agency`
 **Eloquent Model**: [`App\Models\IndexingAgency`](file:///c:/Users/hp/Desktop/L12S9/app/Models/IndexingAgency.php)  
 **Database**: MongoDB (`clonedata.indexing_agency`)

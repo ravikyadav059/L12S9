@@ -407,3 +407,66 @@ test('publications section shows 5 records initially and loads more on click', f
 
     $component->assertSet('limit', 10);
 });
+
+test('saving with e_issn only ignores leftover invalid p_issn and saves successfully', function () {
+    $user = User::factory()->create();
+    $articleType = Article::create(['name' => 'Original Article']);
+    $journal = ReviewerJournal::create([
+        'journal_title' => 'International Journal of Innovation '.uniqid(),
+        'e_issn' => '2252-2824',
+    ]);
+    $title = 'Article With E-ISSN Only '.uniqid();
+
+    $component = Volt::actingAs($user)
+        ->test('profile.publications', ['user' => $user, 'isOwnProfile' => true]);
+
+    $returned = $component->instance()->saveRecord([
+        'title' => $title,
+        'type' => (string) $articleType->_id,
+        'journal_title' => (string) $journal->_id,
+        'issn_type' => 'e_issn',
+        'e_issn' => '2252-2824',
+        'p_issn' => 'invalid-p-issn-here',
+        'published_date' => 'November 2026',
+        'description' => 'Test publication description',
+        'authors' => [
+            ['name' => 'Dr. Test Author', 'affiliation' => 'Test University', 'email' => 'author@example.com'],
+        ],
+    ]);
+
+    expect($returned['ok'])->toBeTrue();
+
+    $saved = Publication::where('title', $title)->first();
+    expect($saved)->not->toBeNull()
+        ->and($saved->e_issn)->toBe('2252-2824')
+        ->and($saved->p_issn)->toBeNull()
+        ->and($saved->issn)->toBe('2252-2824');
+});
+
+test('saving with a future published date fails validation', function () {
+    $user = User::factory()->create();
+    $articleType = Article::create(['name' => 'Original Article']);
+    $journal = ReviewerJournal::create([
+        'journal_title' => 'International Journal of Future '.uniqid(),
+        'e_issn' => '2252-2824',
+    ]);
+
+    $component = Volt::actingAs($user)
+        ->test('profile.publications', ['user' => $user, 'isOwnProfile' => true]);
+
+    $returned = $component->instance()->saveRecord([
+        'title' => 'Future Date Publication '.uniqid(),
+        'type' => (string) $articleType->_id,
+        'journal_title' => (string) $journal->_id,
+        'issn_type' => 'e_issn',
+        'e_issn' => '2252-2824',
+        'published_date' => 'December 2099',
+        'description' => 'Test publication description',
+        'authors' => [
+            ['name' => 'Dr. Test Author', 'affiliation' => 'Test University', 'email' => 'author@example.com'],
+        ],
+    ]);
+
+    expect($returned['ok'])->toBeFalse()
+        ->and($returned['errors']['published_date'][0])->toBe('Publication Date cannot be in the future.');
+});

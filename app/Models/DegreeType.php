@@ -44,7 +44,7 @@ class DegreeType extends Model
     /**
      * Cache key for all active degree types.
      */
-    public const CACHE_KEY_ACTIVE = 'degree_types:all_active_v1';
+    public const CACHE_KEY_ACTIVE = 'degree-types:active';
 
     /**
      * Clear the cached active degree types list.

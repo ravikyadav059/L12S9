@@ -108,7 +108,7 @@ new #[Layout('components.layouts.app')] class extends Component {
     public function with(): array
     {
         // 1. Cached Disciplines List from Active (Status 1) Journals (24 hours cache)
-        $allDisciplines = Cache::remember('journal_disciplines_list', 86400, function () {
+        $allDisciplines = Cache::remember('journals:active:disciplines:list', 86400, function () {
             $raw = ReviewerJournal::raw(function ($collection) {
                 return $collection->distinct('journal_subjects', ['status' => ['$in' => [1, '1', true]]]);
             });
@@ -125,7 +125,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         });
 
         // 2. Cached Indexers List from Active (Status 1) Indexing Agencies with Logos & Initials
-        $allIndexers = Cache::remember('journal_indexers_list', 86400, function () {
+        $allIndexers = Cache::remember('journals:active:indexers:list', 86400, function () {
             $fillable = (new ReviewerJournal)->getFillable();
             $checkboxes = array_filter($fillable, fn ($f) => str_ends_with($f, '_checkbox'));
 
@@ -268,7 +268,7 @@ new #[Layout('components.layouts.app')] class extends Component {
         $journals = $hasMore ? $results->slice(0, $this->perPage) : $results;
 
         // Base total count (Status 1 only)
-        $baseTotalJournals = Cache::remember('total_active_journals_count', 3600, function () {
+        $baseTotalJournals = Cache::remember('journals:active:count', 3600, function () {
             return ReviewerJournal::whereIn('status', [1, '1', true])
                 ->whereNotNull('journal_title')
                 ->where('journal_title', '!=', '')

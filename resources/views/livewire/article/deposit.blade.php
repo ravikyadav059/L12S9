@@ -546,6 +546,19 @@ new #[Layout('components.layouts.app')] class extends Component {
                 return;
             }
 
+            // Ensure selectedJournalId is resolved from ReviewerJournal if verified or matching by name
+            if ($this->option === 'published') {
+                if (empty($this->selectedJournalId)) {
+                    $this->checkJournalVerification();
+                }
+
+                if (empty($this->selectedJournalId)) {
+                    $this->addError('journalName', 'Please select a valid journal from the list or add a new journal.');
+                    $this->dispatch('scroll-to-first-error');
+                    return;
+                }
+            }
+
             if ($this->option === 'published' && ! empty($this->pubMonthYear)) {
                 try {
                     $pubDate = null;
@@ -874,6 +887,11 @@ new #[Layout('components.layouts.app')] class extends Component {
                 $publishedDateValue = date('F Y');
             }
 
+            // Final fallback to resolve selectedJournalId from ReviewerJournal if not set yet
+            if (empty($this->selectedJournalId)) {
+                $this->checkJournalVerification();
+            }
+
             $publicationData = [
                 'publication_type' => $publicationType,
                 'user_id' => $userId,
@@ -888,7 +906,6 @@ new #[Layout('components.layouts.app')] class extends Component {
                 'published_date' => $publishedDateValue,
                 'status' => 0,
                 'journal_title' => $this->selectedJournalId ?: null,
-                'journal_name' => $this->journalName ?: null,
                 'issn' => $finalIssn ?: null,
                 'e_issn' => $finalEIssn ?: null,
                 'p_issn' => $finalPIssn ?: null,

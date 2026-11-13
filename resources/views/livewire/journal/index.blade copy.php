@@ -108,7 +108,7 @@ new #[Layout('components.layouts.app')] class extends Component
     public function with(): array
     {
         // 1. Cached Disciplines List (24 hours cache to protect DB under 10k users)
-        $allDisciplines = Cache::remember('journal_disciplines_list_v1', 86400, function () {
+        $allDisciplines = Cache::remember('journals:all:disciplines:list', 86400, function () {
             $raw = ReviewerJournal::raw(function ($collection) {
                 return $collection->distinct('journal_subjects');
             });
@@ -126,7 +126,7 @@ new #[Layout('components.layouts.app')] class extends Component
         });
 
         // 2. Cached Indexers List
-        $allIndexers = Cache::remember('journal_indexers_list_v1', 86400, function () {
+        $allIndexers = Cache::remember('journals:all:indexers:list', 86400, function () {
             $fillable = (new ReviewerJournal)->getFillable();
             $labels = [
                 'Scopus_checkbox' => 'Scopus',
@@ -275,7 +275,7 @@ new #[Layout('components.layouts.app')] class extends Component
         $journals = $hasMore ? $results->slice(0, $this->perPage) : $results;
 
         // Base total count
-        $baseTotalJournals = Cache::remember('total_active_journals_count_v1', 3600, function () {
+        $baseTotalJournals = Cache::remember('journals:all:count', 3600, function () {
             return ReviewerJournal::whereNotNull('journal_title')->where('journal_title', '!=', '')->count();
         });
 

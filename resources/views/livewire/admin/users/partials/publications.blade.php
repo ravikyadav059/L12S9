@@ -271,6 +271,15 @@ new class extends Component
         performOpenAdd() {
             this.resetErrors();
             this.form = this.emptyForm();
+            const defaultAuthorName = '{{ addslashes((string) ($user?->name ?? '')) }}'.trim();
+            if (defaultAuthorName) {
+                this.form.authors = [{
+                    id: '{{ (string) ($user?->_id ?? '') }}',
+                    name: defaultAuthorName,
+                    affiliation: '{{ addslashes((string) ($user?->affiliation ?? '')) }}'.trim(),
+                    email: '{{ addslashes((string) ($user?->email ?? '')) }}'.trim()
+                }];
+            }
             this.originalSnapshot = JSON.stringify(this.form);
             this.selectedPdfName = '';
             this.keywordInput = '';
@@ -307,15 +316,26 @@ new class extends Component
             if (rec.e_issn && !rec.p_issn) issnType = 'e_issn';
             else if (rec.p_issn && !rec.e_issn) issnType = 'p_issn';
 
+            const rawAuthors = Array.isArray(rec.authors) ? rec.authors : [];
+            const mappedAuthors = rawAuthors
+                .map(a => typeof a === 'string'
+                    ? { id: null, name: a.trim(), affiliation: '', email: '' }
+                    : {
+                        id: a.id || a._id || null,
+                        name: (a.name || a.fullname || a.full_name || '').trim(),
+                        affiliation: a.affiliation || '',
+                        email: a.email || ''
+                    }
+                )
+                .filter(a => a.name !== '');
+
             this.form = {
                 id: rec.id,
                 doi: rec.doi || '',
                 title: rec.title || '',
                 url: rec.url || '',
                 type: rec.type || '',
-                authors: (Array.isArray(rec.authors) && rec.authors.length > 0)
-                    ? rec.authors.map(a => ({ name: a.name || '', affiliation: a.affiliation || '', email: a.email || '' }))
-                    : [{ name: '', affiliation: '', email: '' }],
+                authors: mappedAuthors,
                 journal_title: rec.journal_title || '',
                 journal_name: rec.journal_name || '',
                 issn_type: issnType,
@@ -486,6 +506,7 @@ new class extends Component
             const exists = this.form.authors.some(a => (a.name || '').toLowerCase() === name.toLowerCase());
             if (!exists) {
                 this.form.authors.push({
+                    id: res.id || res._id || null,
                     name: name,
                     affiliation: res.affiliation || '',
                     email: res.email || ''
@@ -586,6 +607,13 @@ new class extends Component
             this.form.issn_type = type;
             this.errors.e_issn = false;
             this.errors.p_issn = false;
+            this.errorMessages.e_issn = '';
+            this.errorMessages.p_issn = '';
+            if (type === 'e_issn') {
+                this.form.p_issn = '';
+            } else if (type === 'p_issn') {
+                this.form.e_issn = '';
+            }
         },
 
         formatIssnField(field) {
@@ -630,10 +658,45 @@ new class extends Component
             this.form.publication_keywords.splice(idx, 1);
         },
 
+        isFuturePublishedDate(val) {
+            if (!val || !val.trim()) return false;
+            const str = val.trim();
+            const now = new Date();
+            const curYear = now.getFullYear();
+            const curMonth = now.getMonth();
+
+            const parts = str.split(/\s+/);
+            const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+            if (parts.length === 2) {
+                const mIdx = months.indexOf(parts[0].toLowerCase());
+                const y = parseInt(parts[1], 10);
+                if (mIdx !== -1 && !isNaN(y)) {
+                    if (y > curYear) return true;
+                    if (y === curYear && mIdx > curMonth) return true;
+                    return false;
+                }
+            }
+
+            const parsed = Date.parse(str.length === 7 && str.includes('-') ? str + '-01' : str);
+            if (!isNaN(parsed)) {
+                const d = new Date(parsed);
+                if (d.getFullYear() > curYear) return true;
+                if (d.getFullYear() === curYear && d.getMonth() > curMonth) return true;
+                if (d > now) return true;
+            }
+            return false;
+        },
+
         validateClient() {
             this.errors = {};
             this.errorMessages = {};
             let valid = true;
+
+            if (this.form.issn_type === 'e_issn') {
+                this.form.p_issn = '';
+            } else if (this.form.issn_type === 'p_issn') {
+                this.form.e_issn = '';
+            }
 
             if (!(this.form.title || '').trim()) {
                 this.errors.title = true;
@@ -676,11 +739,18 @@ new class extends Component
                 this.errors.published_date = true;
                 this.errorMessages.published_date = 'Publication Date is required.';
                 valid = false;
+            } else if (this.isFuturePublishedDate(this.form.published_date)) {
+                this.errors.published_date = true;
+                this.errorMessages.published_date = 'Publication Date cannot be in the future.';
+                valid = false;
             }
             if (!(this.form.description || '').trim()) {
                 this.errors.description = true;
                 this.errorMessages.description = 'Abstract/Description is required.';
                 valid = false;
+            }
+            if (Array.isArray(this.form.authors)) {
+                this.form.authors = this.form.authors.filter(a => a && (a.name || '').trim() !== '');
             }
             if (!Array.isArray(this.form.authors) || this.form.authors.length === 0) {
                 this.errors.authors = true;
@@ -691,9 +761,28 @@ new class extends Component
             return valid;
         },
 
+        scrollToFirstError() {
+            this.$nextTick(() => {
+                const formEl = this.$refs.sharedForm;
+                if (!formEl) return;
+                const candidates = Array.from(formEl.querySelectorAll('.border-red-500, p.text-red-500'));
+                const firstErrorEl = candidates.find(el => el.offsetParent !== null || el.getClientRects().length > 0);
+                if (firstErrorEl) {
+                    firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const input = firstErrorEl.tagName === 'INPUT' || firstErrorEl.tagName === 'TEXTAREA' || firstErrorEl.tagName === 'SELECT'
+                        ? firstErrorEl
+                        : firstErrorEl.querySelector('input, textarea, select');
+                    if (input) input.focus();
+                }
+            });
+        },
+
         async saveItem() {
             this.commitKeywordInput();
-            if (!this.validateClient()) return;
+            if (!this.validateClient()) {
+                this.scrollToFirstError();
+                return;
+            }
 
             this.isSaving = true;
             try {
@@ -707,7 +796,12 @@ new class extends Component
                     Object.keys(res.errors).forEach(key => {
                         this.errors[key] = true;
                         this.errorMessages[key] = Array.isArray(res.errors[key]) ? res.errors[key][0] : res.errors[key];
+                        if (key.startsWith('authors.') || key === 'authors') {
+                            this.errors.authors = true;
+                            this.errorMessages.authors = this.errorMessages[key];
+                        }
                     });
+                    this.scrollToFirstError();
                 }
             } finally {
                 this.isSaving = false;

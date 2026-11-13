@@ -367,22 +367,7 @@ new #[Layout('components.layouts.app')] class extends Component {
             ['name' => 'Node.js', 'count' => '620'],
         ];
 
-        $availableSkills = Cache::remember('qa_available_skills_v2', 1800, function () {
-            $skills = Skill::query()
-                ->whereIn('skills_status', [1, '1'])
-                ->limit(50)
-                ->get()
-                ->map(fn ($s) => trim((string) ($s->skills_title ?? $s->name ?? $s->title ?? '')))
-                ->filter()
-                ->unique()
-                ->values()
-                ->all();
-
-            return ! empty($skills) ? $skills : [
-                'React', 'Laravel', 'MongoDB', 'Python', 'TypeScript', 'Docker',
-                'Data Analysis (STATA)', 'Visual Studio', 'PHP', 'JavaScript',
-            ];
-        });
+        $availableSkills = Skill::getCachedAvailable();
 
         return [
             'questions' => $questions,
